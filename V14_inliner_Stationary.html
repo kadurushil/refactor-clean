@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<!-- DARK MODE: The 'dark' class will be toggled here by JavaScript -->
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radar and Video Visualizer - Timestamp Synchronized</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- DARK MODE: Step 1 - Configure Tailwind to use the 'class' strategy for dark mode -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .font-mono {
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .p5Canvas {
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        video {
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #2563eb;
+            cursor: pointer;
+            border-radius: 50%;
+            margin-top: -8px;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #2563eb;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        .shadow-up {
+            box-shadow: 0 -4px 6px -1px rgb(0 0 0 / 0.1), 0 -2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        #modal-overlay {
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        #modal-content {
+            transition: transform 0.2s ease-in-out;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col min-h-screen">
+
+    <header class="bg-white dark:bg-gray-800 shadow-md p-4 z-10 relative">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Radar and Video Visualizer</h1>
+        <p class="text-sm text-gray-600 dark:text-gray-400">High-precision, timestamp-synchronized playback.</p>
+
+        <!-- DARK MODE: Step 2 - Add the toggle button -->
+        <div class="absolute top-4 right-4">
+            <button id="theme-toggle" type="button"
+                class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
+                <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                </svg>
+                <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                        d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm-.707 12.122l.707-.707a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414-1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+                        fill-rule="evenodd" clip-rule="evenodd"></path>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-grow container mx-auto p-4 flex flex-col lg:flex-row gap-6">
+        <div class="lg:w-1/2 flex flex-col gap-4">
+            <div class="relative">
+                <div id="canvas-container"
+                    class="w-full h-[60vh] bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-inner flex items-center justify-center">
+                    <p id="canvas-placeholder" class="text-gray-500 dark:text-gray-400 text-lg">Load JSON data to start
+                        visualization</p>
+                </div>
+                <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center gap-4">
+                    <div id="ego-speed-display"
+                        class="bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md hidden font-mono"></div>
+                    <div id="can-speed-display"
+                        class="bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md hidden font-mono"></div>
+                </div>
+            </div>
+            <div id="feature-toggles"
+                class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border dark:border-gray-700 flex flex-col items-center gap-4 hidden">
+                <div class="flex flex-wrap justify-center gap-x-6 gap-y-2">
+                    <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
+                            id="toggle-snr-color"
+                            class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"> Color by
+                        SNR</label>
+                    <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
+                            id="toggle-cluster-color"
+                            class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"> Color by
+                        Cluster</label>
+                    <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
+                            id="toggle-inlier-color"
+                            class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"> Color by
+                        Inlier</label>
+                    <!-- ADD THIS LINE -->
+                    <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
+                            id="toggle-stationary-color"
+                            class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"> Color by
+                        Stationary</label>
+                    <!-- END OF ADDED LINE -->
+                    <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
+                            id="toggle-velocity" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+                            checked> Show Object Details</label>
+                    <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
+                            id="toggle-tracks" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+                            checked> Show Tracks</label>
+                    <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
+                            id="toggle-ego-speed"
+                            class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" checked> Show Ego
+                        Speed</label>
+                    <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
+                            id="toggle-frame-norm"
+                            class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"> Per-Frame
+                        SNR</label>
+                    <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
+                            id="toggle-debug-overlay"
+                            class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"> Show Debug
+                        Info</label>
+                    <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
+                            id="toggle-close-up"
+                            class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"> CLOSE-UP</label>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2"><label for="snr-min-input" class="text-sm font-medium">Min
+                            SNR:</label><input type="number" id="snr-min-input" step="0.1"
+                            class="w-20 p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 dark:text-white rounded-lg text-sm">
+                    </div>
+                    <div class="flex items-center gap-2"><label for="snr-max-input" class="text-sm font-medium">Max
+                            SNR:</label><input type="number" id="snr-max-input" step="0.1"
+                            class="w-20 p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 dark:text-white rounded-lg text-sm">
+                    </div>
+                    <button id="apply-snr-btn"
+                        class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">Apply</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:w-1/2 flex flex-col gap-4">
+            <div class="w-full h-[45vh] bg-black rounded-lg shadow-inner flex items-center justify-center relative">
+                <video id="video-player" class="w-full h-full object-contain hidden" muted playsinline></video>
+                <p id="video-placeholder" class="text-gray-500 dark:text-gray-400 text-lg">Load a video file</p>
+                <div id="debug-overlay"
+                    class="absolute top-0 left-0 bg-black bg-opacity-60 text-white p-2 font-mono text-xs hidden w-full">
+                </div>
+            </div>
+            <div id="speed-graph-container"
+                class="w-full h-[27vh] bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-inner flex items-center justify-center">
+                <p id="speed-graph-placeholder" class="text-gray-500 dark:text-gray-400 text-lg">Load CAN log to see
+                    speed graph</p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-white dark:bg-gray-800 shadow-up w-full p-4 mt-auto sticky bottom-0 z-20">
+        <div class="mb-4">
+            <input type="range" id="timeline-slider" min="0" max="0" value="0"
+                class="w-full h-2 bg-gray-300 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer">
+        </div>
+        <div class="flex flex-wrap items-center justify-center md:justify-between gap-4">
+            <div class="flex items-center gap-4 justify-center">
+                <button id="load-json-btn"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">Load
+                    JSON</button>
+                <button id="load-video-btn"
+                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">Load
+                    Video</button>
+                <button id="load-can-btn"
+                    class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors text-sm font-medium">Load
+                    CAN Log</button>
+                <button id="clear-cache-btn"
+                    class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">Clear
+                    Cache</button>
+                <div class="flex items-center gap-2">
+                    <label for="offset-input" class="text-sm font-medium"> Offset (ms):<br><small>(+ve values if
+                            radar<br> lags behind video)</small></label>
+                    <input type="number" id="offset-input" value="0"
+                        class="w-20 p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 dark:text-white rounded-lg text-sm">
+                    <span id="auto-offset-indicator" class="text-green-600 font-semibold text-sm hidden">(auto)</span>
+                </div>
+            </div>
+            <div class="flex items-center justify-center gap-4">
+                <button id="play-pause-btn"
+                    class="px-5 py-2 rounded-lg bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 hover:bg-gray-300 font-semibold w-20">Play</button>
+                <button id="stop-btn"
+                    class="px-5 py-2 rounded-lg bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 hover:bg-gray-300 font-semibold">Stop</button>
+                <div class="text-center">
+                    <span id="frame-counter" class="font-mono text-lg">Frame: 0 / 0</span>
+                </div>
+            </div>
+            <div class="flex items-center justify-center gap-2">
+                <label for="speed-slider" class="text-sm font-medium">Speed:</label>
+                <input type="range" id="speed-slider" min="0.1" max="2" value="1" step="0.1"
+                    class="w-32 h-2 bg-gray-300 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer">
+                <span id="speed-display" class="font-mono text-sm w-12 text-center">1.0x</span>
+            </div>
+        </div>
+    </footer>
+
+    <div id="modal-container" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div id="modal-overlay" class="absolute inset-0 bg-black bg-opacity-50"></div>
+        <div id="modal-content"
+            class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md z-10 transform scale-95">
+            <p id="modal-text" class="text-gray-700 dark:text-gray-300 mb-4"></p>
+            <div id="modal-buttons" class="flex justify-end gap-4"><button id="modal-cancel-btn"
+                    class="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 hover:bg-gray-300 font-semibold">Cancel</button><button
+                    id="modal-ok-btn"
+                    class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-semibold">OK</button>
+            </div>
+        </div>
+    </div>
+    <input type="file" id="json-file-input" class="hidden" accept=".json"><input type="file" id="video-file-input"
+        class="hidden" accept="video/*"><input type="file" id="can-file-input" class="hidden" accept=".log, .txt">
+
+<script>
+        // --- Global State ---
+        let vizData = null;
+        let canData = [];
+        let rawCanLogText = null;
+        let videoStartDate = null;
+        let radarStartTimeMs = 0;
+        let isPlaying = false;
+        let currentFrame = 0;
+        const MAX_TRAJECTORY_LENGTH = 50;
+        let globalMinSnr = 0, globalMaxSnr = 1;
+        let p5_instance = null, speedGraphInstance = null;
+        let jsonFilename = '', videoFilename = '', canLogFilename = '';
+        let isCloseUpMode = false;
+        let masterClockStart = 0;
+        let mediaTimeStart = 0;
+        let lastSyncTime = 0;
+        const VIDEO_FPS = 30;
+
+        // --- DOM Element References ---
+        const canvasContainer = document.getElementById('canvas-container'), canvasPlaceholder = document.getElementById('canvas-placeholder'), videoPlayer = document.getElementById('video-player'), videoPlaceholder = document.getElementById('video-placeholder'), loadJsonBtn = document.getElementById('load-json-btn'), loadVideoBtn = document.getElementById('load-video-btn'), loadCanBtn = document.getElementById('load-can-btn'), jsonFileInput = document.getElementById('json-file-input'), videoFileInput = document.getElementById('video-file-input'), canFileInput = document.getElementById('can-file-input'), playPauseBtn = document.getElementById('play-pause-btn'), stopBtn = document.getElementById('stop-btn'), timelineSlider = document.getElementById('timeline-slider'), frameCounter = document.getElementById('frame-counter'), offsetInput = document.getElementById('offset-input'), speedSlider = document.getElementById('speed-slider'), speedDisplay = document.getElementById('speed-display'), featureToggles = document.getElementById('feature-toggles'), toggleSnrColor = document.getElementById('toggle-snr-color'), toggleClusterColor = document.getElementById('toggle-cluster-color'), toggleInlierColor = document.getElementById('toggle-inlier-color'),
+            // ADD THIS LINE
+            toggleStationaryColor = document.getElementById('toggle-stationary-color'),
+            // END OF ADDED LINE
+            toggleVelocity = document.getElementById('toggle-velocity'), toggleTracks = document.getElementById('toggle-tracks'), toggleEgoSpeed = document.getElementById('toggle-ego-speed'), toggleFrameNorm = document.getElementById('toggle-frame-norm'), toggleDebugOverlay = document.getElementById('toggle-debug-overlay'), egoSpeedDisplay = document.getElementById('ego-speed-display'), canSpeedDisplay = document.getElementById('can-speed-display'), debugOverlay = document.getElementById('debug-overlay'), snrMinInput = document.getElementById('snr-min-input'), snrMaxInput = document.getElementById('snr-max-input'), applySnrBtn = document.getElementById('apply-snr-btn'), autoOffsetIndicator = document.getElementById('auto-offset-indicator'), clearCacheBtn = document.getElementById('clear-cache-btn'), speedGraphContainer = document.getElementById('speed-graph-container'), speedGraphPlaceholder = document.getElementById('speed-graph-placeholder'), modalContainer = document.getElementById('modal-container'), modalOverlay = document.getElementById('modal-overlay'), modalContent = document.getElementById('modal-content'), modalText = document.getElementById('modal-text'), modalOkBtn = document.getElementById('modal-ok-btn'), modalCancelBtn = document.getElementById('modal-cancel-btn');
+        const toggleCloseUp = document.getElementById('toggle-close-up');
+        let modalResolve = null;
+
+        // --- DARK MODE: Step 3 - Add the JavaScript Logic ---
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                lightIcon.classList.remove('hidden');
+                darkIcon.classList.add('hidden');
+                localStorage.setItem('color-theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                darkIcon.classList.remove('hidden');
+                lightIcon.classList.add('hidden');
+                localStorage.setItem('color-theme', 'light');
+            }
+            if (p5_instance) p5_instance.redraw();
+            if (speedGraphInstance) {
+                if ((canData.length > 0 || vizData) && videoPlayer.duration) {
+                    speedGraphInstance.setData(canData, vizData, videoPlayer.duration);
+                }
+                speedGraphInstance.redraw();
+            }
+        }
+
+        const savedTheme = localStorage.getItem('color-theme');
+        if (savedTheme) {
+            setTheme(savedTheme);
+        } else {
+            // Default to light mode if no theme is saved
+            setTheme('light');
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            if (document.documentElement.classList.contains('dark')) {
+                setTheme('light');
+            } else {
+                setTheme('dark');
+            }
+        });
+
+        // --- Custom Modal Logic ---
+        function showModal(message, isConfirm = false) { return new Promise(resolve => { modalText.textContent = message; modalCancelBtn.classList.toggle('hidden', !isConfirm); modalContainer.classList.remove('hidden'); setTimeout(() => { modalOverlay.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10); modalResolve = resolve; }); }
+        function hideModal(value) { modalOverlay.classList.add('opacity-0'); modalContent.classList.add('scale-95'); setTimeout(() => { modalContainer.classList.add('hidden'); if (modalResolve) modalResolve(value); }, 200); }
+        modalOkBtn.addEventListener('click', () => hideModal(true)); modalCancelBtn.addEventListener('click', () => hideModal(false)); modalOverlay.addEventListener('click', () => hideModal(false));
+
+        // --- IndexedDB for Caching ---
+        let db; function initDB(callback) { const request = indexedDB.open('visualizerDB', 1); request.onupgradeneeded = function (event) { const db = event.target.result; if (!db.objectStoreNames.contains('files')) { db.createObjectStore('files'); } }; request.onsuccess = function (event) { db = event.target.result; console.log("Database initialized"); if (callback) callback(); }; request.onerror = function (event) { console.error("IndexedDB error:", event.target.errorCode); }; }
+        function saveFileToDB(key, value) { if (!db) return; const transaction = db.transaction(['files'], 'readwrite'); const store = transaction.objectStore('files'); const request = store.put(value, key); request.onsuccess = () => console.log(`File '${key}' saved to DB.`); request.onerror = (event) => console.error(`Error saving file '${key}':`, event.target.error); }
+        function loadFileFromDB(key, callback) { if (!db) return; const transaction = db.transaction(['files'], 'readonly'); const store = transaction.objectStore('files'); const request = store.get(key); request.onsuccess = function () { if (request.result) { callback(request.result); } else { console.log(`File '${key}' not found in DB.`); callback(null); } }; request.onerror = (event) => { console.error(`Error loading file '${key}':`, event.target.error); callback(null); }; }
+
+        // --- p5.js Sketch Definitions ---
+        let sketch = function (p) {
+            const RADAR_X_MIN = -20, RADAR_X_MAX = 20, RADAR_Y_MIN = 0, RADAR_Y_MAX = 60;
+            let plotScaleX, plotScaleY, staticBackgroundBuffer, snrLegendBuffer, snrColors, clusterColors;
+            // ADD COLOR DEFINITIONS FOR STATIONARY/MOVING OBJECTS
+            let stationaryColor, movingColor;
+
+            p.setup = function () {
+                let canvas = p.createCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight);
+                canvas.parent('canvas-container');
+                staticBackgroundBuffer = p.createGraphics(p.width, p.height);
+                snrLegendBuffer = p.createGraphics(100, 450);
+                snrColors = { c1: p.color(0, 0, 255), c2: p.color(0, 255, 255), c3: p.color(0, 255, 0), c4: p.color(255, 255, 0), c5: p.color(255, 0, 0) };
+                clusterColors = [p.color(230, 25, 75), p.color(60, 180, 75), p.color(0, 130, 200), p.color(245, 130, 48), p.color(145, 30, 180), p.color(70, 240, 240), p.color(240, 50, 230), p.color(210, 245, 60), p.color(128, 0, 0), p.color(0, 128, 128)];
+
+                // INITIALIZE STATIONARY/MOVING COLORS
+                stationaryColor = p.color(218, 165, 32); // Golden ROD Yellow
+                movingColor = p.color(255, 0, 255); // Magenta
+
+                calculatePlotScales();
+                p.drawSnrLegendToBuffer(globalMinSnr, globalMaxSnr);
+                drawStaticRegionsToBuffer();
+                p.noLoop();
+            };
+            function calculatePlotScales() { const hPad = 0.05, vPad = 0.05, bOff = 0.05; const aW = p.width * (1 - 2 * hPad); const aH = p.height * (1 - bOff - vPad); plotScaleX = aW / (RADAR_X_MAX - RADAR_X_MIN); plotScaleY = aH / (RADAR_Y_MAX - RADAR_Y_MIN); }
+            p.draw = function () {
+                if (document.documentElement.classList.contains('dark')) {
+                    p.background(55, 65, 81);
+                } else {
+                    p.background(255);
+                }
+                if (!vizData) return;
+                p.image(staticBackgroundBuffer, 0, 0);
+                p.push();
+                p.translate(p.width / 2, p.height * 0.95);
+                p.scale(1, -1);
+                calculatePlotScales();
+                drawAxes();
+                if (toggleTracks.checked) {
+                    drawTrajectories();
+                    drawTrackMarkers();
+                }
+                const frameData = vizData.radarFrames[currentFrame];
+                if (frameData) drawPointCloud(frameData.pointCloud);
+                p.pop();
+
+                if (isCloseUpMode) {
+                    handleCloseUpDisplay();
+                }
+
+                if (toggleSnrColor.checked) p.image(snrLegendBuffer, 10, p.height - snrLegendBuffer.height - 10);
+            };
+
+
+            function drawStaticRegionsToBuffer() { const b = staticBackgroundBuffer; b.clear(); b.push(); b.translate(b.width / 2, b.height * 0.95); b.scale(1, -1); const hPad = 0.05, vPad = 0.05, bOff = 0.05; const bAW = b.width * (1 - 2 * hPad); const bAH = b.height * (1 - bOff - vPad); const bPSX = bAW / (RADAR_X_MAX - RADAR_X_MIN); const bPSY = bAH / (RADAR_Y_MAX - RADAR_Y_MIN); b.stroke(100, 100, 100, 150); b.strokeWeight(1); b.drawingContext.setLineDash([8, 8]); const a1 = p.radians(30), a2 = p.radians(150); const len = 70; b.line(0, 0, len * p.cos(a1) * bPSX, len * p.sin(a1) * bPSY); b.line(0, 0, len * p.cos(a2) * bPSX, len * p.sin(a2) * bPSY); b.drawingContext.setLineDash([]); b.pop(); }
+            function drawAxes() {
+                p.push();
+                const axisColor = document.documentElement.classList.contains('dark') ? p.color(100) : p.color(220);
+                const mainAxisColor = document.documentElement.classList.contains('dark') ? p.color(150) : p.color(180);
+                const textColor = document.documentElement.classList.contains('dark') ? p.color(200) : p.color(150);
+                p.stroke(axisColor);
+                p.strokeWeight(1);
+                for (let y = 5; y <= RADAR_Y_MAX; y += 5) p.line(RADAR_X_MIN * plotScaleX, y * plotScaleY, RADAR_X_MAX * plotScaleX, y * plotScaleY);
+                for (let x = -15; x <= 15; x += 5) { if (x === 0) continue; p.line(x * plotScaleX, RADAR_Y_MIN * plotScaleY, x * plotScaleX, RADAR_Y_MAX * plotScaleY); }
+                p.stroke(mainAxisColor);
+                p.line(RADAR_X_MIN * plotScaleX, 0, RADAR_X_MAX * plotScaleX, 0);
+                p.line(0, RADAR_Y_MIN * plotScaleY, 0, RADAR_Y_MAX * plotScaleY);
+                p.fill(textColor);
+                p.noStroke();
+                p.textSize(10);
+                for (let y = 5; y <= RADAR_Y_MAX; y += 5) { p.push(); p.translate(5, y * plotScaleY); p.scale(1, -1); p.text(y, 0, 4); p.pop(); }
+                for (let x = -15; x <= 15; x += 5) { if (x === 0) continue; p.push(); p.translate(x * plotScaleX, -10); p.scale(1, -1); p.textAlign(p.CENTER); p.text(x, 0, 0); p.pop(); }
+                p.pop();
+            }
+            function drawPointCloud(points) {
+                p.strokeWeight(4);
+                const useSnr = toggleSnrColor.checked;
+                const useCluster = toggleClusterColor.checked;
+                const useInlier = toggleInlierColor.checked;
+                const useFrameNorm = toggleFrameNorm.checked;
+                let minSnr = globalMinSnr, maxSnr = globalMaxSnr;
+
+                if (useSnr && useFrameNorm && points.length > 0) {
+                    const snrVals = points.map(p => p.snr).filter(snr => snr !== null);
+                    if (snrVals.length > 1) {
+                        minSnr = Math.min(...snrVals);
+                        maxSnr = Math.max(...snrVals);
+                    } else if (snrVals.length === 1) {
+                        minSnr = snrVals[0] - 1;
+                        maxSnr = snrVals[0] + 1;
+                    }
+                }
+                if (useSnr) p.drawSnrLegendToBuffer(minSnr, maxSnr);
+
+                for (const pt of points) {
+                    if (pt && pt.x !== null && pt.y !== null) {
+                        if (useCluster && pt.clusterNumber !== null) {
+                            if (pt.clusterNumber > 0) {
+                                p.stroke(clusterColors[(pt.clusterNumber - 1) % clusterColors.length]);
+                            } else {
+                                p.stroke(128);
+                            }
+                        } else if (useInlier) {
+                            if (pt.isOutlier === false) {
+                                p.stroke(0, 255, 0);
+                            } else if (pt.isOutlier === true) {
+                                p.stroke(255, 0, 0);
+                            } else {
+                                p.stroke(128);
+                            }
+                        } else if (useSnr && pt.snr !== null) {
+                            const amt = p.map(pt.snr, minSnr, maxSnr, 0, 1, true);
+                            let c;
+                            if (amt < 0.25) c = p.lerpColor(snrColors.c1, snrColors.c2, amt / 0.25);
+                            else if (amt < 0.5) c = p.lerpColor(snrColors.c2, snrColors.c3, (amt - 0.25) / 0.25);
+                            else if (amt < 0.75) c = p.lerpColor(snrColors.c3, snrColors.c4, (amt - 0.5) / 0.25);
+                            else c = p.lerpColor(snrColors.c4, snrColors.c5, (amt - 0.75) / 0.25);
+                            p.stroke(c);
+                        } else {
+                            p.stroke(0, 150, 255);
+                        }
+                        p.point(pt.x * plotScaleX, pt.y * plotScaleY);
+                    }
+                }
+            }
+            function drawTrajectories() {
+                for (const track of vizData.tracks) {
+                    const logs = track.historyLog.filter(log => log.frameIdx <= currentFrame + 1);
+                    if (logs.length < 2) continue;
+
+                    const lastLog = logs[logs.length - 1];
+                    if (currentFrame + 1 - lastLog.frameIdx > MAX_TRAJECTORY_LENGTH) continue;
+
+                    // Determine the state from the most recent log entry
+                    const isCurrentlyStationary = lastLog.isStationary;
+
+                    // Set max trajectory length based on state
+                    let maxLen = MAX_TRAJECTORY_LENGTH;
+                    if (isCurrentlyStationary) {
+                        maxLen = Math.floor(MAX_TRAJECTORY_LENGTH / 4);
+                    }
+
+                    let trajPts = logs.filter(log => log.correctedPosition && log.correctedPosition[0] !== null).map(log => log.correctedPosition);
+                    if (trajPts.length > maxLen) {
+                        trajPts = trajPts.slice(trajPts.length - maxLen);
+                    }
+
+                    p.push();
+                    p.noFill();
+
+                    // Apply different styles based on the stationary state
+                    if (isCurrentlyStationary) {
+                        // Style for STATIONARY tracks: thin, dashed, green
+                        p.stroke(34, 139, 34, 220); // A darker, forest green
+                        p.strokeWeight(1);
+                        p.drawingContext.setLineDash([3, 3]); // Small dashes
+                    } else {
+                        // Style for MOVING tracks: default blue
+                        const isDark = document.documentElement.classList.contains('dark');
+                        if (isDark) {
+                            p.stroke(10, 170, 255, 250);
+                        } else {
+                            p.stroke(0, 50, 255, 250);
+                        }
+                        p.strokeWeight(1.5);
+                        // No dash for solid line
+                    }
+
+                    p.beginShape();
+                    for (const pos of trajPts) p.vertex(pos[0] * plotScaleX, pos[1] * plotScaleY);
+                    p.endShape();
+
+                    // IMPORTANT: Reset the drawing context to avoid affecting other elements
+                    p.drawingContext.setLineDash([]);
+                    p.pop();
+                }
+            }
+            function drawTrackMarkers() {
+                const showDetails = toggleVelocity.checked;
+                const useStationary = toggleStationaryColor.checked;
+                const textColor = document.documentElement.classList.contains('dark') ? p.color(255) : p.color(0);
+
+                for (const track of vizData.tracks) {
+                    const log = track.historyLog.find(log => log.frameIdx === currentFrame + 1);
+                    if (log) {
+                        const pos = (log.correctedPosition && log.correctedPosition[0] !== null) ? log.correctedPosition : log.predictedPosition;
+                        if (pos && pos.length === 2 && pos[0] !== null && pos[1] !== null) {
+
+                            // --- START OF CORRECTED LOGIC ---
+
+                            const size = 5, x = pos[0] * plotScaleX, y = pos[1] * plotScaleY;
+                            let velocityColor = p.color(255, 0, 255, 200); // Default velocity color
+
+                            p.push();
+                            p.strokeWeight(2);
+
+                            // Check conditions and draw the correct marker
+                            if (useStationary && log.isStationary === true) {
+                                // 1. Stationary object with toggle ON
+                                p.stroke(stationaryColor); // Use yellow
+                                p.noFill();
+                                p.rectMode(p.CENTER);
+                                p.square(x, y, size * 1.5);
+                                velocityColor = stationaryColor;
+                            } else {
+                                // 2. Moving object OR toggle OFF
+                                let markerColor = p.color(0, 0, 255); // Default blue
+                                if (useStationary && log.isStationary === false) {
+                                    markerColor = movingColor; // Magenta if toggle is on
+                                    velocityColor = movingColor;
+                                }
+                                p.stroke(markerColor);
+                                p.line(x - size, y, x + size, y);
+                                p.line(x, y - size, x, y + size);
+                            }
+                            p.pop();
+
+                            // --- END OF CORRECTED LOGIC ---
+
+                            if (showDetails && log.predictedVelocity && log.predictedVelocity[0] !== null) {
+                                const [vx, vy] = log.predictedVelocity;
+
+                                // Only draw velocity line if object is NOT stationary
+                                if (log.isStationary === false) {
+                                    p.push();
+                                    p.stroke(velocityColor);
+                                    p.strokeWeight(2);
+                                    p.line(pos[0] * plotScaleX, pos[1] * plotScaleY, (pos[0] + vx) * plotScaleX, (pos[1] + vy) * plotScaleY);
+                                    p.pop();
+                                }
+
+                                const speed = (p.sqrt(vx * vx + vy * vy) * 3.6).toFixed(1);
+                                const ttc = (log.ttc !== null && isFinite(log.ttc) && log.ttc < 100) ? `TTC: ${log.ttc.toFixed(1)}s` : '';
+                                const text = `ID: ${track.id} | ${speed} km/h\n${ttc}`;
+                                p.push();
+                                p.fill(textColor);
+                                p.noStroke();
+                                p.scale(1, -1);
+                                p.textSize(12);
+                                p.text(text, pos[0] * plotScaleX + 10, -pos[1] * plotScaleY);
+                                p.pop();
+                            }
+                        }
+                    }
+                }
+            }
+
+            function handleCloseUpDisplay() {
+                const frameData = vizData.radarFrames[currentFrame];
+                if (!frameData || !frameData.pointCloud) return;
+
+                const hoveredPoints = [];
+                const radius = 10;
+
+                for (const pt of frameData.pointCloud) {
+                    if (pt.x === null || pt.y === null) continue;
+                    const screenX = (pt.x * plotScaleX) + p.width / 2;
+                    const screenY = p.height * 0.95 - (pt.y * plotScaleY);
+                    const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
+                    if (d < radius) {
+                        hoveredPoints.push({ point: pt, screenX: screenX, screenY: screenY });
+                    }
+                }
+
+                if (hoveredPoints.length > 0) {
+                    hoveredPoints.sort((a, b) => a.screenY - b.screenY);
+
+                    p.push();
+                    p.textSize(12);
+                    const lineHeight = 15;
+                    const boxPadding = 8;
+                    let boxWidth = 0;
+                    const infoStrings = [];
+
+                    for (const hovered of hoveredPoints) {
+                        const pt = hovered.point;
+                        const vel = pt.velocity !== null ? pt.velocity.toFixed(2) : 'N/A';
+                        const snr = pt.snr !== null ? pt.snr.toFixed(1) : 'N/A';
+                        const infoText = `X:${pt.x.toFixed(2)}, Y:${pt.y.toFixed(2)} | V:${vel}, SNR:${snr}`;
+                        infoStrings.push(infoText);
+                        boxWidth = Math.max(boxWidth, p.textWidth(infoText));
+                    }
+
+                    const boxHeight = (infoStrings.length * lineHeight) + (boxPadding * 2);
+                    boxWidth += (boxPadding * 2);
+
+                    const xOffset = 20;
+                    let boxX = p.mouseX + xOffset;
+                    let boxY = p.mouseY - (boxHeight / 2);
+
+                    if (boxX + boxWidth > p.width) {
+                        boxX = p.mouseX - boxWidth - xOffset;
+                    }
+                    boxY = p.constrain(boxY, 0, p.height - boxHeight);
+
+                    const highlightColor = p.color(46, 204, 113);
+
+                    for (let i = 0; i < hoveredPoints.length; i++) {
+                        const hovered = hoveredPoints[i];
+                        p.noFill();
+                        p.stroke(highlightColor);
+                        p.strokeWeight(2);
+                        p.ellipse(hovered.screenX, hovered.screenY, 15, 15);
+                        p.strokeWeight(1);
+                        p.line(boxX + boxPadding, boxY + boxPadding + (i * lineHeight) + (lineHeight / 2), hovered.screenX, hovered.screenY);
+                    }
+
+                    const bgColor = document.documentElement.classList.contains('dark') ? p.color(20, 20, 30, 255) : p.color(245, 245, 245, 255);
+                    p.fill(bgColor);
+                    p.stroke(highlightColor);
+                    p.strokeWeight(1);
+                    p.rect(boxX, boxY, boxWidth, boxHeight, 4);
+
+                    const textColor = document.documentElement.classList.contains('dark') ? p.color(230) : p.color(20);
+                    p.fill(textColor);
+                    p.noStroke();
+                    p.textAlign(p.LEFT, p.TOP);
+                    for (let i = 0; i < infoStrings.length; i++) {
+                        p.text(infoStrings[i], boxX + boxPadding, boxY + boxPadding + (i * lineHeight));
+                    }
+
+                    p.pop();
+                }
+            }
+
+            p.drawSnrLegendToBuffer = function (minV, maxV) { const b = snrLegendBuffer; b.clear(); b.push(); const lx = 10, ly = 20, lw = 15, lh = 400; for (let i = 0; i < lh; i++) { const amt = b.map(i, 0, lh, 1, 0); let c; if (amt < 0.25) c = b.lerpColor(snrColors.c1, snrColors.c2, amt / 0.25); else if (amt < 0.5) c = b.lerpColor(snrColors.c2, snrColors.c3, (amt - 0.25) / 0.25); else if (amt < 0.75) c = b.lerpColor(snrColors.c3, snrColors.c4, (amt - 0.5) / 0.25); else c = b.lerpColor(snrColors.c4, snrColors.c5, (amt - 0.75) / 0.25); b.stroke(c); b.line(lx, ly + i, lx + lw, ly + i); } b.fill(0); b.noStroke(); b.textSize(10); b.textAlign(b.LEFT, b.CENTER); b.text(maxV.toFixed(1), lx + lw + 5, ly); b.text(minV.toFixed(1), lx + lw + 5, ly + lh); b.text("SNR", lx, ly - 10); b.pop(); };
+            p.windowResized = function () { p.resizeCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight); staticBackgroundBuffer.resize(p.width, p.height); calculatePlotScales(); drawStaticRegionsToBuffer(); if (vizData) p.redraw(); };
+        };
+        let speedGraphSketch = function (p) {
+            let staticBuffer, minSpeed, maxSpeed, videoDuration;
+            const pad = { top: 20, right: 130, bottom: 30, left: 50 };
+            p.setup = function () { let canvas = p.createCanvas(speedGraphContainer.offsetWidth, speedGraphContainer.offsetHeight); canvas.parent('speed-graph-container'); staticBuffer = p.createGraphics(p.width, p.height); p.noLoop(); };
+            p.setData = function (canSpeedData, radarData, duration) {
+                if ((!canSpeedData || canSpeedData.length === 0) && !radarData) return;
+                videoDuration = duration;
+
+                let speeds = [];
+                if (canSpeedData) {
+                    speeds.push(...canSpeedData.map(d => parseFloat(d.speed)));
+                }
+                if (radarData && radarData.radarFrames) {
+                    const egoSpeeds = radarData.radarFrames.map(frame => frame.egoVelocity[1] * 3.6);
+                    speeds.push(...egoSpeeds);
+                }
+
+                minSpeed = speeds.length > 0 ? Math.floor(Math.min(...speeds) / 10) * 10 : 0;
+                maxSpeed = speeds.length > 0 ? Math.ceil(Math.max(...speeds) / 10) * 10 : 10;
+                if (maxSpeed <= 0) maxSpeed = 10;
+                if (minSpeed >= 0) minSpeed = 0;
+
+                drawStaticGraphToBuffer(canSpeedData, radarData);
+                p.redraw();
+            };
+            function drawStaticGraphToBuffer(canSpeedData, radarData) {
+                const b = staticBuffer;
+                b.clear();
+                const isDark = document.documentElement.classList.contains('dark');
+                b.background(isDark ? [55, 65, 81] : 255);
+                const gridColor = isDark ? 100 : 200;
+                const textColor = isDark ? 200 : 100;
+
+                b.push();
+                b.stroke(gridColor);
+                b.strokeWeight(1);
+                b.line(pad.left, pad.top, pad.left, b.height - pad.bottom);
+                b.line(pad.left, b.height - pad.bottom, b.width - pad.right, b.height - pad.bottom);
+                b.textAlign(b.RIGHT, b.CENTER);
+                b.noStroke();
+                b.fill(textColor);
+                b.textSize(10);
+                for (let s = minSpeed; s <= maxSpeed; s += 10) {
+                    const y = b.map(s, minSpeed, maxSpeed, b.height - pad.bottom, pad.top);
+                    b.text(s, pad.left - 8, y);
+                    if (s === 0) {
+                        b.strokeWeight(1.5);
+                        b.stroke(isDark ? 150 : 180);
+                    } else {
+                        b.strokeWeight(1);
+                        b.stroke(isDark ? 80 : 230);
+                    }
+                    b.line(pad.left + 1, y, b.width - pad.right, y);
+                    b.noStroke();
+                }
+
+                b.fill(textColor);
+                b.text("km/h", pad.left - 8, pad.top - 8);
+                b.textAlign(b.CENTER, b.TOP);
+                b.noStroke();
+                b.fill(isDark ? 180 : 150);
+                const tInt = Math.max(1, Math.floor(videoDuration / 10));
+                for (let t = 0; t <= videoDuration; t += tInt) { const x = b.map(t, 0, videoDuration, pad.left, b.width - pad.right); b.text(Math.round(t), x, b.height - pad.bottom + 5); }
+                b.fill(textColor);
+                b.text("Time (s)", b.width / 2, b.height - pad.bottom + 18);
+                b.pop();
+
+                if (canSpeedData && canSpeedData.length > 0) {
+                    b.noFill();
+                    b.stroke(0, 150, 255);
+                    b.strokeWeight(1.5);
+                    b.beginShape();
+                    for (const d of canSpeedData) { const relTime = (d.time - videoStartDate.getTime()) / 1000; if (relTime >= 0 && relTime <= videoDuration) { const x = b.map(relTime, 0, videoDuration, pad.left, b.width - pad.right); const y = b.map(d.speed, minSpeed, maxSpeed, b.height - pad.bottom, pad.top); b.vertex(x, y); } }
+                    b.endShape();
+                }
+
+                if (radarData && radarData.radarFrames) {
+                    b.stroke(0, 200, 100);
+                    b.drawingContext.setLineDash([5, 5]);
+                    b.beginShape();
+                    for (const frame of radarData.radarFrames) {
+                        const relTime = frame.timestamp / 1000;
+                        if (relTime >= 0 && relTime <= videoDuration) {
+                            const x = b.map(relTime, 0, videoDuration, pad.left, b.width - pad.right);
+                            const egoSpeedKmh = frame.egoVelocity[1] * 3.6;
+                            const y = b.map(egoSpeedKmh, minSpeed, maxSpeed, b.height - pad.bottom, pad.top);
+                            b.vertex(x, y);
+                        }
+                    }
+                    b.endShape();
+                    b.drawingContext.setLineDash([]);
+                }
+
+                b.push();
+                b.strokeWeight(2);
+                b.noStroke();
+                b.fill(textColor);
+                b.textAlign(b.LEFT, b.CENTER);
+                b.stroke(0, 150, 255);
+                b.line(b.width - 120, pad.top + 10, b.width - 100, pad.top + 10);
+                b.noStroke();
+                b.text("CAN Speed", b.width - 95, pad.top + 10);
+                b.stroke(0, 200, 100);
+                b.drawingContext.setLineDash([3, 3]);
+                b.line(b.width - 120, pad.top + 30, b.width - 100, pad.top + 30);
+                b.drawingContext.setLineDash([]);
+                b.noStroke();
+                b.text("Ego Speed", b.width - 95, pad.top + 30);
+                b.pop();
+            }
+            p.draw = function () {
+                if (document.documentElement.classList.contains('dark')) {
+                    p.background(55, 65, 81);
+                } else {
+                    p.background(255);
+                }
+                if (!videoDuration) return;
+                p.image(staticBuffer, 0, 0);
+                drawTimeIndicator();
+            };
+            function drawTimeIndicator() { const currentTime = videoPlayer.currentTime; const x = p.map(currentTime, 0, videoDuration, pad.left, p.width - pad.right); p.stroke(255, 0, 0, 150); p.strokeWeight(1.5); p.line(x, pad.top, x, p.height - pad.bottom); const videoAbsTimeMs = videoStartDate.getTime() + (currentTime * 1000); const canIndex = findLastCanIndexBefore(videoAbsTimeMs); if (canIndex !== -1) { const canMsg = canData[canIndex]; const y = p.map(canMsg.speed, minSpeed, maxSpeed, p.height - pad.bottom, pad.top); p.fill(255, 0, 0); p.noStroke(); p.ellipse(x, y, 8, 8); } }
+            p.windowResized = function () { p.resizeCanvas(speedGraphContainer.offsetWidth, speedGraphContainer.offsetHeight); staticBuffer.resize(p.width, p.height); if ((canData.length > 0 || vizData) && videoDuration) { drawStaticGraphToBuffer(canData, vizData); } p.redraw(); };
+        };
+
+        function findRadarFrameIndexForTime(targetTimeMs) { if (!vizData || vizData.radarFrames.length === 0) return -1; let low = 0, high = vizData.radarFrames.length - 1, ans = 0; while (low <= high) { let mid = Math.floor((low + high) / 2); if (vizData.radarFrames[mid].timestampMs <= targetTimeMs) { ans = mid; low = mid + 1; } else { high = mid - 1; } } return ans; }
+        function findLastCanIndexBefore(targetTime) { if (!canData || canData.length === 0) return -1; let low = 0, high = canData.length - 1, ans = -1; while (low <= high) { let mid = Math.floor((low + high) / 2); if (canData[mid].time <= targetTime) { ans = mid; low = mid + 1; } else { high = mid - 1; } } return ans; }
+        function initializeVisualization(jsonString) {
+            try {
+                let cleanJsonString = jsonString.replace(/\b(Infinity|NaN|-Infinity)\b/gi, 'null');
+                vizData = JSON.parse(cleanJsonString);
+                if (!vizData.radarFrames || vizData.radarFrames.length === 0) {
+                    showModal('Error: The JSON file does not contain any radar frames.');
+                    return;
+                }
+                const offsetMs = parseFloat(offsetInput.value) || 0;
+                vizData.radarFrames.forEach(frame => {
+                    frame.timestampMs = (radarStartTimeMs + frame.timestamp) - videoStartDate.getTime();
+                });
+                let snrValues = [], totalPoints = 0;
+                vizData.radarFrames.forEach(frame => {
+                    if (frame.pointCloud && frame.pointCloud.length > 0) {
+                        totalPoints += frame.pointCloud.length;
+                        frame.pointCloud.forEach(p => {
+                            if (p.snr !== null) snrValues.push(p.snr);
+                        });
+                    }
+                });
+                if (totalPoints === 0) showModal('Warning: Loaded frames contain no point cloud data.');
+                globalMinSnr = snrValues.length > 0 ? Math.min(...snrValues) : 0;
+                globalMaxSnr = snrValues.length > 0 ? Math.max(...snrValues) : 1;
+                snrMinInput.value = globalMinSnr.toFixed(1);
+                snrMaxInput.value = globalMaxSnr.toFixed(1);
+                resetVisualization();
+                canvasPlaceholder.style.display = 'none';
+                featureToggles.classList.remove('hidden');
+                if (!p5_instance) p5_instance = new p5(sketch);
+                if (speedGraphInstance && (canData.length > 0 || vizData)) {
+                    speedGraphInstance.setData(canData, vizData, videoPlayer.duration);
+                } else {
+                    p5_instance.drawSnrLegendToBuffer(globalMinSnr, globalMaxSnr);
+                    p5_instance.redraw();
+                }
+            } catch (error) {
+                showModal('Error parsing JSON file. Please check file format. Error: ' + error.message);
+                console.error("JSON Parsing Error:", error);
+            }
+        }
+        function setupVideoPlayer(fileURL) { videoPlayer.src = fileURL; videoPlayer.classList.remove('hidden'); videoPlaceholder.classList.add('hidden'); videoPlayer.playbackRate = parseFloat(speedSlider.value); }
+        function processCanLog(logContent) { if (!videoStartDate) { showModal("Please load the video file first to synchronize the CAN log."); rawCanLogText = logContent; return; } canData = []; const lines = logContent.split('\n'); const logRegex = /(\d{2}):(\d{2}):(\d{2}):(\d{4})\s+Rx\s+\d+\s+0x([0-9a-fA-F]+)\s+s\s+\d+((?:\s+[0-9a-fA-F]{2})+)/; const canIdToDecode = '30F'; for (const line of lines) { const match = line.match(logRegex); if (match && match[5].toUpperCase() === canIdToDecode) { const [h, m, s, ms] = [parseInt(match[1]), parseInt(match[2]), parseInt(match[3]), parseInt(match[4].substring(0, 3))]; const msgDate = new Date(videoStartDate); msgDate.setUTCHours(h, m, s, ms); const dataBytes = match[6].trim().split(/\s+/).map(hex => parseInt(hex, 16)); if (dataBytes.length >= 2) { const rawVal = (dataBytes[0] << 3) | (dataBytes[1] >> 5); const speed = (rawVal * 0.1).toFixed(1); canData.push({ time: msgDate.getTime(), speed: speed }); } } } canData.sort((a, b) => a.time - b.time); rawCanLogText = null; console.log(`Processed ${canData.length} CAN messages for ID ${canIdToDecode}.`); if (canData.length > 0 || vizData) { speedGraphPlaceholder.classList.add('hidden'); if (!speedGraphInstance) { speedGraphInstance = new p5(speedGraphSketch); } if (videoPlayer.duration) { speedGraphInstance.setData(canData, vizData, videoPlayer.duration); } } else { showModal(`No CAN messages with ID 0x${canIdToDecode} found.`); } }
+        loadJsonBtn.addEventListener('click', () => jsonFileInput.click()); loadVideoBtn.addEventListener('click', () => videoFileInput.click()); loadCanBtn.addEventListener('click', () => canFileInput.click());
+        clearCacheBtn.addEventListener('click', async () => { const confirmed = await showModal("Clear all cached data and reload?", true); if (confirmed) { indexedDB.deleteDatabase('visualizerDB'); localStorage.clear(); window.location.reload(); } });
+        jsonFileInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; jsonFilename = file.name; localStorage.setItem('jsonFilename', jsonFilename); calculateAndSetOffset(); const reader = new FileReader(); reader.onload = (e) => { saveFileToDB('json', e.target.result); initializeVisualization(e.target.result); }; reader.readAsText(file); });
+        videoFileInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; videoFilename = file.name; localStorage.setItem('videoFilename', videoFilename); saveFileToDB('video', file); calculateAndSetOffset(); if (rawCanLogText) { processCanLog(rawCanLogText); } const fileURL = URL.createObjectURL(file); setupVideoPlayer(fileURL); });
+        canFileInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; canLogFilename = file.name; localStorage.setItem('canLogFilename', canLogFilename); const reader = new FileReader(); reader.onload = (e) => { const logContent = e.target.result; saveFileToDB('canLogText', logContent); processCanLog(logContent); }; reader.readAsText(file); });
+        offsetInput.addEventListener('input', () => { autoOffsetIndicator.classList.add('hidden'); localStorage.setItem('visualizerOffset', offsetInput.value); });
+        applySnrBtn.addEventListener('click', () => { const newMin = parseFloat(snrMinInput.value), newMax = parseFloat(snrMaxInput.value); if (isNaN(newMin) || isNaN(newMax) || newMin >= newMax) { showModal('Invalid SNR range.'); return; } globalMinSnr = newMin; globalMaxSnr = newMax; toggleFrameNorm.checked = false; if (p5_instance) { p5_instance.drawSnrLegendToBuffer(globalMinSnr, globalMaxSnr); p5_instance.redraw(); } });
+        playPauseBtn.addEventListener('click', () => { if (!vizData && !videoPlayer.src) return; isPlaying = !isPlaying; playPauseBtn.textContent = isPlaying ? 'Pause' : 'Play'; if (isPlaying) { if (videoPlayer.src && videoPlayer.readyState > 1) { masterClockStart = performance.now(); mediaTimeStart = videoPlayer.currentTime; lastSyncTime = masterClockStart; videoPlayer.play(); } requestAnimationFrame(animationLoop); } else { if (videoPlayer.src) videoPlayer.pause(); } });
+        stopBtn.addEventListener('click', () => { videoPlayer.pause(); isPlaying = false; playPauseBtn.textContent = 'Play'; if (vizData) { updateFrame(0, true); } else if (videoPlayer.src) { videoPlayer.currentTime = 0; } if (speedGraphInstance) speedGraphInstance.redraw(); });
+        timelineSlider.addEventListener('input', (event) => { if (!vizData) return; if (isPlaying) { videoPlayer.pause(); isPlaying = false; playPauseBtn.textContent = 'Play'; } const frame = parseInt(event.target.value, 10); updateFrame(frame, true); mediaTimeStart = videoPlayer.currentTime; masterClockStart = performance.now(); });
+        speedSlider.addEventListener('input', (event) => { const speed = parseFloat(event.target.value); videoPlayer.playbackRate = speed; speedDisplay.textContent = `${speed.toFixed(1)}x`; });
+
+        // ADD THE NEW TOGGLE TO THE ARRAY
+        const colorToggles = [toggleSnrColor, toggleClusterColor, toggleInlierColor, toggleStationaryColor];
+        colorToggles.forEach(t => { t.addEventListener('change', (e) => { if (e.target.checked) { colorToggles.forEach(o => { if (o !== e.target) o.checked = false; }); } if (p5_instance) p5_instance.redraw(); }); });
+
+        [toggleVelocity, toggleEgoSpeed, toggleFrameNorm, toggleTracks, toggleDebugOverlay].forEach(t => { t.addEventListener('change', () => { if (p5_instance) { if (t === toggleFrameNorm && !toggleFrameNorm.checked) p5_instance.drawSnrLegendToBuffer(globalMinSnr, globalMaxSnr); p5_instance.redraw(); } if (t === toggleDebugOverlay) updateDebugOverlay(videoPlayer.currentTime); }); });
+
+        toggleCloseUp.addEventListener('change', () => {
+            isCloseUpMode = toggleCloseUp.checked;
+            if (p5_instance) {
+                if (isCloseUpMode) {
+                    if (isPlaying) {
+                        playPauseBtn.click();
+                    }
+                    p5_instance.loop();
+                } else {
+                    p5_instance.noLoop();
+                    p5_instance.redraw();
+                }
+            }
+        });
+
+        videoPlayer.addEventListener('ended', () => { isPlaying = false; playPauseBtn.textContent = 'Play'; });
+        document.addEventListener('keydown', (event) => { if (!vizData || ['ArrowRight', 'ArrowLeft'].indexOf(event.key) === -1) return; event.preventDefault(); if (isPlaying) { isPlaying = false; playPauseBtn.textContent = 'Play'; videoPlayer.pause(); } let newFrame = currentFrame; if (event.key === 'ArrowRight') newFrame = Math.min(vizData.radarFrames.length - 1, currentFrame + 1); else if (event.key === 'ArrowLeft') newFrame = Math.max(0, currentFrame - 1); if (newFrame !== currentFrame) { updateFrame(newFrame, true); mediaTimeStart = videoPlayer.currentTime; masterClockStart = performance.now(); } });
+        function extractTimestampInfo(filename) { if (!filename) return null; let match = filename.match(/Tracks_(\d{8}_\d{6}\.\d{3})/); if (match) return { timestampStr: match[1], format: 'json' }; match = filename.match(/WIN_(\d{8})_(\d{2})_(\d{2})_(\d{2})/); if (match) { const timestamp = `${match[1]}_${match[2]}${match[3]}${match[4]}`; return { timestampStr: timestamp, format: 'video' }; } match = filename.match(/video_(\d{8}_\d{6})/); if (match) return { timestampStr: match[1], format: 'video' }; return null; }
+        function parseTimestamp(timestampStr, format) { if (!timestampStr || !format) return null; let day, month, year, hour, minute, second, millisecond = 0; if (format === 'video') { [year, month, day] = [timestampStr.substring(0, 4), timestampStr.substring(4, 6), timestampStr.substring(6, 8)];[hour, minute, second] = [timestampStr.substring(9, 11), timestampStr.substring(11, 13), timestampStr.substring(13, 15)]; } else if (format === 'json') { [day, month, year] = [timestampStr.substring(0, 2), timestampStr.substring(2, 4), timestampStr.substring(4, 8)];[hour, minute, second, millisecond] = [timestampStr.substring(9, 11), timestampStr.substring(11, 13), timestampStr.substring(13, 15), parseInt(timestampStr.substring(16, 19))]; } else { return null; } const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second, millisecond)); return isNaN(date.getTime()) ? null : date; }
+        function calculateAndSetOffset() { const jsonTimestampInfo = extractTimestampInfo(jsonFilename); const videoTimestampInfo = extractTimestampInfo(videoFilename); if (videoTimestampInfo) { videoStartDate = parseTimestamp(videoTimestampInfo.timestampStr, videoTimestampInfo.format); if (videoStartDate) console.log(`Video start date set to: ${videoStartDate.toISOString()}`); } if (jsonTimestampInfo) { const jsonDate = parseTimestamp(jsonTimestampInfo.timestampStr, jsonTimestampInfo.format); if (jsonDate) { radarStartTimeMs = jsonDate.getTime(); console.log(`Radar start date set to: ${jsonDate.toISOString()}`); if (videoStartDate) { const offset = radarStartTimeMs - videoStartDate.getTime(); offsetInput.value = offset; localStorage.setItem('visualizerOffset', offset); autoOffsetIndicator.classList.remove('hidden'); console.log(`Auto-calculated offset: ${offset} ms`); } } } }
+
+        function animationLoop() {
+            if (!isPlaying) return;
+            const playbackSpeed = parseFloat(speedSlider.value);
+            const elapsedRealTime = performance.now() - masterClockStart;
+            const currentMediaTime = mediaTimeStart + (elapsedRealTime / 1000) * playbackSpeed;
+            if (vizData && videoStartDate) {
+                const offsetMs = parseFloat(offsetInput.value) || 0;
+                const targetRadarTimeMs = (currentMediaTime * 1000) + offsetMs;
+                const targetFrame = findRadarFrameIndexForTime(targetRadarTimeMs);
+                if (targetFrame !== currentFrame) {
+                    updateFrame(targetFrame, false);
+                }
+            }
+            const now = performance.now();
+            if (now - lastSyncTime > 500) {
+                const videoTime = videoPlayer.currentTime;
+                const drift = Math.abs(currentMediaTime - videoTime);
+                if (drift > 0.15) {
+                    console.warn(`Resyncing video. Drift was: ${drift.toFixed(3)}s`);
+                    videoPlayer.currentTime = currentMediaTime;
+                }
+                lastSyncTime = now;
+            }
+            if (currentMediaTime >= videoPlayer.duration) {
+                stopBtn.click();
+                return;
+            }
+            updateCanDisplay(currentMediaTime);
+            updateDebugOverlay(currentMediaTime);
+            if (speedGraphInstance) speedGraphInstance.redraw();
+            requestAnimationFrame(animationLoop);
+        }
+
+        function updateFrame(frame, forceVideoSeek) {
+            if (!vizData || frame < 0 || frame >= vizData.radarFrames.length) return;
+            currentFrame = frame;
+            timelineSlider.value = currentFrame;
+            frameCounter.textContent = `Frame: ${currentFrame + 1} / ${vizData.radarFrames.length}`;
+            const frameData = vizData.radarFrames[currentFrame];
+            if (toggleEgoSpeed.checked && frameData) {
+                const egoVy_kmh = (frameData.egoVelocity[1] * 3.6).toFixed(1);
+                egoSpeedDisplay.textContent = `Ego: ${egoVy_kmh} km/h`;
+                egoSpeedDisplay.classList.remove('hidden');
+            } else {
+                egoSpeedDisplay.classList.add('hidden');
+            }
+            if (forceVideoSeek && videoPlayer.src && videoPlayer.readyState > 1 && videoStartDate && frameData) {
+                const offsetMs = parseFloat(offsetInput.value) || 0;
+                const targetRadarTimeMs = frameData.timestampMs;
+                const targetVideoTimeSec = (targetRadarTimeMs - offsetMs) / 1000;
+                if (targetVideoTimeSec >= 0 && targetVideoTimeSec <= videoPlayer.duration) {
+                    if (Math.abs(videoPlayer.currentTime - targetVideoTimeSec) > 0.05) {
+                        videoPlayer.currentTime = targetVideoTimeSec;
+                    }
+                }
+            }
+            if (!isPlaying) {
+                updateCanDisplay(videoPlayer.currentTime);
+                updateDebugOverlay(videoPlayer.currentTime);
+            }
+            if (p5_instance) p5_instance.redraw();
+            if (speedGraphInstance && !isPlaying) speedGraphInstance.redraw();
+        }
+
+        function resetVisualization() { isPlaying = false; playPauseBtn.textContent = 'Play'; const numFrames = vizData.radarFrames.length; timelineSlider.max = numFrames > 0 ? numFrames - 1 : 0; updateFrame(0, true); }
+        function updateCanDisplay(currentMediaTime) { if (canData.length > 0 && videoPlayer.src && videoStartDate) { const videoAbsoluteTimeMs = videoStartDate.getTime() + (currentMediaTime * 1000); const canIndex = findLastCanIndexBefore(videoAbsoluteTimeMs); if (canIndex !== -1) { const currentCanMessage = canData[canIndex]; canSpeedDisplay.textContent = `CAN: ${currentCanMessage.speed} km/h`; canSpeedDisplay.classList.remove('hidden'); } else { canSpeedDisplay.classList.add('hidden'); } } else { canSpeedDisplay.classList.add('hidden'); } }
+        function updateDebugOverlay(currentMediaTime) {
+            if (!toggleDebugOverlay.checked) {
+                debugOverlay.classList.add('hidden');
+                return;
+            } debugOverlay.classList.remove('hidden');
+            let content = [];
+            if (videoStartDate) {
+                const videoAbsoluteTimeMs = videoStartDate.getTime() + (currentMediaTime * 1000);
+                content.push(`Media Time (s): ${currentMediaTime.toFixed(3)}`);
+                const videoFrame = Math.floor(currentMediaTime * VIDEO_FPS);
+                content.push(`Video Frame: ${videoFrame}`);
+                content.push(`Vid Abs Time: ${new Date(videoAbsoluteTimeMs).toISOString().split('T')[1].replace('Z', '')}`);
+                if (canData.length > 0) {
+                    const canIndex = findLastCanIndexBefore(videoAbsoluteTimeMs);
+                    if (canIndex !== -1) {
+                        const currentCanMessage = canData[canIndex];
+                        content.push(`CAN Abs Time: ${new Date(currentCanMessage.time).toISOString().split('T')[1].replace('Z', '')}`);
+                        content.push(`CAN Speed: ${currentCanMessage.speed} km/h`);
+                    }
+                    else {
+                        content.push('CAN: No data for time');
+
+                    }
+                }
+            }
+            else {
+                content.push('Video not loaded...');
+
+            } if (vizData) {
+                content.push(`Radar Frame: ${currentFrame + 1}`);
+                if (vizData.radarFrames[currentFrame])
+                    content.push(`Radar Abs Time: ${new Date(vizData.radarFrames[currentFrame].timestampMs).toISOString().split('T')[1].replace('Z', '')}`);
+            } debugOverlay.innerHTML = content.join('<br>');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DEBUG: DOMContentLoaded fired. Starting session load.");
+            initDB(() => {
+                console.log("DEBUG: Database initialized.");
+                const savedOffset = localStorage.getItem('visualizerOffset');
+                if (savedOffset !== null) {
+                    offsetInput.value = savedOffset;
+                }
+                videoFilename = localStorage.getItem('videoFilename');
+                jsonFilename = localStorage.getItem('jsonFilename');
+                canLogFilename = localStorage.getItem('canLogFilename');
+                console.log(`DEBUG: Found filenames in localStorage: video='${videoFilename}', json='${jsonFilename}', can='${canLogFilename}'`);
+                calculateAndSetOffset();
+                const videoPromise = new Promise(resolve => loadFileFromDB('video', resolve));
+                const jsonPromise = new Promise(resolve => loadFileFromDB('json', resolve));
+                const canLogPromise = new Promise(resolve => loadFileFromDB('canLogText', resolve));
+                Promise.all([videoPromise, jsonPromise, canLogPromise]).then(([videoBlob, jsonString, canLogText]) => {
+                    console.log("DEBUG: All data fetched from IndexedDB. Proceeding with setup.");
+                    const finalizeSetup = () => {
+                        console.log("DEBUG: Finalizing setup.");
+                        if (jsonString) {
+                            console.log("DEBUG: Initializing visualization with JSON data.");
+                            initializeVisualization(jsonString);
+                        } else {
+                            console.log("DEBUG: No JSON string found to initialize.");
+                        }
+                        if (canLogText) {
+                            console.log("DEBUG: Processing CAN log.");
+                            processCanLog(canLogText);
+                        } else {
+                            console.log("DEBUG: No CAN log text found to process.");
+                        }
+                    };
+                    if (videoBlob) {
+                        console.log("DEBUG: Video blob exists. Setting up player.");
+                        const fileURL = URL.createObjectURL(videoBlob);
+                        setupVideoPlayer(fileURL);
+                        videoPlayer.onloadedmetadata = () => {
+                            console.log("DEBUG: 'onloadedmetadata' event fired.");
+                            finalizeSetup();
+                        };
+                        if (videoPlayer.readyState >= 1) {
+                            console.log("DEBUG: Video was already ready (readyState >= 1). Manually calling final setup.");
+                            finalizeSetup();
+                        }
+                    } else {
+                        console.log("DEBUG: No video blob. Calling final setup immediately.");
+                        finalizeSetup();
+                    }
+                }).catch(error => {
+                    console.error("DEBUG: Error during Promise.all data loading:", error);
+                });
+            });
+        });
+</script>
+</body>
+
+</html>
