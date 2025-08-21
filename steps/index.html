@@ -242,7 +242,7 @@
     <input type="file" id="json-file-input" class="hidden" accept=".json"><input type="file" id="video-file-input"
         class="hidden" accept="video/*"><input type="file" id="can-file-input" class="hidden" accept=".log, .txt">
 
-<script>
+<script type = "module">
     
     // ===========================================================================================================
     // REFACTOR PLAN: This monolithic script will be broken down into
@@ -262,6 +262,16 @@
     // - main.js:           The main application entry point that wires everything
     // ===========================================================================================================
 
+
+        // import constants from './constants.js';
+        import {
+                MAX_TRAJECTORY_LENGTH,
+                VIDEO_FPS,
+                RADAR_X_MIN,
+                RADAR_X_MAX,
+                RADAR_Y_MIN,
+                RADAR_Y_MAX
+            } from './src/constants.js';
         // --- Global State ---
         let vizData = null;
         let canData = [];
@@ -270,7 +280,6 @@
         let radarStartTimeMs = 0;
         let isPlaying = false;
         let currentFrame = 0;
-        const MAX_TRAJECTORY_LENGTH = 50;
         let globalMinSnr = 0, globalMaxSnr = 1;
         let p5_instance = null, speedGraphInstance = null;
         let jsonFilename = '', videoFilename = '', canLogFilename = '';
@@ -278,7 +287,6 @@
         let masterClockStart = 0;
         let mediaTimeStart = 0;
         let lastSyncTime = 0;
-        const VIDEO_FPS = 30;
 
         // --- DOM Element References ---
         const canvasContainer = document.getElementById('canvas-container'), canvasPlaceholder = document.getElementById('canvas-placeholder'), videoPlayer = document.getElementById('video-player'), videoPlaceholder = document.getElementById('video-placeholder'), loadJsonBtn = document.getElementById('load-json-btn'), loadVideoBtn = document.getElementById('load-video-btn'), loadCanBtn = document.getElementById('load-can-btn'), jsonFileInput = document.getElementById('json-file-input'), videoFileInput = document.getElementById('video-file-input'), canFileInput = document.getElementById('can-file-input'), playPauseBtn = document.getElementById('play-pause-btn'), stopBtn = document.getElementById('stop-btn'), timelineSlider = document.getElementById('timeline-slider'), frameCounter = document.getElementById('frame-counter'), offsetInput = document.getElementById('offset-input'), speedSlider = document.getElementById('speed-slider'), speedDisplay = document.getElementById('speed-display'), featureToggles = document.getElementById('feature-toggles'), toggleSnrColor = document.getElementById('toggle-snr-color'), toggleClusterColor = document.getElementById('toggle-cluster-color'), toggleInlierColor = document.getElementById('toggle-inlier-color'),
@@ -343,7 +351,7 @@
 
         // --- p5.js Sketch Definitions ---
         let sketch = function (p) {
-            const RADAR_X_MIN = -20, RADAR_X_MAX = 20, RADAR_Y_MIN = 0, RADAR_Y_MAX = 60;
+
             let plotScaleX, plotScaleY, staticBackgroundBuffer, snrLegendBuffer, snrColors, clusterColors;
             // ADD COLOR DEFINITIONS FOR STATIONARY/MOVING OBJECTS
             let stationaryColor, movingColor;
