@@ -298,81 +298,22 @@
             toggleClusterColor, toggleInlierColor, toggleStationaryColor, toggleVelocity,
             toggleTracks, toggleEgoSpeed, toggleFrameNorm, toggleDebugOverlay, egoSpeedDisplay,
             canSpeedDisplay, debugOverlay, snrMinInput, snrMaxInput, applySnrBtn, autoOffsetIndicator,
-            clearCacheBtn, speedGraphContainer, speedGraphPlaceholder, modalContainer, modalOverlay,
-            modalContent, modalText, modalOkBtn, modalCancelBtn, toggleCloseUp,
+            clearCacheBtn, speedGraphContainer, speedGraphPlaceholder, toggleCloseUp,
             //---UI Updaters---//
             updateFrame, resetVisualization, updateCanDisplay, updateDebugOverlay
 
         } from './src/dom.js';
 
-        // --- DARK MODE: Step 3 - Add the JavaScript Logic ---
-        const themeToggleBtn = document.getElementById('theme-toggle');
-        const darkIcon = document.getElementById('theme-toggle-dark-icon');
-        const lightIcon = document.getElementById('theme-toggle-light-icon');
+        // import modal dialog logic from './src/modal.js';
+        import {
+            showModal
+        } from './src/modal.js';
 
-        function setTheme(theme) {
-            if (theme === 'dark') {
-                document.documentElement.classList.add('dark');
-                lightIcon.classList.remove('hidden');
-                darkIcon.classList.add('hidden');
-                localStorage.setItem('color-theme', 'dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-                darkIcon.classList.remove('hidden');
-                lightIcon.classList.add('hidden');
-                localStorage.setItem('color-theme', 'light');
-            }
-            if (appState.p5_instance) appState.p5_instance.redraw();
-            if (appState.speedGraphInstance) {
-                if ((appState.canData.length > 0 || appState.vizData) && videoPlayer.duration) {
-                    appState.speedGraphInstance.setData(appState.canData, appState.vizData, videoPlayer.duration);
-                }
-                appState.speedGraphInstance.redraw();
-            }
-        }
+        // import initialize theme from './src/theme.js';
+        import {
+            initializeTheme
+        } from './src/theme.js';
 
-        const savedTheme = localStorage.getItem('color-theme');
-        if (savedTheme) {
-            setTheme(savedTheme);
-        } else {
-            // Default to light mode if no theme is saved
-            setTheme('light');
-        }
-
-        themeToggleBtn.addEventListener('click', () => {
-            if (document.documentElement.classList.contains('dark')) {
-                setTheme('light');
-            } else {
-                setTheme('dark');
-            }
-        });
-
-        // --- Custom Modal Logic --- //
-        let modalResolve = null;
-        function showModal(message, isConfirm = false) {
-            return new Promise(resolve => {
-                modalText.textContent = message;
-                modalCancelBtn.classList.toggle('hidden', !isConfirm);
-                modalContainer.classList.remove('hidden');
-                setTimeout(() => {
-                    modalOverlay.classList.remove('opacity-0');
-                    modalContent.classList.remove('scale-95');
-                }
-                    , 10);
-                modalResolve = resolve;
-            });
-        }
-        function hideModal(value) {
-            modalOverlay.classList.add('opacity-0');
-            modalContent.classList.add('scale-95');
-            setTimeout(() => {
-                modalContainer.classList.add('hidden');
-                if (modalResolve) modalResolve(value);
-            }, 200);
-        }
-        modalOkBtn.addEventListener('click', () => hideModal(true));
-        modalCancelBtn.addEventListener('click', () => hideModal(false));
-        modalOverlay.addEventListener('click', () => hideModal(false));
 
         // --- IndexedDB for Caching ---
         let db; function initDB(callback) { const request = indexedDB.open('visualizerDB', 1); request.onupgradeneeded = function (event) { const db = event.target.result; if (!db.objectStoreNames.contains('files')) { db.createObjectStore('files'); } }; request.onsuccess = function (event) { db = event.target.result; console.log("Database initialized"); if (callback) callback(); }; request.onerror = function (event) { console.error("IndexedDB error:", event.target.errorCode); }; }
@@ -946,6 +887,7 @@
 
 
         document.addEventListener('DOMContentLoaded', () => {
+            initializeTheme(); // Setup theme here as soon as DOM is loaded.  
             console.log("DEBUG: DOMContentLoaded fired. Starting session load.");
             initDB(() => {
                 console.log("DEBUG: Database initialized.");
