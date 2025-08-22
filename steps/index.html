@@ -242,61 +242,68 @@
     <input type="file" id="json-file-input" class="hidden" accept=".json"><input type="file" id="video-file-input"
         class="hidden" accept="video/*"><input type="file" id="can-file-input" class="hidden" accept=".log, .txt">
 
-<script type = "module">
-    
-    // ===========================================================================================================
-    // REFACTOR PLAN: This monolithic script will be broken down into
-    // the following modules in the '/src' directory:
-    //
-    // - constants.js:      Shared constants (VIDEO_FPS, RADAR_X_MAX)
-    // - utils.js:          Pure helper functions (findRadarFrameIndexForTime)
-    // - state.js:          Central application state management
-    // - dom.js:            DOM element references and UI updaters
-    // - modal.js:          Modal dialog logic
-    // - theme.js:          Dark/Light mode theme switcher
-    // - db.js:             IndexedDB caching logic
-    // - fileParsers.js:    JSON and CAN log parsing logic
-    // - p5/radarSketch.js: The main p5.js radar visualization
-    // - p5/speedGraph.js:  The p5.js speed graph visualization
-    // - sync.js:           Playback and synchronization loop
-    // - main.js:           The main application entry point that wires everything
-    // ===========================================================================================================
+    <script type="module">
+
+        // ===========================================================================================================
+        // REFACTOR PLAN: This monolithic script will be broken down into
+        // the following modules in the '/src' directory:
+        //
+        // - constants.js:      Shared constants (VIDEO_FPS, RADAR_X_MAX)
+        // - utils.js:          Pure helper functions (findRadarFrameIndexForTime)
+        // - state.js:          Central application state management
+        // - dom.js:            DOM element references and UI updaters
+        // - modal.js:          Modal dialog logic
+        // - theme.js:          Dark/Light mode theme switcher
+        // - db.js:             IndexedDB caching logic
+        // - fileParsers.js:    JSON and CAN log parsing logic
+        // - p5/radarSketch.js: The main p5.js radar visualization
+        // - p5/speedGraph.js:  The p5.js speed graph visualization
+        // - sync.js:           Playback and synchronization loop
+        // - main.js:           The main application entry point that wires everything
+        // ===========================================================================================================
 
 
         // import constants from './constants.js';
         import {
-                MAX_TRAJECTORY_LENGTH,
-                VIDEO_FPS,
-                RADAR_X_MIN,
-                RADAR_X_MAX,
-                RADAR_Y_MIN,
-                RADAR_Y_MAX
-            } from './src/constants.js';
+            MAX_TRAJECTORY_LENGTH,
+            VIDEO_FPS,
+            RADAR_X_MIN,
+            RADAR_X_MAX,
+            RADAR_Y_MIN,
+            RADAR_Y_MAX
+        } from './src/constants.js';
 
 
         // import utils and helpers from './src/utils.js';
-            import {
-                findRadarFrameIndexForTime,
-                findLastCanIndexBefore,
-                extractTimestampInfo,
-                parseTimestamp
-            } from './src/utils.js';
+        import {
+            findRadarFrameIndexForTime,
+            findLastCanIndexBefore,
+            extractTimestampInfo,
+            parseTimestamp
+        } from './src/utils.js';
 
 
         // import state machine from './src/state.js';
-            import { 
-                appState 
-            } from './src/state.js';
+        import {
+            appState
+        } from './src/state.js';
 
+        // import DOM elements and UI updaters from './src/dom.js';    
+        import {
+            //---DOM Elements---//
+            canvasContainer, canvasPlaceholder, videoPlayer, videoPlaceholder,
+            loadJsonBtn, loadVideoBtn, loadCanBtn, jsonFileInput, videoFileInput,
+            canFileInput, playPauseBtn, stopBtn, timelineSlider, frameCounter,
+            offsetInput, speedSlider, speedDisplay, featureToggles, toggleSnrColor,
+            toggleClusterColor, toggleInlierColor, toggleStationaryColor, toggleVelocity,
+            toggleTracks, toggleEgoSpeed, toggleFrameNorm, toggleDebugOverlay, egoSpeedDisplay,
+            canSpeedDisplay, debugOverlay, snrMinInput, snrMaxInput, applySnrBtn, autoOffsetIndicator,
+            clearCacheBtn, speedGraphContainer, speedGraphPlaceholder, modalContainer, modalOverlay,
+            modalContent, modalText, modalOkBtn, modalCancelBtn, toggleCloseUp,
+            //---UI Updaters---//
+            updateFrame, resetVisualization, updateCanDisplay, updateDebugOverlay
 
-        // --- DOM Element References ---
-        const canvasContainer = document.getElementById('canvas-container'), canvasPlaceholder = document.getElementById('canvas-placeholder'), videoPlayer = document.getElementById('video-player'), videoPlaceholder = document.getElementById('video-placeholder'), loadJsonBtn = document.getElementById('load-json-btn'), loadVideoBtn = document.getElementById('load-video-btn'), loadCanBtn = document.getElementById('load-can-btn'), jsonFileInput = document.getElementById('json-file-input'), videoFileInput = document.getElementById('video-file-input'), canFileInput = document.getElementById('can-file-input'), playPauseBtn = document.getElementById('play-pause-btn'), stopBtn = document.getElementById('stop-btn'), timelineSlider = document.getElementById('timeline-slider'), frameCounter = document.getElementById('frame-counter'), offsetInput = document.getElementById('offset-input'), speedSlider = document.getElementById('speed-slider'), speedDisplay = document.getElementById('speed-display'), featureToggles = document.getElementById('feature-toggles'), toggleSnrColor = document.getElementById('toggle-snr-color'), toggleClusterColor = document.getElementById('toggle-cluster-color'), toggleInlierColor = document.getElementById('toggle-inlier-color'),
-            // ADD THIS LINE
-            toggleStationaryColor = document.getElementById('toggle-stationary-color'),
-            // END OF ADDED LINE
-            toggleVelocity = document.getElementById('toggle-velocity'), toggleTracks = document.getElementById('toggle-tracks'), toggleEgoSpeed = document.getElementById('toggle-ego-speed'), toggleFrameNorm = document.getElementById('toggle-frame-norm'), toggleDebugOverlay = document.getElementById('toggle-debug-overlay'), egoSpeedDisplay = document.getElementById('ego-speed-display'), canSpeedDisplay = document.getElementById('can-speed-display'), debugOverlay = document.getElementById('debug-overlay'), snrMinInput = document.getElementById('snr-min-input'), snrMaxInput = document.getElementById('snr-max-input'), applySnrBtn = document.getElementById('apply-snr-btn'), autoOffsetIndicator = document.getElementById('auto-offset-indicator'), clearCacheBtn = document.getElementById('clear-cache-btn'), speedGraphContainer = document.getElementById('speed-graph-container'), speedGraphPlaceholder = document.getElementById('speed-graph-placeholder'), modalContainer = document.getElementById('modal-container'), modalOverlay = document.getElementById('modal-overlay'), modalContent = document.getElementById('modal-content'), modalText = document.getElementById('modal-text'), modalOkBtn = document.getElementById('modal-ok-btn'), modalCancelBtn = document.getElementById('modal-cancel-btn');
-        const toggleCloseUp = document.getElementById('toggle-close-up');
-        let modalResolve = null;
+        } from './src/dom.js';
 
         // --- DARK MODE: Step 3 - Add the JavaScript Logic ---
         const themeToggleBtn = document.getElementById('theme-toggle');
@@ -340,10 +347,32 @@
             }
         });
 
-        // --- Custom Modal Logic ---
-        function showModal(message, isConfirm = false) { return new Promise(resolve => { modalText.textContent = message; modalCancelBtn.classList.toggle('hidden', !isConfirm); modalContainer.classList.remove('hidden'); setTimeout(() => { modalOverlay.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10); modalResolve = resolve; }); }
-        function hideModal(value) { modalOverlay.classList.add('opacity-0'); modalContent.classList.add('scale-95'); setTimeout(() => { modalContainer.classList.add('hidden'); if (modalResolve) modalResolve(value); }, 200); }
-        modalOkBtn.addEventListener('click', () => hideModal(true)); modalCancelBtn.addEventListener('click', () => hideModal(false)); modalOverlay.addEventListener('click', () => hideModal(false));
+        // --- Custom Modal Logic --- //
+        let modalResolve = null;
+        function showModal(message, isConfirm = false) {
+            return new Promise(resolve => {
+                modalText.textContent = message;
+                modalCancelBtn.classList.toggle('hidden', !isConfirm);
+                modalContainer.classList.remove('hidden');
+                setTimeout(() => {
+                    modalOverlay.classList.remove('opacity-0');
+                    modalContent.classList.remove('scale-95');
+                }
+                    , 10);
+                modalResolve = resolve;
+            });
+        }
+        function hideModal(value) {
+            modalOverlay.classList.add('opacity-0');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                modalContainer.classList.add('hidden');
+                if (modalResolve) modalResolve(value);
+            }, 200);
+        }
+        modalOkBtn.addEventListener('click', () => hideModal(true));
+        modalCancelBtn.addEventListener('click', () => hideModal(false));
+        modalOverlay.addEventListener('click', () => hideModal(false));
 
         // --- IndexedDB for Caching ---
         let db; function initDB(callback) { const request = indexedDB.open('visualizerDB', 1); request.onupgradeneeded = function (event) { const db = event.target.result; if (!db.objectStoreNames.contains('files')) { db.createObjectStore('files'); } }; request.onsuccess = function (event) { db = event.target.result; console.log("Database initialized"); if (callback) callback(); }; request.onerror = function (event) { console.error("IndexedDB error:", event.target.errorCode); }; }
@@ -915,73 +944,6 @@
             requestAnimationFrame(animationLoop);
         }
 
-        function updateFrame(frame, forceVideoSeek) {
-            if (!appState.vizData || frame < 0 || frame >= appState.vizData.radarFrames.length) return;
-            appState.currentFrame = frame;
-            timelineSlider.value = appState.currentFrame;
-            frameCounter.textContent = `Frame: ${appState.currentFrame + 1} / ${appState.vizData.radarFrames.length}`;
-            const frameData = appState.vizData.radarFrames[appState.currentFrame];
-            if (toggleEgoSpeed.checked && frameData) {
-                const egoVy_kmh = (frameData.egoVelocity[1] * 3.6).toFixed(1);
-                egoSpeedDisplay.textContent = `Ego: ${egoVy_kmh} km/h`;
-                egoSpeedDisplay.classList.remove('hidden');
-            } else {
-                egoSpeedDisplay.classList.add('hidden');
-            }
-            if (forceVideoSeek && videoPlayer.src && videoPlayer.readyState > 1 && appState.videoStartDate && frameData) {
-                const offsetMs = parseFloat(offsetInput.value) || 0;
-                const targetRadarTimeMs = frameData.timestampMs;
-                const targetVideoTimeSec = (targetRadarTimeMs - offsetMs) / 1000;
-                if (targetVideoTimeSec >= 0 && targetVideoTimeSec <= videoPlayer.duration) {
-                    if (Math.abs(videoPlayer.currentTime - targetVideoTimeSec) > 0.05) {
-                        videoPlayer.currentTime = targetVideoTimeSec;
-                    }
-                }
-            }
-            if (!appState.isPlaying) {
-                updateCanDisplay(videoPlayer.currentTime);
-                updateDebugOverlay(videoPlayer.currentTime);
-            }
-            if (appState.p5_instance) appState.p5_instance.redraw();
-            if (appState.speedGraphInstance && !appState.isPlaying) appState.speedGraphInstance.redraw();
-        }
-
-        function resetVisualization() { appState.isPlaying = false; playPauseBtn.textContent = 'Play'; const numFrames = appState.vizData.radarFrames.length; timelineSlider.max = numFrames > 0 ? numFrames - 1 : 0; updateFrame(0, true); }
-        function updateCanDisplay(currentMediaTime) { if (appState.canData.length > 0 && videoPlayer.src && appState.videoStartDate) { const videoAbsoluteTimeMs = appState.videoStartDate.getTime() + (currentMediaTime * 1000); const canIndex = findLastCanIndexBefore(videoAbsoluteTimeMs, appState.canData); if (canIndex !== -1) { const currentCanMessage = appState.canData[canIndex]; canSpeedDisplay.textContent = `CAN: ${currentCanMessage.speed} km/h`; canSpeedDisplay.classList.remove('hidden'); } else { canSpeedDisplay.classList.add('hidden'); } } else { canSpeedDisplay.classList.add('hidden'); } }
-        function updateDebugOverlay(currentMediaTime) {
-            if (!toggleDebugOverlay.checked) {
-                debugOverlay.classList.add('hidden');
-                return;
-            } debugOverlay.classList.remove('hidden');
-            let content = [];
-            if (appState.videoStartDate) {
-                const videoAbsoluteTimeMs = appState.videoStartDate.getTime() + (currentMediaTime * 1000);
-                content.push(`Media Time (s): ${currentMediaTime.toFixed(3)}`);
-                const videoFrame = Math.floor(currentMediaTime * VIDEO_FPS);
-                content.push(`Video Frame: ${videoFrame}`);
-                content.push(`Vid Abs Time: ${new Date(videoAbsoluteTimeMs).toISOString().split('T')[1].replace('Z', '')}`);
-                if (appState.canData.length > 0) {
-                    const canIndex = findLastCanIndexBefore(videoAbsoluteTimeMs, appState.canData);
-                    if (canIndex !== -1) {
-                        const currentCanMessage = appState.canData[canIndex];
-                        content.push(`CAN Abs Time: ${new Date(currentCanMessage.time).toISOString().split('T')[1].replace('Z', '')}`);
-                        content.push(`CAN Speed: ${currentCanMessage.speed} km/h`);
-                    }
-                    else {
-                        content.push('CAN: No data for time');
-
-                    }
-                }
-            }
-            else {
-                content.push('Video not loaded...');
-
-            } if (appState.vizData) {
-                content.push(`Radar Frame: ${appState.currentFrame + 1}`);
-                if (appState.vizData.radarFrames[appState.currentFrame])
-                    content.push(`Radar Abs Time: ${new Date(appState.vizData.radarFrames[appState.currentFrame].timestampMs).toISOString().split('T')[1].replace('Z', '')}`);
-            } debugOverlay.innerHTML = content.join('<br>');
-        }
 
         document.addEventListener('DOMContentLoaded', () => {
             console.log("DEBUG: DOMContentLoaded fired. Starting session load.");
@@ -1037,7 +999,7 @@
                 });
             });
         });
-</script>
+    </script>
 </body>
 
 </html>
