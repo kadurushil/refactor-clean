@@ -283,21 +283,11 @@
             } from './src/utils.js';
 
 
-            // --- Global State ---
-        let vizData = null;
-        let canData = [];
-        let rawCanLogText = null;
-        let videoStartDate = null;
-        let radarStartTimeMs = 0;
-        let isPlaying = false;
-        let currentFrame = 0;
-        let globalMinSnr = 0, globalMaxSnr = 1;
-        let p5_instance = null, speedGraphInstance = null;
-        let jsonFilename = '', videoFilename = '', canLogFilename = '';
-        let isCloseUpMode = false;
-        let masterClockStart = 0;
-        let mediaTimeStart = 0;
-        let lastSyncTime = 0;
+        // import state machine from './src/state.js';
+            import { 
+                appState 
+            } from './src/state.js';
+
 
         // --- DOM Element References ---
         const canvasContainer = document.getElementById('canvas-container'), canvasPlaceholder = document.getElementById('canvas-placeholder'), videoPlayer = document.getElementById('video-player'), videoPlaceholder = document.getElementById('video-placeholder'), loadJsonBtn = document.getElementById('load-json-btn'), loadVideoBtn = document.getElementById('load-video-btn'), loadCanBtn = document.getElementById('load-can-btn'), jsonFileInput = document.getElementById('json-file-input'), videoFileInput = document.getElementById('video-file-input'), canFileInput = document.getElementById('can-file-input'), playPauseBtn = document.getElementById('play-pause-btn'), stopBtn = document.getElementById('stop-btn'), timelineSlider = document.getElementById('timeline-slider'), frameCounter = document.getElementById('frame-counter'), offsetInput = document.getElementById('offset-input'), speedSlider = document.getElementById('speed-slider'), speedDisplay = document.getElementById('speed-display'), featureToggles = document.getElementById('feature-toggles'), toggleSnrColor = document.getElementById('toggle-snr-color'), toggleClusterColor = document.getElementById('toggle-cluster-color'), toggleInlierColor = document.getElementById('toggle-inlier-color'),
@@ -325,12 +315,12 @@
                 lightIcon.classList.add('hidden');
                 localStorage.setItem('color-theme', 'light');
             }
-            if (p5_instance) p5_instance.redraw();
-            if (speedGraphInstance) {
-                if ((canData.length > 0 || vizData) && videoPlayer.duration) {
-                    speedGraphInstance.setData(canData, vizData, videoPlayer.duration);
+            if (appState.p5_instance) appState.p5_instance.redraw();
+            if (appState.speedGraphInstance) {
+                if ((appState.canData.length > 0 || appState.vizData) && videoPlayer.duration) {
+                    appState.speedGraphInstance.setData(appState.canData, appState.vizData, videoPlayer.duration);
                 }
-                speedGraphInstance.redraw();
+                appState.speedGraphInstance.redraw();
             }
         }
 
@@ -380,7 +370,7 @@
                 movingColor = p.color(255, 0, 255); // Magenta
 
                 calculatePlotScales();
-                p.drawSnrLegendToBuffer(globalMinSnr, globalMaxSnr);
+                p.drawSnrLegendToBuffer(appState.globalMinSnr, appState.globalMaxSnr);
                 drawStaticRegionsToBuffer();
                 p.noLoop();
             };
@@ -391,7 +381,7 @@
                 } else {
                     p.background(255);
                 }
-                if (!vizData) return;
+                if (!appState.vizData) return;
                 p.image(staticBackgroundBuffer, 0, 0);
                 p.push();
                 p.translate(p.width / 2, p.height * 0.95);
@@ -402,11 +392,11 @@
                     drawTrajectories();
                     drawTrackMarkers();
                 }
-                const frameData = vizData.radarFrames[currentFrame];
+                const frameData = appState.vizData.radarFrames[appState.currentFrame];
                 if (frameData) drawPointCloud(frameData.pointCloud);
                 p.pop();
 
-                if (isCloseUpMode) {
+                if (appState.isCloseUpMode) {
                     handleCloseUpDisplay();
                 }
 
@@ -440,7 +430,7 @@
                 const useCluster = toggleClusterColor.checked;
                 const useInlier = toggleInlierColor.checked;
                 const useFrameNorm = toggleFrameNorm.checked;
-                let minSnr = globalMinSnr, maxSnr = globalMaxSnr;
+                let minSnr = appState.globalMinSnr, maxSnr = appState.globalMaxSnr;
 
                 if (useSnr && useFrameNorm && points.length > 0) {
                     const snrVals = points.map(p => p.snr).filter(snr => snr !== null);
@@ -486,12 +476,12 @@
                 }
             }
             function drawTrajectories() {
-                for (const track of vizData.tracks) {
-                    const logs = track.historyLog.filter(log => log.frameIdx <= currentFrame + 1);
+                for (const track of appState.vizData.tracks) {
+                    const logs = track.historyLog.filter(log => log.frameIdx <= appState.currentFrame + 1);
                     if (logs.length < 2) continue;
 
                     const lastLog = logs[logs.length - 1];
-                    if (currentFrame + 1 - lastLog.frameIdx > MAX_TRAJECTORY_LENGTH) continue;
+                    if (appState.currentFrame + 1 - lastLog.frameIdx > MAX_TRAJECTORY_LENGTH) continue;
 
                     // Determine the state from the most recent log entry
                     const isCurrentlyStationary = lastLog.isStationary;
@@ -542,8 +532,8 @@
                 const useStationary = toggleStationaryColor.checked;
                 const textColor = document.documentElement.classList.contains('dark') ? p.color(255) : p.color(0);
 
-                for (const track of vizData.tracks) {
-                    const log = track.historyLog.find(log => log.frameIdx === currentFrame + 1);
+                for (const track of appState.vizData.tracks) {
+                    const log = track.historyLog.find(log => log.frameIdx === appState.currentFrame + 1);
                     if (log) {
                         const pos = (log.correctedPosition && log.correctedPosition[0] !== null) ? log.correctedPosition : log.predictedPosition;
                         if (pos && pos.length === 2 && pos[0] !== null && pos[1] !== null) {
@@ -608,7 +598,7 @@
             }
 
             function handleCloseUpDisplay() {
-                const frameData = vizData.radarFrames[currentFrame];
+                const frameData = appState.vizData.radarFrames[appState.currentFrame];
                 if (!frameData || !frameData.pointCloud) return;
 
                 const hoveredPoints = [];
@@ -686,7 +676,7 @@
             }
 
             p.drawSnrLegendToBuffer = function (minV, maxV) { const b = snrLegendBuffer; b.clear(); b.push(); const lx = 10, ly = 20, lw = 15, lh = 400; for (let i = 0; i < lh; i++) { const amt = b.map(i, 0, lh, 1, 0); let c; if (amt < 0.25) c = b.lerpColor(snrColors.c1, snrColors.c2, amt / 0.25); else if (amt < 0.5) c = b.lerpColor(snrColors.c2, snrColors.c3, (amt - 0.25) / 0.25); else if (amt < 0.75) c = b.lerpColor(snrColors.c3, snrColors.c4, (amt - 0.5) / 0.25); else c = b.lerpColor(snrColors.c4, snrColors.c5, (amt - 0.75) / 0.25); b.stroke(c); b.line(lx, ly + i, lx + lw, ly + i); } b.fill(0); b.noStroke(); b.textSize(10); b.textAlign(b.LEFT, b.CENTER); b.text(maxV.toFixed(1), lx + lw + 5, ly); b.text(minV.toFixed(1), lx + lw + 5, ly + lh); b.text("SNR", lx, ly - 10); b.pop(); };
-            p.windowResized = function () { p.resizeCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight); staticBackgroundBuffer.resize(p.width, p.height); calculatePlotScales(); drawStaticRegionsToBuffer(); if (vizData) p.redraw(); };
+            p.windowResized = function () { p.resizeCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight); staticBackgroundBuffer.resize(p.width, p.height); calculatePlotScales(); drawStaticRegionsToBuffer(); if (appState.vizData) p.redraw(); };
         };
         let speedGraphSketch = function (p) {
             let staticBuffer, minSpeed, maxSpeed, videoDuration;
@@ -760,7 +750,7 @@
                     b.stroke(0, 150, 255);
                     b.strokeWeight(1.5);
                     b.beginShape();
-                    for (const d of canSpeedData) { const relTime = (d.time - videoStartDate.getTime()) / 1000; if (relTime >= 0 && relTime <= videoDuration) { const x = b.map(relTime, 0, videoDuration, pad.left, b.width - pad.right); const y = b.map(d.speed, minSpeed, maxSpeed, b.height - pad.bottom, pad.top); b.vertex(x, y); } }
+                    for (const d of canSpeedData) { const relTime = (d.time - appState.videoStartDate.getTime()) / 1000; if (relTime >= 0 && relTime <= videoDuration) { const x = b.map(relTime, 0, videoDuration, pad.left, b.width - pad.right); const y = b.map(d.speed, minSpeed, maxSpeed, b.height - pad.bottom, pad.top); b.vertex(x, y); } }
                     b.endShape();
                 }
 
@@ -808,24 +798,24 @@
                 p.image(staticBuffer, 0, 0);
                 drawTimeIndicator();
             };
-            function drawTimeIndicator() { const currentTime = videoPlayer.currentTime; const x = p.map(currentTime, 0, videoDuration, pad.left, p.width - pad.right); p.stroke(255, 0, 0, 150); p.strokeWeight(1.5); p.line(x, pad.top, x, p.height - pad.bottom); const videoAbsTimeMs = videoStartDate.getTime() + (currentTime * 1000); const canIndex = findLastCanIndexBefore(videoAbsTimeMs, canData); if (canIndex !== -1) { const canMsg = canData[canIndex]; const y = p.map(canMsg.speed, minSpeed, maxSpeed, p.height - pad.bottom, pad.top); p.fill(255, 0, 0); p.noStroke(); p.ellipse(x, y, 8, 8); } }
-            p.windowResized = function () { p.resizeCanvas(speedGraphContainer.offsetWidth, speedGraphContainer.offsetHeight); staticBuffer.resize(p.width, p.height); if ((canData.length > 0 || vizData) && videoDuration) { drawStaticGraphToBuffer(canData, vizData); } p.redraw(); };
+            function drawTimeIndicator() { const currentTime = videoPlayer.currentTime; const x = p.map(currentTime, 0, videoDuration, pad.left, p.width - pad.right); p.stroke(255, 0, 0, 150); p.strokeWeight(1.5); p.line(x, pad.top, x, p.height - pad.bottom); const videoAbsTimeMs = appState.videoStartDate.getTime() + (currentTime * 1000); const canIndex = findLastCanIndexBefore(videoAbsTimeMs, appState.canData); if (canIndex !== -1) { const canMsg = appState.canData[canIndex]; const y = p.map(canMsg.speed, minSpeed, maxSpeed, p.height - pad.bottom, pad.top); p.fill(255, 0, 0); p.noStroke(); p.ellipse(x, y, 8, 8); } }
+            p.windowResized = function () { p.resizeCanvas(speedGraphContainer.offsetWidth, speedGraphContainer.offsetHeight); staticBuffer.resize(p.width, p.height); if ((appState.canData.length > 0 || appState.vizData) && videoDuration) { drawStaticGraphToBuffer(appState.canData, appState.vizData); } p.redraw(); };
         };
 
         function initializeVisualization(jsonString) {
             try {
                 let cleanJsonString = jsonString.replace(/\b(Infinity|NaN|-Infinity)\b/gi, 'null');
-                vizData = JSON.parse(cleanJsonString);
-                if (!vizData.radarFrames || vizData.radarFrames.length === 0) {
+                appState.vizData = JSON.parse(cleanJsonString);
+                if (!appState.vizData.radarFrames || appState.vizData.radarFrames.length === 0) {
                     showModal('Error: The JSON file does not contain any radar frames.');
                     return;
                 }
                 const offsetMs = parseFloat(offsetInput.value) || 0;
-                vizData.radarFrames.forEach(frame => {
-                    frame.timestampMs = (radarStartTimeMs + frame.timestamp) - videoStartDate.getTime();
+                appState.vizData.radarFrames.forEach(frame => {
+                    frame.timestampMs = (appState.radarStartTimeMs + frame.timestamp) - appState.videoStartDate.getTime();
                 });
                 let snrValues = [], totalPoints = 0;
-                vizData.radarFrames.forEach(frame => {
+                appState.vizData.radarFrames.forEach(frame => {
                     if (frame.pointCloud && frame.pointCloud.length > 0) {
                         totalPoints += frame.pointCloud.length;
                         frame.pointCloud.forEach(p => {
@@ -834,19 +824,19 @@
                     }
                 });
                 if (totalPoints === 0) showModal('Warning: Loaded frames contain no point cloud data.');
-                globalMinSnr = snrValues.length > 0 ? Math.min(...snrValues) : 0;
-                globalMaxSnr = snrValues.length > 0 ? Math.max(...snrValues) : 1;
-                snrMinInput.value = globalMinSnr.toFixed(1);
-                snrMaxInput.value = globalMaxSnr.toFixed(1);
+                appState.globalMinSnr = snrValues.length > 0 ? Math.min(...snrValues) : 0;
+                appState.globalMaxSnr = snrValues.length > 0 ? Math.max(...snrValues) : 1;
+                snrMinInput.value = appState.globalMinSnr.toFixed(1);
+                snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
                 resetVisualization();
                 canvasPlaceholder.style.display = 'none';
                 featureToggles.classList.remove('hidden');
-                if (!p5_instance) p5_instance = new p5(sketch);
-                if (speedGraphInstance && (canData.length > 0 || vizData)) {
-                    speedGraphInstance.setData(canData, vizData, videoPlayer.duration);
+                if (!appState.p5_instance) appState.p5_instance = new p5(sketch);
+                if (appState.speedGraphInstance && (appState.canData.length > 0 || appState.vizData)) {
+                    appState.speedGraphInstance.setData(appState.canData, appState.vizData, videoPlayer.duration);
                 } else {
-                    p5_instance.drawSnrLegendToBuffer(globalMinSnr, globalMaxSnr);
-                    p5_instance.redraw();
+                    appState.p5_instance.drawSnrLegendToBuffer(appState.globalMinSnr, appState.globalMaxSnr);
+                    appState.p5_instance.redraw();
                 }
             } catch (error) {
                 showModal('Error parsing JSON file. Please check file format. Error: ' + error.message);
@@ -854,66 +844,66 @@
             }
         }
         function setupVideoPlayer(fileURL) { videoPlayer.src = fileURL; videoPlayer.classList.remove('hidden'); videoPlaceholder.classList.add('hidden'); videoPlayer.playbackRate = parseFloat(speedSlider.value); }
-        function processCanLog(logContent) { if (!videoStartDate) { showModal("Please load the video file first to synchronize the CAN log."); rawCanLogText = logContent; return; } canData = []; const lines = logContent.split('\n'); const logRegex = /(\d{2}):(\d{2}):(\d{2}):(\d{4})\s+Rx\s+\d+\s+0x([0-9a-fA-F]+)\s+s\s+\d+((?:\s+[0-9a-fA-F]{2})+)/; const canIdToDecode = '30F'; for (const line of lines) { const match = line.match(logRegex); if (match && match[5].toUpperCase() === canIdToDecode) { const [h, m, s, ms] = [parseInt(match[1]), parseInt(match[2]), parseInt(match[3]), parseInt(match[4].substring(0, 3))]; const msgDate = new Date(videoStartDate); msgDate.setUTCHours(h, m, s, ms); const dataBytes = match[6].trim().split(/\s+/).map(hex => parseInt(hex, 16)); if (dataBytes.length >= 2) { const rawVal = (dataBytes[0] << 3) | (dataBytes[1] >> 5); const speed = (rawVal * 0.1).toFixed(1); canData.push({ time: msgDate.getTime(), speed: speed }); } } } canData.sort((a, b) => a.time - b.time); rawCanLogText = null; console.log(`Processed ${canData.length} CAN messages for ID ${canIdToDecode}.`); if (canData.length > 0 || vizData) { speedGraphPlaceholder.classList.add('hidden'); if (!speedGraphInstance) { speedGraphInstance = new p5(speedGraphSketch); } if (videoPlayer.duration) { speedGraphInstance.setData(canData, vizData, videoPlayer.duration); } } else { showModal(`No CAN messages with ID 0x${canIdToDecode} found.`); } }
+        function processCanLog(logContent) { if (!appState.videoStartDate) { showModal("Please load the video file first to synchronize the CAN log."); appState.rawCanLogText = logContent; return; } appState.canData = []; const lines = logContent.split('\n'); const logRegex = /(\d{2}):(\d{2}):(\d{2}):(\d{4})\s+Rx\s+\d+\s+0x([0-9a-fA-F]+)\s+s\s+\d+((?:\s+[0-9a-fA-F]{2})+)/; const canIdToDecode = '30F'; for (const line of lines) { const match = line.match(logRegex); if (match && match[5].toUpperCase() === canIdToDecode) { const [h, m, s, ms] = [parseInt(match[1]), parseInt(match[2]), parseInt(match[3]), parseInt(match[4].substring(0, 3))]; const msgDate = new Date(appState.videoStartDate); msgDate.setUTCHours(h, m, s, ms); const dataBytes = match[6].trim().split(/\s+/).map(hex => parseInt(hex, 16)); if (dataBytes.length >= 2) { const rawVal = (dataBytes[0] << 3) | (dataBytes[1] >> 5); const speed = (rawVal * 0.1).toFixed(1); appState.canData.push({ time: msgDate.getTime(), speed: speed }); } } } appState.canData.sort((a, b) => a.time - b.time); appState.rawCanLogText = null; console.log(`Processed ${appState.canData.length} CAN messages for ID ${canIdToDecode}.`); if (appState.canData.length > 0 || appState.vizData) { speedGraphPlaceholder.classList.add('hidden'); if (!appState.speedGraphInstance) { appState.speedGraphInstance = new p5(speedGraphSketch); } if (videoPlayer.duration) { appState.speedGraphInstance.setData(appState.canData, appState.vizData, videoPlayer.duration); } } else { showModal(`No CAN messages with ID 0x${canIdToDecode} found.`); } }
         loadJsonBtn.addEventListener('click', () => jsonFileInput.click()); loadVideoBtn.addEventListener('click', () => videoFileInput.click()); loadCanBtn.addEventListener('click', () => canFileInput.click());
         clearCacheBtn.addEventListener('click', async () => { const confirmed = await showModal("Clear all cached data and reload?", true); if (confirmed) { indexedDB.deleteDatabase('visualizerDB'); localStorage.clear(); window.location.reload(); } });
-        jsonFileInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; jsonFilename = file.name; localStorage.setItem('jsonFilename', jsonFilename); calculateAndSetOffset(); const reader = new FileReader(); reader.onload = (e) => { saveFileToDB('json', e.target.result); initializeVisualization(e.target.result); }; reader.readAsText(file); });
-        videoFileInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; videoFilename = file.name; localStorage.setItem('videoFilename', videoFilename); saveFileToDB('video', file); calculateAndSetOffset(); if (rawCanLogText) { processCanLog(rawCanLogText); } const fileURL = URL.createObjectURL(file); setupVideoPlayer(fileURL); });
-        canFileInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; canLogFilename = file.name; localStorage.setItem('canLogFilename', canLogFilename); const reader = new FileReader(); reader.onload = (e) => { const logContent = e.target.result; saveFileToDB('canLogText', logContent); processCanLog(logContent); }; reader.readAsText(file); });
+        jsonFileInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; appState.jsonFilename = file.name; localStorage.setItem('appState.jsonFilename', appState.jsonFilename); calculateAndSetOffset(); const reader = new FileReader(); reader.onload = (e) => { saveFileToDB('json', e.target.result); initializeVisualization(e.target.result); }; reader.readAsText(file); });
+        videoFileInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; appState.videoFilename = file.name; localStorage.setItem('appState.videoFilename', appState.videoFilename); saveFileToDB('video', file); calculateAndSetOffset(); if (appState.rawCanLogText) { processCanLog(appState.rawCanLogText); } const fileURL = URL.createObjectURL(file); setupVideoPlayer(fileURL); });
+        canFileInput.addEventListener('change', (event) => { const file = event.target.files[0]; if (!file) return; appState.canLogFilename = file.name; localStorage.setItem('appState.canLogFilename', appState.canLogFilename); const reader = new FileReader(); reader.onload = (e) => { const logContent = e.target.result; saveFileToDB('canLogText', logContent); processCanLog(logContent); }; reader.readAsText(file); });
         offsetInput.addEventListener('input', () => { autoOffsetIndicator.classList.add('hidden'); localStorage.setItem('visualizerOffset', offsetInput.value); });
-        applySnrBtn.addEventListener('click', () => { const newMin = parseFloat(snrMinInput.value), newMax = parseFloat(snrMaxInput.value); if (isNaN(newMin) || isNaN(newMax) || newMin >= newMax) { showModal('Invalid SNR range.'); return; } globalMinSnr = newMin; globalMaxSnr = newMax; toggleFrameNorm.checked = false; if (p5_instance) { p5_instance.drawSnrLegendToBuffer(globalMinSnr, globalMaxSnr); p5_instance.redraw(); } });
-        playPauseBtn.addEventListener('click', () => { if (!vizData && !videoPlayer.src) return; isPlaying = !isPlaying; playPauseBtn.textContent = isPlaying ? 'Pause' : 'Play'; if (isPlaying) { if (videoPlayer.src && videoPlayer.readyState > 1) { masterClockStart = performance.now(); mediaTimeStart = videoPlayer.currentTime; lastSyncTime = masterClockStart; videoPlayer.play(); } requestAnimationFrame(animationLoop); } else { if (videoPlayer.src) videoPlayer.pause(); } });
-        stopBtn.addEventListener('click', () => { videoPlayer.pause(); isPlaying = false; playPauseBtn.textContent = 'Play'; if (vizData) { updateFrame(0, true); } else if (videoPlayer.src) { videoPlayer.currentTime = 0; } if (speedGraphInstance) speedGraphInstance.redraw(); });
-        timelineSlider.addEventListener('input', (event) => { if (!vizData) return; if (isPlaying) { videoPlayer.pause(); isPlaying = false; playPauseBtn.textContent = 'Play'; } const frame = parseInt(event.target.value, 10); updateFrame(frame, true); mediaTimeStart = videoPlayer.currentTime; masterClockStart = performance.now(); });
+        applySnrBtn.addEventListener('click', () => { const newMin = parseFloat(snrMinInput.value), newMax = parseFloat(snrMaxInput.value); if (isNaN(newMin) || isNaN(newMax) || newMin >= newMax) { showModal('Invalid SNR range.'); return; } appState.globalMinSnr = newMin; appState.globalMaxSnr = newMax; toggleFrameNorm.checked = false; if (appState.p5_instance) { appState.p5_instance.drawSnrLegendToBuffer(appState.globalMinSnr, appState.globalMaxSnr); appState.p5_instance.redraw(); } });
+        playPauseBtn.addEventListener('click', () => { if (!appState.vizData && !videoPlayer.src) return; appState.isPlaying = !appState.isPlaying; playPauseBtn.textContent = appState.isPlaying ? 'Pause' : 'Play'; if (appState.isPlaying) { if (videoPlayer.src && videoPlayer.readyState > 1) { appState.masterClockStart = performance.now(); appState.mediaTimeStart = videoPlayer.currentTime; appState.lastSyncTime = appState.masterClockStart; videoPlayer.play(); } requestAnimationFrame(animationLoop); } else { if (videoPlayer.src) videoPlayer.pause(); } });
+        stopBtn.addEventListener('click', () => { videoPlayer.pause(); appState.isPlaying = false; playPauseBtn.textContent = 'Play'; if (appState.vizData) { updateFrame(0, true); } else if (videoPlayer.src) { videoPlayer.currentTime = 0; } if (appState.speedGraphInstance) appState.speedGraphInstance.redraw(); });
+        timelineSlider.addEventListener('input', (event) => { if (!appState.vizData) return; if (appState.isPlaying) { videoPlayer.pause(); appState.isPlaying = false; playPauseBtn.textContent = 'Play'; } const frame = parseInt(event.target.value, 10); updateFrame(frame, true); appState.mediaTimeStart = videoPlayer.currentTime; appState.masterClockStart = performance.now(); });
         speedSlider.addEventListener('input', (event) => { const speed = parseFloat(event.target.value); videoPlayer.playbackRate = speed; speedDisplay.textContent = `${speed.toFixed(1)}x`; });
 
         // ADD THE NEW TOGGLE TO THE ARRAY
         const colorToggles = [toggleSnrColor, toggleClusterColor, toggleInlierColor, toggleStationaryColor];
-        colorToggles.forEach(t => { t.addEventListener('change', (e) => { if (e.target.checked) { colorToggles.forEach(o => { if (o !== e.target) o.checked = false; }); } if (p5_instance) p5_instance.redraw(); }); });
+        colorToggles.forEach(t => { t.addEventListener('change', (e) => { if (e.target.checked) { colorToggles.forEach(o => { if (o !== e.target) o.checked = false; }); } if (appState.p5_instance) appState.p5_instance.redraw(); }); });
 
-        [toggleVelocity, toggleEgoSpeed, toggleFrameNorm, toggleTracks, toggleDebugOverlay].forEach(t => { t.addEventListener('change', () => { if (p5_instance) { if (t === toggleFrameNorm && !toggleFrameNorm.checked) p5_instance.drawSnrLegendToBuffer(globalMinSnr, globalMaxSnr); p5_instance.redraw(); } if (t === toggleDebugOverlay) updateDebugOverlay(videoPlayer.currentTime); }); });
+        [toggleVelocity, toggleEgoSpeed, toggleFrameNorm, toggleTracks, toggleDebugOverlay].forEach(t => { t.addEventListener('change', () => { if (appState.p5_instance) { if (t === toggleFrameNorm && !toggleFrameNorm.checked) appState.p5_instance.drawSnrLegendToBuffer(appState.globalMinSnr, appState.globalMaxSnr); appState.p5_instance.redraw(); } if (t === toggleDebugOverlay) updateDebugOverlay(videoPlayer.currentTime); }); });
 
         toggleCloseUp.addEventListener('change', () => {
-            isCloseUpMode = toggleCloseUp.checked;
-            if (p5_instance) {
-                if (isCloseUpMode) {
-                    if (isPlaying) {
+            appState.isCloseUpMode = toggleCloseUp.checked;
+            if (appState.p5_instance) {
+                if (appState.isCloseUpMode) {
+                    if (appState.isPlaying) {
                         playPauseBtn.click();
                     }
-                    p5_instance.loop();
+                    appState.p5_instance.loop();
                 } else {
-                    p5_instance.noLoop();
-                    p5_instance.redraw();
+                    appState.p5_instance.noLoop();
+                    appState.p5_instance.redraw();
                 }
             }
         });
 
-        videoPlayer.addEventListener('ended', () => { isPlaying = false; playPauseBtn.textContent = 'Play'; });
-        document.addEventListener('keydown', (event) => { if (!vizData || ['ArrowRight', 'ArrowLeft'].indexOf(event.key) === -1) return; event.preventDefault(); if (isPlaying) { isPlaying = false; playPauseBtn.textContent = 'Play'; videoPlayer.pause(); } let newFrame = currentFrame; if (event.key === 'ArrowRight') newFrame = Math.min(vizData.radarFrames.length - 1, currentFrame + 1); else if (event.key === 'ArrowLeft') newFrame = Math.max(0, currentFrame - 1); if (newFrame !== currentFrame) { updateFrame(newFrame, true); mediaTimeStart = videoPlayer.currentTime; masterClockStart = performance.now(); } });
-        function calculateAndSetOffset() { const jsonTimestampInfo = extractTimestampInfo(jsonFilename); const videoTimestampInfo = extractTimestampInfo(videoFilename); if (videoTimestampInfo) { videoStartDate = parseTimestamp(videoTimestampInfo.timestampStr, videoTimestampInfo.format); if (videoStartDate) console.log(`Video start date set to: ${videoStartDate.toISOString()}`); } if (jsonTimestampInfo) { const jsonDate = parseTimestamp(jsonTimestampInfo.timestampStr, jsonTimestampInfo.format); if (jsonDate) { radarStartTimeMs = jsonDate.getTime(); console.log(`Radar start date set to: ${jsonDate.toISOString()}`); if (videoStartDate) { const offset = radarStartTimeMs - videoStartDate.getTime(); offsetInput.value = offset; localStorage.setItem('visualizerOffset', offset); autoOffsetIndicator.classList.remove('hidden'); console.log(`Auto-calculated offset: ${offset} ms`); } } } }
+        videoPlayer.addEventListener('ended', () => { appState.isPlaying = false; playPauseBtn.textContent = 'Play'; });
+        document.addEventListener('keydown', (event) => { if (!appState.vizData || ['ArrowRight', 'ArrowLeft'].indexOf(event.key) === -1) return; event.preventDefault(); if (appState.isPlaying) { appState.isPlaying = false; playPauseBtn.textContent = 'Play'; videoPlayer.pause(); } let newFrame = appState.currentFrame; if (event.key === 'ArrowRight') newFrame = Math.min(appState.vizData.radarFrames.length - 1, appState.currentFrame + 1); else if (event.key === 'ArrowLeft') newFrame = Math.max(0, appState.currentFrame - 1); if (newFrame !== appState.currentFrame) { updateFrame(newFrame, true); appState.mediaTimeStart = videoPlayer.currentTime; appState.masterClockStart = performance.now(); } });
+        function calculateAndSetOffset() { const jsonTimestampInfo = extractTimestampInfo(appState.jsonFilename); const videoTimestampInfo = extractTimestampInfo(appState.videoFilename); if (videoTimestampInfo) { appState.videoStartDate = parseTimestamp(videoTimestampInfo.timestampStr, videoTimestampInfo.format); if (appState.videoStartDate) console.log(`Video start date set to: ${appState.videoStartDate.toISOString()}`); } if (jsonTimestampInfo) { const jsonDate = parseTimestamp(jsonTimestampInfo.timestampStr, jsonTimestampInfo.format); if (jsonDate) { appState.radarStartTimeMs = jsonDate.getTime(); console.log(`Radar start date set to: ${jsonDate.toISOString()}`); if (appState.videoStartDate) { const offset = appState.radarStartTimeMs - appState.videoStartDate.getTime(); offsetInput.value = offset; localStorage.setItem('visualizerOffset', offset); autoOffsetIndicator.classList.remove('hidden'); console.log(`Auto-calculated offset: ${offset} ms`); } } } }
 
         function animationLoop() {
-            if (!isPlaying) return;
+            if (!appState.isPlaying) return;
             const playbackSpeed = parseFloat(speedSlider.value);
-            const elapsedRealTime = performance.now() - masterClockStart;
-            const currentMediaTime = mediaTimeStart + (elapsedRealTime / 1000) * playbackSpeed;
-            if (vizData && videoStartDate) {
+            const elapsedRealTime = performance.now() - appState.masterClockStart;
+            const currentMediaTime = appState.mediaTimeStart + (elapsedRealTime / 1000) * playbackSpeed;
+            if (appState.vizData && appState.videoStartDate) {
                 const offsetMs = parseFloat(offsetInput.value) || 0;
                 const targetRadarTimeMs = (currentMediaTime * 1000) + offsetMs;
-                const targetFrame = findRadarFrameIndexForTime(targetRadarTimeMs, vizData);
-                if (targetFrame !== currentFrame) {
+                const targetFrame = findRadarFrameIndexForTime(targetRadarTimeMs, appState.vizData);
+                if (targetFrame !== appState.currentFrame) {
                     updateFrame(targetFrame, false);
                 }
             }
             const now = performance.now();
-            if (now - lastSyncTime > 500) {
+            if (now - appState.lastSyncTime > 500) {
                 const videoTime = videoPlayer.currentTime;
                 const drift = Math.abs(currentMediaTime - videoTime);
                 if (drift > 0.15) {
                     console.warn(`Resyncing video. Drift was: ${drift.toFixed(3)}s`);
                     videoPlayer.currentTime = currentMediaTime;
                 }
-                lastSyncTime = now;
+                appState.lastSyncTime = now;
             }
             if (currentMediaTime >= videoPlayer.duration) {
                 stopBtn.click();
@@ -921,16 +911,16 @@
             }
             updateCanDisplay(currentMediaTime);
             updateDebugOverlay(currentMediaTime);
-            if (speedGraphInstance) speedGraphInstance.redraw();
+            if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
             requestAnimationFrame(animationLoop);
         }
 
         function updateFrame(frame, forceVideoSeek) {
-            if (!vizData || frame < 0 || frame >= vizData.radarFrames.length) return;
-            currentFrame = frame;
-            timelineSlider.value = currentFrame;
-            frameCounter.textContent = `Frame: ${currentFrame + 1} / ${vizData.radarFrames.length}`;
-            const frameData = vizData.radarFrames[currentFrame];
+            if (!appState.vizData || frame < 0 || frame >= appState.vizData.radarFrames.length) return;
+            appState.currentFrame = frame;
+            timelineSlider.value = appState.currentFrame;
+            frameCounter.textContent = `Frame: ${appState.currentFrame + 1} / ${appState.vizData.radarFrames.length}`;
+            const frameData = appState.vizData.radarFrames[appState.currentFrame];
             if (toggleEgoSpeed.checked && frameData) {
                 const egoVy_kmh = (frameData.egoVelocity[1] * 3.6).toFixed(1);
                 egoSpeedDisplay.textContent = `Ego: ${egoVy_kmh} km/h`;
@@ -938,7 +928,7 @@
             } else {
                 egoSpeedDisplay.classList.add('hidden');
             }
-            if (forceVideoSeek && videoPlayer.src && videoPlayer.readyState > 1 && videoStartDate && frameData) {
+            if (forceVideoSeek && videoPlayer.src && videoPlayer.readyState > 1 && appState.videoStartDate && frameData) {
                 const offsetMs = parseFloat(offsetInput.value) || 0;
                 const targetRadarTimeMs = frameData.timestampMs;
                 const targetVideoTimeSec = (targetRadarTimeMs - offsetMs) / 1000;
@@ -948,32 +938,32 @@
                     }
                 }
             }
-            if (!isPlaying) {
+            if (!appState.isPlaying) {
                 updateCanDisplay(videoPlayer.currentTime);
                 updateDebugOverlay(videoPlayer.currentTime);
             }
-            if (p5_instance) p5_instance.redraw();
-            if (speedGraphInstance && !isPlaying) speedGraphInstance.redraw();
+            if (appState.p5_instance) appState.p5_instance.redraw();
+            if (appState.speedGraphInstance && !appState.isPlaying) appState.speedGraphInstance.redraw();
         }
 
-        function resetVisualization() { isPlaying = false; playPauseBtn.textContent = 'Play'; const numFrames = vizData.radarFrames.length; timelineSlider.max = numFrames > 0 ? numFrames - 1 : 0; updateFrame(0, true); }
-        function updateCanDisplay(currentMediaTime) { if (canData.length > 0 && videoPlayer.src && videoStartDate) { const videoAbsoluteTimeMs = videoStartDate.getTime() + (currentMediaTime * 1000); const canIndex = findLastCanIndexBefore(videoAbsoluteTimeMs, canData); if (canIndex !== -1) { const currentCanMessage = canData[canIndex]; canSpeedDisplay.textContent = `CAN: ${currentCanMessage.speed} km/h`; canSpeedDisplay.classList.remove('hidden'); } else { canSpeedDisplay.classList.add('hidden'); } } else { canSpeedDisplay.classList.add('hidden'); } }
+        function resetVisualization() { appState.isPlaying = false; playPauseBtn.textContent = 'Play'; const numFrames = appState.vizData.radarFrames.length; timelineSlider.max = numFrames > 0 ? numFrames - 1 : 0; updateFrame(0, true); }
+        function updateCanDisplay(currentMediaTime) { if (appState.canData.length > 0 && videoPlayer.src && appState.videoStartDate) { const videoAbsoluteTimeMs = appState.videoStartDate.getTime() + (currentMediaTime * 1000); const canIndex = findLastCanIndexBefore(videoAbsoluteTimeMs, appState.canData); if (canIndex !== -1) { const currentCanMessage = appState.canData[canIndex]; canSpeedDisplay.textContent = `CAN: ${currentCanMessage.speed} km/h`; canSpeedDisplay.classList.remove('hidden'); } else { canSpeedDisplay.classList.add('hidden'); } } else { canSpeedDisplay.classList.add('hidden'); } }
         function updateDebugOverlay(currentMediaTime) {
             if (!toggleDebugOverlay.checked) {
                 debugOverlay.classList.add('hidden');
                 return;
             } debugOverlay.classList.remove('hidden');
             let content = [];
-            if (videoStartDate) {
-                const videoAbsoluteTimeMs = videoStartDate.getTime() + (currentMediaTime * 1000);
+            if (appState.videoStartDate) {
+                const videoAbsoluteTimeMs = appState.videoStartDate.getTime() + (currentMediaTime * 1000);
                 content.push(`Media Time (s): ${currentMediaTime.toFixed(3)}`);
                 const videoFrame = Math.floor(currentMediaTime * VIDEO_FPS);
                 content.push(`Video Frame: ${videoFrame}`);
                 content.push(`Vid Abs Time: ${new Date(videoAbsoluteTimeMs).toISOString().split('T')[1].replace('Z', '')}`);
-                if (canData.length > 0) {
-                    const canIndex = findLastCanIndexBefore(videoAbsoluteTimeMs, canData);
+                if (appState.canData.length > 0) {
+                    const canIndex = findLastCanIndexBefore(videoAbsoluteTimeMs, appState.canData);
                     if (canIndex !== -1) {
-                        const currentCanMessage = canData[canIndex];
+                        const currentCanMessage = appState.canData[canIndex];
                         content.push(`CAN Abs Time: ${new Date(currentCanMessage.time).toISOString().split('T')[1].replace('Z', '')}`);
                         content.push(`CAN Speed: ${currentCanMessage.speed} km/h`);
                     }
@@ -986,10 +976,10 @@
             else {
                 content.push('Video not loaded...');
 
-            } if (vizData) {
-                content.push(`Radar Frame: ${currentFrame + 1}`);
-                if (vizData.radarFrames[currentFrame])
-                    content.push(`Radar Abs Time: ${new Date(vizData.radarFrames[currentFrame].timestampMs).toISOString().split('T')[1].replace('Z', '')}`);
+            } if (appState.vizData) {
+                content.push(`Radar Frame: ${appState.currentFrame + 1}`);
+                if (appState.vizData.radarFrames[appState.currentFrame])
+                    content.push(`Radar Abs Time: ${new Date(appState.vizData.radarFrames[appState.currentFrame].timestampMs).toISOString().split('T')[1].replace('Z', '')}`);
             } debugOverlay.innerHTML = content.join('<br>');
         }
 
@@ -1001,10 +991,10 @@
                 if (savedOffset !== null) {
                     offsetInput.value = savedOffset;
                 }
-                videoFilename = localStorage.getItem('videoFilename');
-                jsonFilename = localStorage.getItem('jsonFilename');
-                canLogFilename = localStorage.getItem('canLogFilename');
-                console.log(`DEBUG: Found filenames in localStorage: video='${videoFilename}', json='${jsonFilename}', can='${canLogFilename}'`);
+                appState.videoFilename = localStorage.getItem('appState.videoFilename');
+                appState.jsonFilename = localStorage.getItem('appState.jsonFilename');
+                appState.canLogFilename = localStorage.getItem('appState.canLogFilename');
+                console.log(`DEBUG: Found filenames in localStorage: video='${appState.videoFilename}', json='${appState.jsonFilename}', can='${appState.canLogFilename}'`);
                 calculateAndSetOffset();
                 const videoPromise = new Promise(resolve => loadFileFromDB('video', resolve));
                 const jsonPromise = new Promise(resolve => loadFileFromDB('json', resolve));
