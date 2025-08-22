@@ -1,8 +1,5 @@
 import { appState } from './state.js';
-
-
-
-
+import { videoPlayer } from './dom.js';
 // --- DARK MODE: Step 3 - Add the JavaScript Logic ---
 const themeToggleBtn = document.getElementById('theme-toggle');
 const darkIcon = document.getElementById('theme-toggle-dark-icon');
@@ -20,14 +17,23 @@ function setTheme(theme) {
         lightIcon.classList.add('hidden');
         localStorage.setItem('color-theme', 'light');
     }
+    
+    // Redraw the main radar plot
     if (appState.p5_instance) appState.p5_instance.redraw();
+
+    // =================== THE FIX IS HERE ===================
     if (appState.speedGraphInstance) {
+        // 1. Check if there's data to draw.
         if ((appState.canData.length > 0 || appState.vizData) && videoPlayer.duration) {
-            appState.speedGraphInstance.setData(appState.canData, appState.vizData, videoPlayer.duration);
+            // 2. Force it to take a new "photograph" with the new theme colors.
+            appState.speedGraphInstance.drawStaticGraphToBuffer(appState.canData, appState.vizData);
         }
+        // 3. Display the new photograph.
         appState.speedGraphInstance.redraw();
     }
+    // ================= END OF FIX =========================
 }
+
 
 export function initializeTheme() {
     const savedTheme = localStorage.getItem('color-theme');
