@@ -263,6 +263,14 @@
         // ===========================================================================================================
 
 
+        // import animation loop from './src/sync.js';
+
+        import {
+            animationLoop
+
+        } from './src/sync.js';
+
+
         // import radar sketch from './src/p5/radarSketch.js';
 
         import {
@@ -506,38 +514,6 @@
         document.addEventListener('keydown', (event) => { if (!appState.vizData || ['ArrowRight', 'ArrowLeft'].indexOf(event.key) === -1) return; event.preventDefault(); if (appState.isPlaying) { appState.isPlaying = false; playPauseBtn.textContent = 'Play'; videoPlayer.pause(); } let newFrame = appState.currentFrame; if (event.key === 'ArrowRight') newFrame = Math.min(appState.vizData.radarFrames.length - 1, appState.currentFrame + 1); else if (event.key === 'ArrowLeft') newFrame = Math.max(0, appState.currentFrame - 1); if (newFrame !== appState.currentFrame) { updateFrame(newFrame, true); appState.mediaTimeStart = videoPlayer.currentTime; appState.masterClockStart = performance.now(); } });
         function calculateAndSetOffset() { const jsonTimestampInfo = extractTimestampInfo(appState.jsonFilename); const videoTimestampInfo = extractTimestampInfo(appState.videoFilename); if (videoTimestampInfo) { appState.videoStartDate = parseTimestamp(videoTimestampInfo.timestampStr, videoTimestampInfo.format); if (appState.videoStartDate) console.log(`Video start date set to: ${appState.videoStartDate.toISOString()}`); } if (jsonTimestampInfo) { const jsonDate = parseTimestamp(jsonTimestampInfo.timestampStr, jsonTimestampInfo.format); if (jsonDate) { appState.radarStartTimeMs = jsonDate.getTime(); console.log(`Radar start date set to: ${jsonDate.toISOString()}`); if (appState.videoStartDate) { const offset = appState.radarStartTimeMs - appState.videoStartDate.getTime(); offsetInput.value = offset; localStorage.setItem('visualizerOffset', offset); autoOffsetIndicator.classList.remove('hidden'); console.log(`Auto-calculated offset: ${offset} ms`); } } } }
 
-        function animationLoop() {
-            if (!appState.isPlaying) return;
-            const playbackSpeed = parseFloat(speedSlider.value);
-            const elapsedRealTime = performance.now() - appState.masterClockStart;
-            const currentMediaTime = appState.mediaTimeStart + (elapsedRealTime / 1000) * playbackSpeed;
-            if (appState.vizData && appState.videoStartDate) {
-                const offsetMs = parseFloat(offsetInput.value) || 0;
-                const targetRadarTimeMs = (currentMediaTime * 1000) + offsetMs;
-                const targetFrame = findRadarFrameIndexForTime(targetRadarTimeMs, appState.vizData);
-                if (targetFrame !== appState.currentFrame) {
-                    updateFrame(targetFrame, false);
-                }
-            }
-            const now = performance.now();
-            if (now - appState.lastSyncTime > 500) {
-                const videoTime = videoPlayer.currentTime;
-                const drift = Math.abs(currentMediaTime - videoTime);
-                if (drift > 0.15) {
-                    console.warn(`Resyncing video. Drift was: ${drift.toFixed(3)}s`);
-                    videoPlayer.currentTime = currentMediaTime;
-                }
-                appState.lastSyncTime = now;
-            }
-            if (currentMediaTime >= videoPlayer.duration) {
-                stopBtn.click();
-                return;
-            }
-            updateCanDisplay(currentMediaTime);
-            updateDebugOverlay(currentMediaTime);
-            if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
-            requestAnimationFrame(animationLoop);
-        }
 
         // --- Application Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
