@@ -40,6 +40,7 @@ import {
   findLastCanIndexBefore,
   extractTimestampInfo,
   parseTimestamp,
+  throttle
 } from "./utils.js";
 // import state machine from './src/state.js';
 import { appState } from "./state.js";
@@ -316,7 +317,7 @@ stopBtn.addEventListener("click", () => {
   }
   if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
 });
-timelineSlider.addEventListener("input", (event) => {
+timelineSlider.addEventListener('input', throttle((event) => {
   if (!appState.vizData) return;
   if (appState.isPlaying) {
     videoPlayer.pause();
@@ -327,7 +328,7 @@ timelineSlider.addEventListener("input", (event) => {
   updateFrame(frame, true);
   appState.mediaTimeStart = videoPlayer.currentTime;
   appState.masterClockStart = performance.now();
-});
+}, 16 )); // 50ms throttle delay
 speedSlider.addEventListener("input", (event) => {
   const speed = parseFloat(event.target.value);
   videoPlayer.playbackRate = speed;

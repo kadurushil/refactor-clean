@@ -61,3 +61,22 @@ export function parseTimestamp(timestampStr, format) {
     const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second, millisecond));
     return isNaN(date.getTime()) ? null : date;
 }
+
+/**
+ * Creates a throttled function that only invokes the provided function
+ * at most once per every `delay` milliseconds.
+ * @param {Function} func The function to throttle.
+ * @param {number} delay The number of milliseconds to throttle invocations to.
+ * @returns {Function} Returns the new throttled function.
+ */
+export function throttle(func, delay) {
+    let lastCall = 0;
+    return function(...args) {
+        const now = new Date().getTime();
+        if (now - lastCall < delay) {
+            return;
+        }
+        lastCall = now;
+        return func(...args);
+    };
+}
