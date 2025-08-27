@@ -74,6 +74,7 @@ import {
   toggleEgoSpeed,
   toggleFrameNorm,
   toggleDebugOverlay,
+  toggleDebug2Overlay,
   egoSpeedDisplay,
   canSpeedDisplay,
   debugOverlay,
@@ -359,6 +360,7 @@ colorToggles.forEach((t) => {
   toggleFrameNorm,
   toggleTracks,
   toggleDebugOverlay,
+  toggleDebug2Overlay
 ].forEach((t) => {
   t.addEventListener("change", () => {
     if (appState.p5_instance) {
@@ -369,7 +371,7 @@ colorToggles.forEach((t) => {
         );
       appState.p5_instance.redraw();
     }
-    if (t === toggleDebugOverlay) updateDebugOverlay(videoPlayer.currentTime);
+    if (t === toggleDebugOverlay || t === toggleDebug2Overlay) { updateDebugOverlay(videoPlayer.currentTime)};
   });
 });
 

@@ -17,7 +17,7 @@ export function animationLoop() {
     // Update radar frame based on the master clock
     if (appState.vizData && appState.videoStartDate) {
         const offsetMs = parseFloat(offsetInput.value) || 0;
-        const targetRadarTimeMs = (currentMediaTime * 1000) + offsetMs;
+        const targetRadarTimeMs = (currentMediaTime * 1000);
         const targetFrame = findRadarFrameIndexForTime(targetRadarTimeMs, appState.vizData);
         if (targetFrame !== appState.currentFrame) {
             updateFrame(targetFrame, false);

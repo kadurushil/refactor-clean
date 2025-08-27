@@ -75,7 +75,7 @@ export const speedGraphSketch = function (p) {
                     b.drawingContext.setLineDash([5, 5]);
                     b.beginShape();
                     for (const frame of radarData.radarFrames) {
-                        const relTime = frame.timestamp / 1000;
+                        const relTime = frame.timestampMs / 1000;
                         if (relTime >= 0 && relTime <= videoDuration) {
                             const x = b.map(relTime, 0, videoDuration, pad.left, b.width - pad.right);
                             const egoSpeedKmh = frame.egoVelocity[1] * 3.6;
