@@ -43,24 +43,28 @@ If you don't have serve, install it first:
 3.) Open in Browser: Open your web browser and navigate to the URL provided by the server (usually http://localhost:8000 or http://localhost:3000). # Navigate to the server URL
 
 Project StructureThe project has been refactored into a modular structure to separate concerns. All JavaScript source code resides in the src/ directory..
-├── index.html # The main HTML shell for the application
-├── README.md # This documentation file
-└── src/
-    ├── constants.js # Shared constants (e.g., radar bounds, FPS)
-    ├── db.js # IndexedDB logic for caching files
-    ├── dom.js # DOM element references and UI update functions
-    ├── drawUtils.js # p5.js drawing helper functions for the radar sketch
-    ├── fileParsers.js # Logic for parsing JSON and CAN log files
-    ├── main.js # The main application entry point and event wiring
-    ├── modal.js # Logic for the pop-up modal dialog
-    ├── state.js # Centralized application state management
-    ├── sync.js # The core animation loop and playback synchronization logic
-    ├── theme.js # Dark/Light mode theme switching logic
-    ├── utils.js # General utility functions (e.g., binary search, throttling)
-    └── p5/
-        ├── radarSketch.js # The p5.js sketch for the main radar visualization
-        └── speedGraphSketch.js # The p5.js sketch for the speed graph
 
+
+
+    ├── index.html # The main HTML shell for the application
+    ├── README.md # This documentation file
+    └── src/
+        ├── constants.js # Shared constants (e.g., radar bounds, FPS)
+        ├── db.js # IndexedDB logic for caching files
+        ├── dom.js # DOM element references and UI update functions
+        ├── drawUtils.js # p5.js drawing helper functions for the radar sketch
+        ├── fileParsers.js # Logic for parsing JSON and CAN log files
+        ├── main.js # The main application entry point and event wiring
+        ├── modal.js # Logic for the pop-up modal dialog
+        ├── state.js # Centralized application state management
+        ├── sync.js # The core animation loop and playback synchronization logic
+        ├── theme.js # Dark/Light mode theme switching logic
+        ├── utils.js # General utility functions (e.g., binary search, throttling)
+            └── p5/
+                ├── radarSketch.js # The p5.js sketch for the main radar visualization
+                └── speedGraphSketch.js # The p5.js sketch for the speed graph
+        
+        
 How to Use the Application
 
 - Load Files: Use the "Load JSON", "Load Video", and "Load CAN Log" buttons to select your data files. The application works best when all three are loaded. The application will automatically attempt to calculate the time offset between the JSON and video files based on their filenames.
