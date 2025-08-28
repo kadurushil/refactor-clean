@@ -40,7 +40,7 @@ import {
   findLastCanIndexBefore,
   extractTimestampInfo,
   parseTimestamp,
-  throttle
+  throttle,
 } from "./utils.js";
 // import state machine from './src/state.js';
 import { appState } from "./state.js";
@@ -92,19 +92,21 @@ import {
   updateCanDisplay,
   updateDebugOverlay,
 } from "./dom.js";
-// import modal dialog logic from './src/modal.js';
+// Import modal dialog logic from './src/modal.js'.
 import { showModal } from "./modal.js";
-// import initialize theme from './src/theme.js';
+// Import theme initialization from './src/theme.js'.
 import { initializeTheme } from "./theme.js";
-// import caching logic from './src/db.js';
+// Import caching logic from './src/db.js'.
 import { initDB, saveFileToDB, loadFileFromDB } from "./db.js";
 
+// Sets up the video player with the given file URL.
 function setupVideoPlayer(fileURL) {
   videoPlayer.src = fileURL;
   videoPlayer.classList.remove("hidden");
   videoPlaceholder.classList.add("hidden");
   videoPlayer.playbackRate = parseFloat(speedSlider.value);
 }
+// Event listener for loading JSON file.
 loadJsonBtn.addEventListener("click", () => jsonFileInput.click());
 loadVideoBtn.addEventListener("click", () => videoFileInput.click());
 loadCanBtn.addEventListener("click", () => canFileInput.click());
@@ -116,6 +118,7 @@ clearCacheBtn.addEventListener("click", async () => {
     window.location.reload();
   }
 });
+// Event listener for JSON file input change.
 jsonFileInput.addEventListener("change", (event) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -174,6 +177,7 @@ jsonFileInput.addEventListener("change", (event) => {
   };
   reader.readAsText(file);
 });
+// Event listener for video file input change.
 videoFileInput.addEventListener("change", (event) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -222,7 +226,7 @@ videoFileInput.addEventListener("change", (event) => {
     }
   };
 });
-
+// Event listener for CAN file input change.
 canFileInput.addEventListener("change", (event) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -269,10 +273,12 @@ canFileInput.addEventListener("change", (event) => {
   };
   reader.readAsText(file);
 });
+// Event listener for offset input change.
 offsetInput.addEventListener("input", () => {
   autoOffsetIndicator.classList.add("hidden");
   localStorage.setItem("visualizerOffset", offsetInput.value);
 });
+// Event listener for apply SNR button click.
 applySnrBtn.addEventListener("click", () => {
   const newMin = parseFloat(snrMinInput.value),
     newMax = parseFloat(snrMaxInput.value);
@@ -291,6 +297,7 @@ applySnrBtn.addEventListener("click", () => {
     appState.p5_instance.redraw();
   }
 });
+// Event listener for play/pause button click.
 playPauseBtn.addEventListener("click", () => {
   if (!appState.vizData && !videoPlayer.src) return;
   appState.isPlaying = !appState.isPlaying;
@@ -307,6 +314,7 @@ playPauseBtn.addEventListener("click", () => {
     if (videoPlayer.src) videoPlayer.pause();
   }
 });
+// Event listener for stop button click.
 stopBtn.addEventListener("click", () => {
   videoPlayer.pause();
   appState.isPlaying = false;
@@ -318,18 +326,24 @@ stopBtn.addEventListener("click", () => {
   }
   if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
 });
-timelineSlider.addEventListener('input', throttle((event) => {
-  if (!appState.vizData) return;
-  if (appState.isPlaying) {
-    videoPlayer.pause();
-    appState.isPlaying = false;
-    playPauseBtn.textContent = "Play";
-  }
-  const frame = parseInt(event.target.value, 10);
-  updateFrame(frame, true);
-  appState.mediaTimeStart = videoPlayer.currentTime;
-  appState.masterClockStart = performance.now();
-}, 16 )); // 50ms throttle delay
+// Event listener for timeline slider input.
+timelineSlider.addEventListener(
+  "input",
+  throttle((event) => {
+    if (!appState.vizData) return;
+    if (appState.isPlaying) {
+      videoPlayer.pause();
+      appState.isPlaying = false;
+      playPauseBtn.textContent = "Play";
+    }
+    const frame = parseInt(event.target.value, 10);
+    updateFrame(frame, true);
+    appState.mediaTimeStart = videoPlayer.currentTime;
+    appState.masterClockStart = performance.now();
+  }, 16)
+); // Throttle delay for smoother updates. 
+// Currently set at 16 ms to achieve smooth 60fps.
+// Event listener for speed slider input.
 speedSlider.addEventListener("input", (event) => {
   const speed = parseFloat(event.target.value);
   videoPlayer.playbackRate = speed;
@@ -337,7 +351,8 @@ speedSlider.addEventListener("input", (event) => {
 });
 
 // ADD THE NEW TOGGLE TO THE ARRAY
-const colorToggles = [
+// Array of color toggles.
+const colorToggles = [ 
   toggleSnrColor,
   toggleClusterColor,
   toggleInlierColor,
@@ -353,14 +368,14 @@ colorToggles.forEach((t) => {
     if (appState.p5_instance) appState.p5_instance.redraw();
   });
 });
-
+// Event listeners for various feature toggles.
 [
   toggleVelocity,
   toggleEgoSpeed,
   toggleFrameNorm,
   toggleTracks,
   toggleDebugOverlay,
-  toggleDebug2Overlay
+  toggleDebug2Overlay,
 ].forEach((t) => {
   t.addEventListener("change", () => {
     if (appState.p5_instance) {
@@ -371,10 +386,12 @@ colorToggles.forEach((t) => {
         );
       appState.p5_instance.redraw();
     }
-    if (t === toggleDebugOverlay || t === toggleDebug2Overlay) { updateDebugOverlay(videoPlayer.currentTime)};
+    if (t === toggleDebugOverlay || t === toggleDebug2Overlay) {
+      updateDebugOverlay(videoPlayer.currentTime);
+    }
   });
 });
-
+// Event listener for close-up toggle.
 toggleCloseUp.addEventListener("change", () => {
   appState.isCloseUpMode = toggleCloseUp.checked;
   if (appState.p5_instance) {
@@ -389,11 +406,12 @@ toggleCloseUp.addEventListener("change", () => {
     }
   }
 });
-
+// Event listener for video ended event.
 videoPlayer.addEventListener("ended", () => {
   appState.isPlaying = false;
   playPauseBtn.textContent = "Play";
 });
+// Event listener for keyboard arrow key presses to navigate frames.
 document.addEventListener("keydown", (event) => {
   if (
     !appState.vizData ||
@@ -420,6 +438,7 @@ document.addEventListener("keydown", (event) => {
     appState.masterClockStart = performance.now();
   }
 });
+// Calculates and sets the time offset between JSON and video timestamps.
 function calculateAndSetOffset() {
   const jsonTimestampInfo = extractTimestampInfo(appState.jsonFilename);
   const videoTimestampInfo = extractTimestampInfo(appState.videoFilename);
@@ -453,10 +472,10 @@ function calculateAndSetOffset() {
   }
 }
 
-// --- Application Initialization ---
+// Application Initialization: Event listener for DOMContentLoaded.
 document.addEventListener("DOMContentLoaded", () => {
   initializeTheme();
-  console.log("DEBUG: DOMContentLoaded fired. Starting session load.");
+  console.log("DEBUG: DOMContentLoaded fired. Starting session load."); // Log for debugging.
 
   initDB(() => {
     console.log("DEBUG: Database initialized.");
@@ -469,8 +488,9 @@ document.addEventListener("DOMContentLoaded", () => {
     appState.canLogFilename = localStorage.getItem("canLogFilename");
 
     // This is important: it sets videoStartDate if a video filename is cached
-    calculateAndSetOffset();
+    calculateAndSetOffset(); // Calculate offset based on cached filenames.
 
+    // Promises to load files from IndexedDB.
     const videoPromise = new Promise((resolve) =>
       loadFileFromDB("video", resolve)
     );
@@ -480,7 +500,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const canLogPromise = new Promise((resolve) =>
       loadFileFromDB("canLogText", resolve)
     );
-
+    // Once all files are loaded from DB, process them.
     Promise.all([videoPromise, jsonPromise, canLogPromise])
       .then(([videoBlob, jsonString, canLogText]) => {
         console.log("DEBUG: All data fetched from IndexedDB.");
@@ -488,7 +508,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const processAllData = () => {
           console.log("DEBUG: Processing all loaded data.");
 
-          // 1. Process JSON (only if we have a video date)
+          // 1. Process JSON (only if video start date is available).
           if (jsonString && appState.videoStartDate) {
             const result = parseVisualizationJson(
               jsonString,
@@ -506,7 +526,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           }
 
-          // 2. Process CAN log (only if we have a video date)
+          // 2. Process CAN log (only if video start date is available).
           if (canLogText && appState.videoStartDate) {
             const result = processCanLog(canLogText, appState.videoStartDate);
             if (!result.error) {
@@ -514,7 +534,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           }
 
-          // 3. Update all UI elements now that data is processed
+          // 3. Update all UI elements now that data is processed.
           if (appState.vizData) {
             resetVisualization();
             canvasPlaceholder.style.display = "none";
@@ -536,15 +556,14 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         };
 
-        // This is the main controller
-        // --- THIS IS THE CORRECTED CODE ---
+        // Main controller for processing data based on video availability.
         if (videoBlob) {
           const fileURL = URL.createObjectURL(videoBlob);
           setupVideoPlayer(fileURL);
           // This ensures we ONLY process data once the video's duration is known.
           videoPlayer.onloadedmetadata = processAllData;
         } else {
-          // If there's no video, we can go ahead and process the other data.
+          // If there's no video, process other data immediately.
           processAllData();
         }
       })

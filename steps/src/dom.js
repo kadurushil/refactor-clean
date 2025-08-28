@@ -1,6 +1,6 @@
 import { appState } from "./state.js";
 import { findLastCanIndexBefore } from "./utils.js";
-import { VIDEO_FPS } from "./constants.js";
+import { VIDEO_FPS } from "./constants.js"; // Import VIDEO_FPS for debug overlay calculations
 
 // --- DOM Element References --- //
 
@@ -65,28 +65,26 @@ export const modalCancelBtn = document.getElementById("modal-cancel-btn");
 export const toggleCloseUp = document.getElementById("toggle-close-up");
 
 //----------------------UPDATE FRAME Function----------------------//
-
-// Located in: src/dom.js
-
+// Updates the UI to reflect the current radar frame and synchronizes video playback.
 export function updateFrame(frame, forceVideoSeek) {
   if (
     !appState.vizData ||
     frame < 0 ||
     frame >= appState.vizData.radarFrames.length
-  )
-    return;
+  ) // Exit if no visualization data or invalid frame.
+    return; // Exit if no visualization data or invalid frame
   appState.currentFrame = frame;
   timelineSlider.value = appState.currentFrame;
   frameCounter.textContent = `Frame: ${appState.currentFrame + 1} / ${
     appState.vizData.radarFrames.length
   }`;
   const frameData = appState.vizData.radarFrames[appState.currentFrame];
-  if (toggleEgoSpeed.checked && frameData) {
-    const egoVy_kmh = (frameData.egoVelocity[1] * 3.6).toFixed(1);
+  if (toggleEgoSpeed.checked && frameData) { // Update ego speed display if enabled.
+    const egoVy_kmh = (frameData.egoVelocity[1] * 3.6).toFixed(1); // Convert m/s to km/h and format
     egoSpeedDisplay.textContent = `Ego: ${egoVy_kmh} km/h`;
     egoSpeedDisplay.classList.remove("hidden");
   } else {
-    egoSpeedDisplay.classList.add("hidden");
+    egoSpeedDisplay.classList.add("hidden"); // Hide ego speed display.
   }
 
   // --- Start of fix ---
@@ -102,14 +100,14 @@ export function updateFrame(frame, forceVideoSeek) {
     const offsetMs = parseFloat(offsetInput.value) || 0;
     const targetRadarTimeMs = frameData.timestampMs;
     const targetVideoTimeSec = (targetRadarTimeMs - offsetMs) / 1000;
-    if (targetVideoTimeSec >= 0 && targetVideoTimeSec <= videoPlayer.duration) {
-      if (Math.abs(videoPlayer.currentTime - targetVideoTimeSec) > 0.05) {
-        videoPlayer.currentTime = targetVideoTimeSec;
+    if (targetVideoTimeSec >= 0 && targetVideoTimeSec <= videoPlayer.duration) { // Ensure target time is within video duration
+      if (Math.abs(videoPlayer.currentTime - targetVideoTimeSec) > 0.05) { // Check for significant drift
+        videoPlayer.currentTime = targetVideoTimeSec; // Seek video if drift is significant
       }
       // MODIFIED: Use the calculated target time for our updates, not the stale videoPlayer.currentTime
-      timeForUpdates = targetVideoTimeSec;
+      timeForUpdates = targetVideoTimeSec; // Update time for subsequent UI updates
     }
-  }
+  } // End of forceVideoSeek block
 
   if (!appState.isPlaying) {
     // MODIFIED: Use our new synchronized time variable
@@ -118,23 +116,23 @@ export function updateFrame(frame, forceVideoSeek) {
   }
   // --- End of fix ---
 
-  if (appState.p5_instance) appState.p5_instance.redraw();
-  if (appState.speedGraphInstance && !appState.isPlaying)
+  if (appState.p5_instance) appState.p5_instance.redraw(); // Redraw radar sketch
+  if (appState.speedGraphInstance && !appState.isPlaying) // Redraw speed graph if not playing.
     appState.speedGraphInstance.redraw();
 }
 
 //----------------------RESET VISUALIZATION Function----------------------//
-
+// Resets the visualization to its initial state.
 export function resetVisualization() {
   appState.isPlaying = false;
   playPauseBtn.textContent = "Play";
   const numFrames = appState.vizData.radarFrames.length;
   timelineSlider.max = numFrames > 0 ? numFrames - 1 : 0;
-  updateFrame(0, true);
+  updateFrame(0, true); // Update to the first frame and force video seek
 }
 
 //----------------------CAN DISPLAY UPDATE Function----------------------//
-
+// Updates the CAN speed display based on the current media time.
 export function updateCanDisplay(currentMediaTime) {
   if (
     appState.canData.length > 0 &&
@@ -148,19 +146,19 @@ export function updateCanDisplay(currentMediaTime) {
       appState.canData
     );
     if (canIndex !== -1) {
-      const currentCanMessage = appState.canData[canIndex];
-      canSpeedDisplay.textContent = `CAN: ${currentCanMessage.speed} km/h`;
+      const currentCanMessage = appState.canData[canIndex]; // Get the CAN message at the found index
+      canSpeedDisplay.textContent = `CAN: ${currentCanMessage.speed} km/h`; // Display CAN speed
       canSpeedDisplay.classList.remove("hidden");
     } else {
-      canSpeedDisplay.classList.add("hidden");
+      canSpeedDisplay.classList.add("hidden"); // Hide CAN speed display
     }
   } else {
-    canSpeedDisplay.classList.add("hidden");
+    canSpeedDisplay.classList.add("hidden"); // Hide CAN speed display.
   }
 }
 
 //----------------------DEBUG OVERLAY UPDATE Function----------------------//
-
+// Updates the debug overlay with various synchronization and time information.
 export function updateDebugOverlay(currentMediaTime) {
   // Check the state of both debug toggles
   const isDebug1Visible = toggleDebugOverlay.checked;
@@ -168,13 +166,13 @@ export function updateDebugOverlay(currentMediaTime) {
 
   // If neither is checked, hide the overlay and stop
   if (!isDebug1Visible && !isDebug2Visible) {
-    debugOverlay.classList.add("hidden");
+    debugOverlay.classList.add("hidden"); // Hide debug overlay
     return;
   }
-
-  debugOverlay.classList.remove("hidden");
+  // If at least one is checked, show the overlay
+  debugOverlay.classList.remove("hidden"); // Show debug overlay.
   let content = [];
-
+ 
   // --- Logic for the original debug overlay ---
   if (isDebug1Visible) {
     content.push(`--- Basic Info ---`);
@@ -188,9 +186,9 @@ export function updateDebugOverlay(currentMediaTime) {
           .toISOString()
           .split("T")[1]
           .replace("Z", "")}`
-      );
+      ); // Format and display video absolute time
     } else {
-      content.push("Video not loaded...");
+      content.push("Video not loaded..."); // Indicate video not loaded.
     }
     if (
       appState.vizData &&
@@ -206,9 +204,9 @@ export function updateDebugOverlay(currentMediaTime) {
           .toISOString()
           .split("T")[1]
           .replace("Z", "")}`
-      );
+      ); // Format and display radar absolute time
     }
-  }
+  } 
 
   // --- Logic for the new advanced debug overlay ---
   if (isDebug2Visible) {
@@ -223,10 +221,10 @@ export function updateDebugOverlay(currentMediaTime) {
       const targetRadarTimeMs = currentRadarFrame.timestampMs;
       const driftMs = currentMediaTime * 1000 - targetRadarTimeMs;
 
-      // Style the drift value to be green if sync is good, and red if it's off
+      // Style the drift value to be green if sync is good, and red if it's off.
       const driftColor = Math.abs(driftMs) > 40 ? "#FF6347" : "#98FB98"; // Tomato red or Pale green
 
-      content.push(`Video Time (s): ${currentMediaTime.toFixed(3)}`);
+      content.push(`Video Time (s): ${currentMediaTime.toFixed(3)}`); // Display current video time
       content.push(`Target Radar Time (ms): ${targetRadarTimeMs.toFixed(0)}`);
       content.push(
         `Drift (ms): <b style="color: ${driftColor};">${driftMs.toFixed(0)}</b>`
@@ -237,11 +235,11 @@ export function updateDebugOverlay(currentMediaTime) {
       content.push(
         `Radar Start Time: ${new Date(appState.radarStartTimeMs).toISOString()}`
       );
-      content.push(`Calculated Offset (ms): ${offsetInput.value}`);
+      content.push(`Calculated Offset (ms): ${offsetInput.value}`); // Display calculated offset.
     } else {
-      content.push("Load video and radar data to see sync info.");
+      content.push("Load video and radar data to see sync info."); // Prompt to load data.
     }
   }
 
-  debugOverlay.innerHTML = content.join("<br>");
+  debugOverlay.innerHTML = content.join("<br>"); // Update debug overlay content.
 }
