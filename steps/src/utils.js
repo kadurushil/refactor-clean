@@ -50,19 +50,22 @@ export function findLastCanIndexBefore(targetTime, canData) {
 export function extractTimestampInfo(filename) {
   // Return null if filename is not provided
   if (!filename) return null;
-  // Try to match JSON filename pattern: "Tracks_YYYYMMDD_HHMMSS.ms"
-  // Example: Tracks_20231027_103000.123
+
+  // Try to match the old JSON filename pattern: "Tracks_YYYYMMDD_HHMMSS.ms"
   let match = filename.match(/Tracks_(\d{8}_\d{6}\.\d{3})/);
   if (match) return { timestampStr: match[1], format: "json" };
+
+  // NEW: Add this block to match the new filename pattern
+  match = filename.match(/fHist_(\d{8}_\d{6}\.\d{3})/);
+  if (match) return { timestampStr: match[1], format: "json" };
+
   // Try to match video filename pattern (e.g., from GoPro): "WIN_YYYYMMDD_HH_MM_SS"
-  // Example: WIN_20231027_10_30_00
   match = filename.match(/WIN_(\d{8})_(\d{2})_(\d{2})_(\d{2})/);
   if (match) {
     const timestamp = `${match[1]}_${match[2]}${match[3]}${match[4]}`;
     return { timestampStr: timestamp, format: "video" };
   }
   // Try to match another common video filename pattern: "video_YYYYMMDD_HHMMSS"
-  // Example: video_20231027_103000
   match = filename.match(/video_(\d{8}_\d{6})/);
   if (match)
     return {
