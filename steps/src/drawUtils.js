@@ -320,44 +320,42 @@ export function drawTrajectories(p, plotScales) {
 export function drawTrackMarkers(p, plotScales) {
   const showDetails = toggleVelocity.checked;
   const useStationary = toggleStationaryColor.checked;
-  // Determine text color based on theme.
   const textColor = document.documentElement.classList.contains("dark")
     ? p.color(255)
     : p.color(0);
-  // Get local color instances for stationary and moving objects.
   const localStationaryColor = stationaryColor(p);
   const localMovingColor = movingColor(p);
 
-  // Iterate through each tracked object.
   for (const track of appState.vizData.tracks) {
-    // Find the log entry for the current frame.
     const log = track.historyLog.find(
       (log) => log.frameIdx === appState.currentFrame + 1
     );
+
     if (log) {
-      const pos =
-        log.correctedPosition && log.correctedPosition[0] !== null
-          ? log.correctedPosition // Use corrected position if available.
-          : log.predictedPosition;
+      // --- MODIFIED LOGIC STARTS HERE ---
+      // 1. Get the corrected position directly.
+      const pos = log.correctedPosition;
+
+      // 2. Only draw the marker and details if the corrected position is valid (not null).
       if (pos && pos.length === 2 && pos[0] !== null && pos[1] !== null) {
-        const size = 5,
-          x = pos[0] * plotScales.plotScaleX,
-          y = pos[1] * plotScales.plotScaleY;
+        const size = 5;
+        const x = pos[0] * plotScales.plotScaleX;
+        const y = pos[1] * plotScales.plotScaleY;
         let velocityColor = p.color(255, 0, 255, 200);
+
         p.push();
         p.strokeWeight(2);
+        // This part remains the same: it styles the marker based on stationary status
         if (useStationary && log.isStationary === true) {
           p.stroke(localStationaryColor);
           p.noFill();
           p.rectMode(p.CENTER);
           p.square(x, y, size * 1.5);
-          velocityColor = localStationaryColor; // Set velocity color to stationary.
+          velocityColor = localStationaryColor;
         } else {
-          let markerColor = p.color(0, 0, 255);
+          let markerColor = p.color(0, 0, 255); // Default blue
           if (useStationary && log.isStationary === false) {
-            // If not stationary, use moving color.
             markerColor = localMovingColor;
-            // Set velocity color to moving.
             velocityColor = localMovingColor;
           }
           p.stroke(markerColor);
@@ -366,7 +364,7 @@ export function drawTrackMarkers(p, plotScales) {
         }
         p.pop();
 
-        // Draw velocity vector and text details if enabled.
+        // The logic to show velocity and text details also moves inside this block
         if (
           showDetails &&
           log.predictedVelocity &&
@@ -374,7 +372,6 @@ export function drawTrackMarkers(p, plotScales) {
         ) {
           const [vx, vy] = log.predictedVelocity;
           if (log.isStationary === false) {
-            // Only draw velocity for moving objects.
             p.push();
             p.stroke(velocityColor);
             p.strokeWeight(2);
@@ -385,14 +382,12 @@ export function drawTrackMarkers(p, plotScales) {
               (pos[1] + vy) * plotScales.plotScaleY
             );
             p.pop();
-          } // Calculate speed in km/h.
+          }
           const speed = (p.sqrt(vx * vx + vy * vy) * 3.6).toFixed(1);
-          // Format TTC (Time To Collision) if available and finite.
           const ttc =
             log.ttc !== null && isFinite(log.ttc) && log.ttc < 100
               ? `TTC: ${log.ttc.toFixed(1)}s`
               : "";
-          // Construct info text.
           const text = `ID: ${track.id} | ${speed} km/h\n${ttc}`;
           p.push();
           p.fill(textColor);
@@ -403,6 +398,7 @@ export function drawTrackMarkers(p, plotScales) {
           p.pop();
         }
       }
+      // --- MODIFIED LOGIC ENDS HERE ---
     }
   }
 }
