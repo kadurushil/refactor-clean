@@ -23,39 +23,25 @@ export const speedSlider = document.getElementById("speed-slider");
 export const speedDisplay = document.getElementById("speed-display");
 export const featureToggles = document.getElementById("feature-toggles");
 export const toggleSnrColor = document.getElementById("toggle-snr-color");
-export const toggleClusterColor = document.getElementById(
-  "toggle-cluster-color"
-);
+export const toggleClusterColor = document.getElementById("toggle-cluster-color");
 export const toggleInlierColor = document.getElementById("toggle-inlier-color");
-export const toggleStationaryColor = document.getElementById(
-  "toggle-stationary-color"
-);
+export const toggleStationaryColor = document.getElementById("toggle-stationary-color");
 export const toggleVelocity = document.getElementById("toggle-velocity");
 export const toggleTracks = document.getElementById("toggle-tracks");
 export const toggleEgoSpeed = document.getElementById("toggle-ego-speed");
 export const toggleFrameNorm = document.getElementById("toggle-frame-norm");
-export const toggleDebugOverlay = document.getElementById(
-  "toggle-debug-overlay"
-);
+export const toggleDebugOverlay = document.getElementById("toggle-debug-overlay");
 export const egoSpeedDisplay = document.getElementById("ego-speed-display");
 export const canSpeedDisplay = document.getElementById("can-speed-display");
 export const debugOverlay = document.getElementById("debug-overlay");
-export const toggleDebug2Overlay = document.getElementById(
-  "toggle-debug2-overlay"
-);
+export const toggleDebug2Overlay = document.getElementById("toggle-debug2-overlay");
 export const snrMinInput = document.getElementById("snr-min-input");
 export const snrMaxInput = document.getElementById("snr-max-input");
 export const applySnrBtn = document.getElementById("apply-snr-btn");
-export const autoOffsetIndicator = document.getElementById(
-  "auto-offset-indicator"
-);
+export const autoOffsetIndicator = document.getElementById("auto-offset-indicator");
 export const clearCacheBtn = document.getElementById("clear-cache-btn");
-export const speedGraphContainer = document.getElementById(
-  "speed-graph-container"
-);
-export const speedGraphPlaceholder = document.getElementById(
-  "speed-graph-placeholder"
-);
+export const speedGraphContainer = document.getElementById("speed-graph-container");
+export const speedGraphPlaceholder = document.getElementById("speed-graph-placeholder");
 export const modalContainer = document.getElementById("modal-container");
 export const modalOverlay = document.getElementById("modal-overlay");
 export const modalContent = document.getElementById("modal-content");
@@ -63,6 +49,8 @@ export const modalText = document.getElementById("modal-text");
 export const modalOkBtn = document.getElementById("modal-ok-btn");
 export const modalCancelBtn = document.getElementById("modal-cancel-btn");
 export const toggleCloseUp = document.getElementById("toggle-close-up");
+export const togglePredictedPos = document.getElementById("toggle-predicted-pos");
+export const toggleCovariance = document.getElementById("toggle-covariance");
 
 //----------------------UPDATE FRAME Function----------------------//
 // Updates the UI to reflect the current radar frame and synchronizes video playback.
@@ -71,7 +59,8 @@ export function updateFrame(frame, forceVideoSeek) {
     !appState.vizData ||
     frame < 0 ||
     frame >= appState.vizData.radarFrames.length
-  ) // Exit if no visualization data or invalid frame.
+  )
+    // Exit if no visualization data or invalid frame.
     return; // Exit if no visualization data or invalid frame
   appState.currentFrame = frame;
   timelineSlider.value = appState.currentFrame;
@@ -79,7 +68,8 @@ export function updateFrame(frame, forceVideoSeek) {
     appState.vizData.radarFrames.length
   }`;
   const frameData = appState.vizData.radarFrames[appState.currentFrame];
-  if (toggleEgoSpeed.checked && frameData) { // Update ego speed display if enabled.
+  if (toggleEgoSpeed.checked && frameData) {
+    // Update ego speed display if enabled.
     const egoVy_kmh = (frameData.egoVelocity[1] * 3.6).toFixed(1); // Convert m/s to km/h and format
     egoSpeedDisplay.textContent = `Ego: ${egoVy_kmh} km/h`;
     egoSpeedDisplay.classList.remove("hidden");
@@ -100,8 +90,10 @@ export function updateFrame(frame, forceVideoSeek) {
     const offsetMs = parseFloat(offsetInput.value) || 0;
     const targetRadarTimeMs = frameData.timestampMs;
     const targetVideoTimeSec = (targetRadarTimeMs - offsetMs) / 1000;
-    if (targetVideoTimeSec >= 0 && targetVideoTimeSec <= videoPlayer.duration) { // Ensure target time is within video duration
-      if (Math.abs(videoPlayer.currentTime - targetVideoTimeSec) > 0.05) { // Check for significant drift
+    if (targetVideoTimeSec >= 0 && targetVideoTimeSec <= videoPlayer.duration) {
+      // Ensure target time is within video duration
+      if (Math.abs(videoPlayer.currentTime - targetVideoTimeSec) > 0.05) {
+        // Check for significant drift
         videoPlayer.currentTime = targetVideoTimeSec; // Seek video if drift is significant
       }
       // MODIFIED: Use the calculated target time for our updates, not the stale videoPlayer.currentTime
@@ -117,7 +109,8 @@ export function updateFrame(frame, forceVideoSeek) {
   // --- End of fix ---
 
   if (appState.p5_instance) appState.p5_instance.redraw(); // Redraw radar sketch
-  if (appState.speedGraphInstance && !appState.isPlaying) // Redraw speed graph if not playing.
+  if (appState.speedGraphInstance && !appState.isPlaying)
+    // Redraw speed graph if not playing.
     appState.speedGraphInstance.redraw();
 }
 
@@ -172,7 +165,7 @@ export function updateDebugOverlay(currentMediaTime) {
   // If at least one is checked, show the overlay
   debugOverlay.classList.remove("hidden"); // Show debug overlay.
   let content = [];
- 
+
   // --- Logic for the original debug overlay ---
   if (isDebug1Visible) {
     content.push(`--- Basic Info ---`);
@@ -206,7 +199,7 @@ export function updateDebugOverlay(currentMediaTime) {
           .replace("Z", "")}`
       ); // Format and display radar absolute time
     }
-  } 
+  }
 
   // --- Logic for the new advanced debug overlay ---
   if (isDebug2Visible) {

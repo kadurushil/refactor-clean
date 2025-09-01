@@ -516,3 +516,38 @@ export function handleCloseUpDisplay(p, plotScales) {
     p.pop();
   }
 }
+
+export function drawCovarianceEllipse(p, position, covarianceP, plotScales) {
+  const pPos = [
+    [covarianceP[0][0], covarianceP[0][1]],
+    [covarianceP[1][0], covarianceP[1][1]],
+  ];
+
+  const a = pPos[0][0];
+  const b = pPos[0][1];
+  const d = pPos[1][1];
+  const trace = a + d;
+  const determinant = a * d - b * b;
+
+  const lambda1 = trace / 2 + Math.sqrt(Math.pow(trace, 2) / 4 - determinant);
+  const lambda2 = trace / 2 - Math.sqrt(Math.pow(trace, 2) / 4 - determinant);
+
+  const chi2 = 5.991;
+  const majorAxis = Math.sqrt(chi2 * lambda1);
+  const minorAxis = Math.sqrt(chi2 * lambda2);
+
+  let eigenvector = [1, 0];
+  if (b !== 0) {
+    eigenvector = [lambda1 - d, b];
+  }
+  const angle = Math.atan2(eigenvector[1], eigenvector[0]);
+
+  p.push();
+  p.noFill();
+  p.stroke(255, 0, 0, 150);
+  p.strokeWeight(1);
+  p.translate(position[0] * plotScales.plotScaleX, position[1] * plotScales.plotScaleY);
+  p.rotate(angle);
+  p.ellipse(0, 0, majorAxis * 2 * plotScales.plotScaleX, minorAxis * 2 * plotScales.plotScaleY);
+  p.pop();
+}

@@ -6,7 +6,13 @@ import {
   RADAR_Y_MAX,
   RADAR_Y_MIN,
 } from "../constants.js";
-import { canvasContainer, toggleSnrColor, toggleTracks } from "../dom.js";
+import {
+  canvasContainer,
+  toggleSnrColor,
+  toggleTracks,
+  togglePredictedPos,
+  toggleCovariance,
+} from "../dom.js";
 import {
   drawStaticRegionsToBuffer,
   drawAxes,
@@ -15,7 +21,8 @@ import {
   drawTrajectories,
   drawTrackMarkers,
   snrColors,
-  handleCloseUpDisplay, // BUG FIX 1: Import the close-up handler
+  handleCloseUpDisplay,
+  drawCovarianceEllipse, // BUG FIX 1: Import the close-up handler
 } from "../drawUtils.js";
 
 export const radarSketch = function (p) {
@@ -89,6 +96,44 @@ export const radarSketch = function (p) {
       if (toggleTracks.checked) {
         drawTrajectories(p, plotScales);
         drawTrackMarkers(p, plotScales);
+
+        if (toggleCovariance.checked) {
+          for (const track of appState.vizData.tracks) {
+            const log = track.historyLog.find(
+              (log) => log.frameIdx === appState.currentFrame + 1
+            );
+            if (log && log.covarianceP) {
+              const pos = log.predictedPosition;
+              if (pos && pos[0] !== null) {
+                drawCovarianceEllipse(p, pos, log.covarianceP, plotScales);
+              }
+            }
+          }
+        }
+
+        if (togglePredictedPos.checked) {
+          for (const track of appState.vizData.tracks) {
+            const log = track.historyLog.find(
+              (log) => log.frameIdx === appState.currentFrame + 1
+            );
+            if (
+              log &&
+              log.predictedPosition &&
+              log.predictedPosition[0] !== null
+            ) {
+              const pos = log.predictedPosition;
+              const x = pos[0] * plotScales.plotScaleX;
+              const y = pos[1] * plotScales.plotScaleY;
+
+              p.push();
+              p.stroke(255, 0, 0); // Red for predicted
+              p.strokeWeight(2);
+              p.line(x - 4, y - 4, x + 4, y + 4);
+              p.line(x + 4, y - 4, x - 4, y + 4);
+              p.pop();
+            }
+          }
+        }
       }
       // Draw the point cloud for the current frame
       drawPointCloud(p, frameData.pointCloud, plotScales);
