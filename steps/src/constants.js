@@ -9,4 +9,4 @@ export const RADAR_X_MAX = 20;
 // Minimum Y-coordinate for the radar plot in meters.
 export const RADAR_Y_MIN = 0;
 // Maximum Y-coordinate for the radar plot in meters.
-export const RADAR_Y_MAX = 60;
+export const RADAR_Y_MAX = 80;

@@ -1,3 +1,42 @@
+/**
+ * Parses a JSON file stream using Oboe.js to handle very large files.
+ * @param {string} fileURL - A temporary URL created from the file object.
+ * @param {function} onProgress - A callback to update the UI on progress.
+ * @param {function} onComplete - A callback to run when parsing is complete.
+ * @param {function} onError - A callback to run if an error occurs.
+ */
+// This function can be deleted if it exists: parseJsonStream
+// This function can be deleted if it exists: parseJsonWithOboe
+
+// Add this simplified streaming function
+export function parseJsonWithOboe(fileURL, onComplete, onError) {
+  const vizData = {
+    radarFrames: [],
+    tracks: [],
+  };
+
+  oboe(fileURL)
+    .node("radarFrames[*]", (frame) => {
+      vizData.radarFrames.push(frame);
+      return oboe.drop;
+    })
+    .node("tracks[*]", (track) => {
+      vizData.tracks.push(track);
+      return oboe.drop;
+    })
+    .done(() => {
+      console.log("Oboe.js parsing complete.");
+      onComplete(vizData);
+    })
+    .fail((err) => {
+      console.error("Oboe.js parsing failed:", err);
+      onError(
+        "Error parsing JSON stream. Please check file format and console."
+      );
+    });
+}
+
+
 //--------------------CAN-LOG PARSER------------------------//
 
 export function processCanLog(logContent, videoStartDate) {
@@ -68,72 +107,72 @@ export function processCanLog(logContent, videoStartDate) {
   return { data: canData };
 }
 
-//--------------------JSON PARSER------------------------//
+//--------------------JSON POST-PROCESSOR (ASYNCHRONOUS & SAFE)------------------------//
 
-export function parseVisualizationJson(
-  jsonString,
+// Helper function to process large arrays in chunks without blocking
+async function processArrayInChunks(array, chunkSize, processingFn) {
+  for (let i = 0; i < array.length; i += chunkSize) {
+    const chunk = array.slice(i, i + chunkSize);
+    processingFn(chunk);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+}
+
+export async function parseVisualizationJson(
+  vizData,
   radarStartTimeMs,
   videoStartDate
 ) {
   try {
-    // Replace Infinity, NaN, and -Infinity with "null" to prevent JSON.parse errors.
-    const cleanJsonString = jsonString.replace(
-      /\b(Infinity|NaN|-Infinity)\b/gi,
-      "null"
-    );
-    // Parse the cleaned JSON string into a JavaScript object.
-    const vizData = JSON.parse(cleanJsonString);
-
-    // Validate if the parsed data contains radar frames.
     if (!vizData.radarFrames || vizData.radarFrames.length === 0) {
       return {
         error: "Error: The JSON file does not contain any radar frames.",
       };
     }
 
-    // Perform timestamp calculations for each radar frame.
-    // The `timestampMs` for each frame is calculated relative to the video's start time,
-    // taking into account the `radarStartTimeMs` (extracted from JSON filename)
-    // and the `videoStartDate` (extracted from video filename).
-    // This ensures synchronization between radar data and video.
-    vizData.radarFrames.forEach((frame) => {
-      frame.timestampMs =
-        radarStartTimeMs + frame.timestamp - videoStartDate.getTime();
-    });
-
-    // Calculate SNR range from the data
-    let snrValues = [],
-      totalPoints = 0; // Counter for total points across all frames.
-    vizData.radarFrames.forEach((frame) => {
-      if (frame.pointCloud && frame.pointCloud.length > 0) {
-        totalPoints += frame.pointCloud.length;
-        frame.pointCloud.forEach((p) => {
-          // Collect SNR values, ignoring nulls.
-          if (p.snr !== null) snrValues.push(p.snr);
+    if (videoStartDate && radarStartTimeMs) {
+      await processArrayInChunks(vizData.radarFrames, 5000, (chunk) => {
+        chunk.forEach((frame) => {
+          frame.timestampMs =
+            radarStartTimeMs + frame.timestamp - videoStartDate.getTime();
         });
-      }
+      });
+    }
+
+    let snrValues = [];
+    let totalPoints = 0;
+    await processArrayInChunks(vizData.radarFrames, 5000, (chunk) => {
+      chunk.forEach((frame) => {
+        if (frame.pointCloud && frame.pointCloud.length > 0) {
+          totalPoints += frame.pointCloud.length;
+          frame.pointCloud.forEach((p) => {
+            if (p.snr !== null) snrValues.push(p.snr);
+          });
+        }
+      });
     });
 
-    // Warn if no point cloud data was found in the loaded frames.
     if (totalPoints === 0) {
       console.warn("Warning: Loaded frames contain no point cloud data.");
     }
 
-    // Determine the global minimum and maximum SNR values from the collected data.
-    // These values are used for scaling the SNR color legend.
-    // Default to 0 and 1 if no SNR values are found to prevent errors.
-    const minSnr = snrValues.length > 0 ? Math.min(...snrValues) : 0;
-    const maxSnr = snrValues.length > 0 ? Math.max(...snrValues) : 1;
+    // --- FINAL FIX IS HERE ---
+    // Manually calculate min and max to avoid stack overflow
+    let minSnr = 0;
+    let maxSnr = 1;
+    if (snrValues.length > 0) {
+      minSnr = snrValues[0];
+      maxSnr = snrValues[0];
+      for (let i = 1; i < snrValues.length; i++) {
+        if (snrValues[i] < minSnr) minSnr = snrValues[i];
+        if (snrValues[i] > maxSnr) maxSnr = snrValues[i];
+      }
+    }
+    // --- END OF FIX ---
 
-    // Return the finished data package
-    // This object contains the processed visualization data, and the calculated min/max SNR.
     return { data: vizData, minSnr: minSnr, maxSnr: maxSnr };
   } catch (error) {
-    console.error("JSON Parsing Error:", error);
-    return {
-      error:
-        "Error parsing JSON file. Please check file format. Error: " +
-        error.message,
-    };
+    console.error("JSON Processing Error:", error);
+    return { error: "Error processing the JSON data. Error: " + error.message };
   }
 }

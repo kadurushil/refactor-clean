@@ -16,14 +16,16 @@
 // - main.js:           The main application entry point that wires everything
 // ===========================================================================================================
 
+// import animation loop from './src/sync.js';
+
 import { animationLoop } from "./sync.js";
+// import radar sketch from './src/p5/radarSketch.js';
 import { radarSketch } from "./p5/radarSketch.js";
+// import speed graph sketch from './src/p5/speedGraphSketch.js';
 import { speedGraphSketch } from "./p5/speedGraphSketch.js";
-import {
-  processCanLog,
-  parseVisualizationJson,
-  parseJsonWithOboe,
-} from "./fileParsers.js";
+// import JSON parser, can log procesor from './src/fileParsers.js';
+import { processCanLog, parseVisualizationJson } from "./fileParsers.js";
+// import constants from './constants.js';
 import {
   MAX_TRAJECTORY_LENGTH,
   VIDEO_FPS,
@@ -32,6 +34,7 @@ import {
   RADAR_Y_MIN,
   RADAR_Y_MAX,
 } from "./constants.js";
+// import utils and helpers from './src/utils.js';
 import {
   findRadarFrameIndexForTime,
   findLastCanIndexBefore,
@@ -39,8 +42,11 @@ import {
   parseTimestamp,
   throttle,
 } from "./utils.js";
+// import state machine from './src/state.js';
 import { appState } from "./state.js";
+// import DOM elements and UI updaters from './src/dom.js';
 import {
+  //---DOM Elements---//
   canvasContainer,
   canvasPlaceholder,
   videoPlayer,
@@ -80,13 +86,17 @@ import {
   speedGraphContainer,
   speedGraphPlaceholder,
   toggleCloseUp,
+  //---UI Updaters---//
   updateFrame,
   resetVisualization,
   updateCanDisplay,
   updateDebugOverlay,
 } from "./dom.js";
+// Import modal dialog logic from './src/modal.js'.
 import { showModal } from "./modal.js";
+// Import theme initialization from './src/theme.js'.
 import { initializeTheme } from "./theme.js";
+// Import caching logic from './src/db.js'.
 import { initDB, saveFileToDB, loadFileFromDB } from "./db.js";
 
 // Sets up the video player with the given file URL.
@@ -96,12 +106,10 @@ function setupVideoPlayer(fileURL) {
   videoPlaceholder.classList.add("hidden");
   videoPlayer.playbackRate = parseFloat(speedSlider.value);
 }
-
 // Event listener for loading JSON file.
 loadJsonBtn.addEventListener("click", () => jsonFileInput.click());
 loadVideoBtn.addEventListener("click", () => videoFileInput.click());
 loadCanBtn.addEventListener("click", () => canFileInput.click());
-
 clearCacheBtn.addEventListener("click", async () => {
   const confirmed = await showModal("Clear all cached data and reload?", true);
   if (confirmed) {
@@ -110,31 +118,27 @@ clearCacheBtn.addEventListener("click", async () => {
     window.location.reload();
   }
 });
-
+// Event listener for JSON file input change.
 jsonFileInput.addEventListener("change", (event) => {
   const file = event.target.files[0];
   if (!file) return;
-
   appState.jsonFilename = file.name;
   localStorage.setItem("jsonFilename", appState.jsonFilename);
-  calculateAndSetOffset();
+  calculateAndSetOffset(); // This function now correctly sets appState variables
 
-  const fileURL = URL.createObjectURL(file);
-
-  // Show a simple "parsing" message
+  // Show a modal or loading indicator to the user
   showModal("Parsing large JSON file, please wait...");
 
-  const onError = (errorMessage) => {
-    URL.revokeObjectURL(fileURL);
-    showModal(errorMessage);
-  };
+  // Get a readable stream from the file
+  const stream = file.stream();
 
-  const onComplete = async (parsedData) => {
-    URL.revokeObjectURL(fileURL);
-    showModal("Processing data...");
+  // Call the new streaming parser
+  parseJsonStream(stream, (parsedData) => {
+    // This callback runs once the entire file has been parsed
 
-    const result = await parseVisualizationJson(
-      parsedData,
+    // Once parsing is complete, continue with the rest of the setup
+    const result = parseVisualizationJson(
+      parsedData, // We now pass the parsed object, not a string
       appState.radarStartTimeMs,
       appState.videoStartDate
     );
@@ -143,7 +147,6 @@ jsonFileInput.addEventListener("change", (event) => {
       showModal(result.error);
       return;
     }
-
     appState.vizData = result.data;
     appState.globalMinSnr = result.minSnr;
     appState.globalMaxSnr = result.maxSnr;
@@ -158,12 +161,63 @@ jsonFileInput.addEventListener("change", (event) => {
     if (!appState.p5_instance) {
       appState.p5_instance = new p5(radarSketch);
     }
-    
+    // Hide the loading modal
+    // Note: You might need to adjust your hideModal logic if it's not already globally accessible
     document.getElementById("modal-ok-btn").click();
-  };
+  });
 
-  // Start the simple parsing process
-  parseJsonWithOboe(fileURL, onComplete, onError);
+
+const reader = new FileReader();
+reader.onload = (e) => {
+  const jsonString = e.target.result;
+  saveFileToDB("json", jsonString);
+
+  // 1. Give the raw ingredients to our new JSON "chef"
+  const result = parseVisualizationJson(
+    jsonString,
+    appState.radarStartTimeMs,
+    appState.videoStartDate
+  );
+
+  // 2. Check the result
+  if (result.error) {
+    showModal(result.error);
+    return;
+  }
+
+  // 3. Update the application's central state with the prepared data
+  appState.vizData = result.data;
+  appState.globalMinSnr = result.minSnr;
+  appState.globalMaxSnr = result.maxSnr;
+
+  // 4. Now, the "waiter" updates the UI
+  snrMinInput.value = appState.globalMinSnr.toFixed(1);
+  snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
+  resetVisualization(); // This UI function is in dom.js
+  canvasPlaceholder.style.display = "none";
+  featureToggles.classList.remove("hidden");
+
+  if (!appState.p5_instance) {
+    appState.p5_instance = new p5(radarSketch);
+  }
+
+  if (appState.speedGraphInstance) {
+    appState.speedGraphInstance.setData(
+      appState.canData,
+      appState.vizData,
+      videoPlayer.duration
+    );
+  } else {
+    // Redraw p5 instance with new data
+    appState.p5_instance.drawSnrLegendToBuffer(
+      appState.globalMinSnr,
+      appState.globalMaxSnr
+    );
+    appState.p5_instance.redraw();
+  }
+};
+reader.readAsText(file);
+
 });
 
 // Event listener for video file input change.
@@ -174,8 +228,10 @@ videoFileInput.addEventListener("change", (event) => {
   localStorage.setItem("videoFilename", appState.videoFilename);
   saveFileToDB("video", file);
 
+  // This is the key moment: we now have a video start date.
   calculateAndSetOffset();
 
+  // Now, check if we have pending data that needs this date.
   if (appState.rawCanLogText) {
     const result = processCanLog(
       appState.rawCanLogText,
@@ -187,6 +243,7 @@ videoFileInput.addEventListener("change", (event) => {
     }
   }
 
+  // NEW: Re-process vizData if it was loaded before the video.
   if (appState.vizData) {
     console.log("DEBUG: Video loaded after JSON. Re-calculating timestamps.");
     appState.vizData.radarFrames.forEach((frame) => {
@@ -195,12 +252,13 @@ videoFileInput.addEventListener("change", (event) => {
         frame.timestamp -
         appState.videoStartDate.getTime();
     });
-    resetVisualization();
+    resetVisualization(); // Reset UI to reflect new timestamps
   }
 
   const fileURL = URL.createObjectURL(file);
   setupVideoPlayer(fileURL);
 
+  // When the video is ready, update the speed graph
   videoPlayer.onloadedmetadata = () => {
     if (appState.speedGraphInstance) {
       appState.speedGraphInstance.setData(
@@ -211,7 +269,6 @@ videoFileInput.addEventListener("change", (event) => {
     }
   };
 });
-
 // Event listener for CAN file input change.
 canFileInput.addEventListener("change", (event) => {
   const file = event.target.files[0];
@@ -224,20 +281,26 @@ canFileInput.addEventListener("change", (event) => {
     const logContent = e.target.result;
     saveFileToDB("canLogText", logContent);
 
+    // 1. Give the raw ingredients to the chef (our parser)
     const result = processCanLog(logContent, appState.videoStartDate);
 
+    // 2. Check what the chef gave back
     if (result.error) {
+      // If there was an error, show it and save the raw text for later.
       showModal(result.error);
       appState.rawCanLogText = result.rawCanLogText;
       return;
     }
 
+    // 3. If successful, update the application's central state
     appState.canData = result.data;
     appState.rawCanLogText = null;
 
+    // 4. Now, the waiter updates the UI based on the new state
     if (appState.canData.length > 0 || appState.vizData) {
       speedGraphPlaceholder.classList.add("hidden");
       if (!appState.speedGraphInstance) {
+        // We need to pass the speedGraphSketch function definition here
         appState.speedGraphInstance = new p5(speedGraphSketch);
       }
       if (videoPlayer.duration) {
@@ -253,13 +316,11 @@ canFileInput.addEventListener("change", (event) => {
   };
   reader.readAsText(file);
 });
-
 // Event listener for offset input change.
 offsetInput.addEventListener("input", () => {
   autoOffsetIndicator.classList.add("hidden");
   localStorage.setItem("visualizerOffset", offsetInput.value);
 });
-
 // Event listener for apply SNR button click.
 applySnrBtn.addEventListener("click", () => {
   const newMin = parseFloat(snrMinInput.value),
@@ -279,7 +340,6 @@ applySnrBtn.addEventListener("click", () => {
     appState.p5_instance.redraw();
   }
 });
-
 // Event listener for play/pause button click.
 playPauseBtn.addEventListener("click", () => {
   if (!appState.vizData && !videoPlayer.src) return;
@@ -297,7 +357,6 @@ playPauseBtn.addEventListener("click", () => {
     if (videoPlayer.src) videoPlayer.pause();
   }
 });
-
 // Event listener for stop button click.
 stopBtn.addEventListener("click", () => {
   videoPlayer.pause();
@@ -310,7 +369,6 @@ stopBtn.addEventListener("click", () => {
   }
   if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
 });
-
 // Event listener for timeline slider input.
 timelineSlider.addEventListener(
   "input",
@@ -326,8 +384,8 @@ timelineSlider.addEventListener(
     appState.mediaTimeStart = videoPlayer.currentTime;
     appState.masterClockStart = performance.now();
   }, 16)
-);
-
+); // Throttle delay for smoother updates.
+// Currently set at 16 ms to achieve smooth 60fps.
 // Event listener for speed slider input.
 speedSlider.addEventListener("input", (event) => {
   const speed = parseFloat(event.target.value);
@@ -335,6 +393,8 @@ speedSlider.addEventListener("input", (event) => {
   speedDisplay.textContent = `${speed.toFixed(1)}x`;
 });
 
+// ADD THE NEW TOGGLE TO THE ARRAY
+// Array of color toggles.
 const colorToggles = [
   toggleSnrColor,
   toggleClusterColor,
@@ -351,7 +411,7 @@ colorToggles.forEach((t) => {
     if (appState.p5_instance) appState.p5_instance.redraw();
   });
 });
-
+// Event listeners for various feature toggles.
 [
   toggleVelocity,
   toggleEgoSpeed,
@@ -374,7 +434,7 @@ colorToggles.forEach((t) => {
     }
   });
 });
-
+// Event listener for close-up toggle.
 toggleCloseUp.addEventListener("change", () => {
   appState.isCloseUpMode = toggleCloseUp.checked;
   if (appState.p5_instance) {
@@ -389,12 +449,12 @@ toggleCloseUp.addEventListener("change", () => {
     }
   }
 });
-
+// Event listener for video ended event.
 videoPlayer.addEventListener("ended", () => {
   appState.isPlaying = false;
   playPauseBtn.textContent = "Play";
 });
-
+// Event listener for keyboard arrow key presses to navigate frames.
 document.addEventListener("keydown", (event) => {
   if (
     !appState.vizData ||
@@ -421,7 +481,7 @@ document.addEventListener("keydown", (event) => {
     appState.masterClockStart = performance.now();
   }
 });
-
+// Calculates and sets the time offset between JSON and video timestamps.
 function calculateAndSetOffset() {
   const jsonTimestampInfo = extractTimestampInfo(appState.jsonFilename);
   const videoTimestampInfo = extractTimestampInfo(appState.videoFilename);
@@ -455,10 +515,10 @@ function calculateAndSetOffset() {
   }
 }
 
-// Application Initialization
+// Application Initialization: Event listener for DOMContentLoaded.
 document.addEventListener("DOMContentLoaded", () => {
   initializeTheme();
-  console.log("DEBUG: DOMContentLoaded fired. Starting session load.");
+  console.log("DEBUG: DOMContentLoaded fired. Starting session load."); // Log for debugging.
 
   initDB(() => {
     console.log("DEBUG: Database initialized.");
@@ -470,8 +530,10 @@ document.addEventListener("DOMContentLoaded", () => {
     appState.jsonFilename = localStorage.getItem("jsonFilename");
     appState.canLogFilename = localStorage.getItem("canLogFilename");
 
-    calculateAndSetOffset();
+    // This is important: it sets videoStartDate if a video filename is cached
+    calculateAndSetOffset(); // Calculate offset based on cached filenames.
 
+    // Promises to load files from IndexedDB.
     const videoPromise = new Promise((resolve) =>
       loadFileFromDB("video", resolve)
     );
@@ -481,42 +543,33 @@ document.addEventListener("DOMContentLoaded", () => {
     const canLogPromise = new Promise((resolve) =>
       loadFileFromDB("canLogText", resolve)
     );
-
+    // Once all files are loaded from DB, process them.
     Promise.all([videoPromise, jsonPromise, canLogPromise])
       .then(([videoBlob, jsonString, canLogText]) => {
         console.log("DEBUG: All data fetched from IndexedDB.");
 
-        const processAllData = async () => {
+        const processAllData = () => {
           console.log("DEBUG: Processing all loaded data.");
 
+          // 1. Process JSON (only if video start date is available).
           if (jsonString && appState.videoStartDate) {
-            try {
-              // 1. First, parse the string from the cache into an object.
-              const cachedData = JSON.parse(jsonString);
-              // 2. Now, pass the OBJECT to our updated function.
-
-              const result = parseVisualizationJson(
-                cachedData, // Pass the object directly
-                appState.radarStartTimeMs,
-                appState.videoStartDate
-              );
-              if (!result.error) {
-                appState.vizData = result.data;
-                appState.globalMinSnr = result.minSnr;
-                appState.globalMaxSnr = result.maxSnr;
-                snrMinInput.value = appState.globalMinSnr.toFixed(1);
-                snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
-              } else {
-                showModal(result.error);
-              }
-            } catch (e) {
-              showModal(
-                "Error parsing cached JSON data. Please clear cache and reload."
-              );
-              console.error("DEBUG: Error parsing cached JSON data:", e);
+            const result = parseVisualizationJson(
+              jsonString,
+              appState.radarStartTimeMs,
+              appState.videoStartDate
+            );
+            if (!result.error) {
+              appState.vizData = result.data;
+              appState.globalMinSnr = result.minSnr;
+              appState.globalMaxSnr = result.maxSnr;
+              snrMinInput.value = appState.globalMinSnr.toFixed(1);
+              snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
+            } else {
+              showModal(result.error);
             }
           }
 
+          // 2. Process CAN log (only if video start date is available).
           if (canLogText && appState.videoStartDate) {
             const result = processCanLog(canLogText, appState.videoStartDate);
             if (!result.error) {
@@ -524,6 +577,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           }
 
+          // 3. Update all UI elements now that data is processed.
           if (appState.vizData) {
             resetVisualization();
             canvasPlaceholder.style.display = "none";
@@ -545,11 +599,14 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         };
 
+        // Main controller for processing data based on video availability.
         if (videoBlob) {
           const fileURL = URL.createObjectURL(videoBlob);
           setupVideoPlayer(fileURL);
+          // This ensures we ONLY process data once the video's duration is known.
           videoPlayer.onloadedmetadata = processAllData;
         } else {
+          // If there's no video, process other data immediately.
           processAllData();
         }
       })
