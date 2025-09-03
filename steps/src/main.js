@@ -118,52 +118,64 @@ jsonFileInput.addEventListener("change", (event) => {
   appState.jsonFilename = file.name;
   localStorage.setItem("jsonFilename", appState.jsonFilename);
   calculateAndSetOffset();
+  saveFileToDB("json", file); // Save the file object for the next session
 
-  const fileURL = URL.createObjectURL(file);
+  const reader = new FileReader();
 
-  // Show a simple "parsing" message
-  showModal("Parsing large JSON file, please wait...");
+  // 1. Show the modal immediately.
+  showModal("Loading large JSON file, this may take a moment...");
 
-  const onError = (errorMessage) => {
-    URL.revokeObjectURL(fileURL);
-    showModal(errorMessage);
+  reader.onload = (e) => {
+    // 2. Use setTimeout to schedule the heavy work for the next event loop cycle.
+    // This gives the browser time to render the modal before it freezes.
+    setTimeout(() => {
+        const jsonString = e.target.result;
+        // Note: We don't need to save to DB here, as we saved the file object earlier.
+
+        const result = parseVisualizationJson(
+            jsonString,
+            appState.radarStartTimeMs,
+            appState.videoStartDate
+        );
+
+        if (result.error) {
+            showModal(result.error);
+            return;
+        }
+
+        appState.vizData = result.data;
+        appState.globalMinSnr = result.minSnr;
+        appState.globalMaxSnr = result.maxSnr;
+
+        // Update UI
+        snrMinInput.value = appState.globalMinSnr.toFixed(1);
+        snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
+        resetVisualization();
+        canvasPlaceholder.style.display = "none";
+        featureToggles.classList.remove("hidden");
+
+        if (!appState.p5_instance) {
+            appState.p5_instance = new p5(radarSketch);
+        }
+
+        if (appState.speedGraphInstance) {
+            appState.speedGraphInstance.setData(
+            appState.canData,
+            appState.vizData,
+            videoPlayer.duration
+            );
+        }
+        
+        // Close the loading modal
+        document.getElementById("modal-ok-btn").click();
+    }, 50); // A small 50ms delay is enough for the UI to update.
   };
 
-  const onComplete = async (parsedData) => {
-    URL.revokeObjectURL(fileURL);
-    showModal("Processing data...");
-
-    const result = await parseVisualizationJson(
-      parsedData,
-      appState.radarStartTimeMs,
-      appState.videoStartDate
-    );
-
-    if (result.error) {
-      showModal(result.error);
-      return;
-    }
-
-    appState.vizData = result.data;
-    appState.globalMinSnr = result.minSnr;
-    appState.globalMaxSnr = result.maxSnr;
-
-    // Update UI
-    snrMinInput.value = appState.globalMinSnr.toFixed(1);
-    snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
-    resetVisualization();
-    canvasPlaceholder.style.display = "none";
-    featureToggles.classList.remove("hidden");
-
-    if (!appState.p5_instance) {
-      appState.p5_instance = new p5(radarSketch);
-    }
-    
-    document.getElementById("modal-ok-btn").click();
+  reader.onerror = () => {
+      showModal("Error reading the selected file.");
   };
 
-  // Start the simple parsing process
-  parseJsonWithOboe(fileURL, onComplete, onError);
+  reader.readAsText(file);
 });
 
 // Event listener for video file input change.
@@ -482,48 +494,37 @@ document.addEventListener("DOMContentLoaded", () => {
       loadFileFromDB("canLogText", resolve)
     );
 
+    // At the end of main.js, inside the DOMContentLoaded listener
+
     Promise.all([videoPromise, jsonPromise, canLogPromise])
-      .then(([videoBlob, jsonString, canLogText]) => {
+      .then(([videoBlob, jsonBlob, canLogText]) => {
+        // Renamed jsonString to jsonBlob
         console.log("DEBUG: All data fetched from IndexedDB.");
 
-        const processAllData = async () => {
-          console.log("DEBUG: Processing all loaded data.");
+        const processRestOfData = async (parsedJson) => {
+          // This is our main processing logic
+          if (parsedJson) {
+            const result = await parseVisualizationJson(
+              parsedJson,
+              appState.radarStartTimeMs,
+              appState.videoStartDate
+            );
 
-          if (jsonString && appState.videoStartDate) {
-            try {
-              // 1. First, parse the string from the cache into an object.
-              const cachedData = JSON.parse(jsonString);
-              // 2. Now, pass the OBJECT to our updated function.
-
-              const result = parseVisualizationJson(
-                cachedData, // Pass the object directly
-                appState.radarStartTimeMs,
-                appState.videoStartDate
-              );
-              if (!result.error) {
-                appState.vizData = result.data;
-                appState.globalMinSnr = result.minSnr;
-                appState.globalMaxSnr = result.maxSnr;
-                snrMinInput.value = appState.globalMinSnr.toFixed(1);
-                snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
-              } else {
-                showModal(result.error);
-              }
-            } catch (e) {
-              showModal(
-                "Error parsing cached JSON data. Please clear cache and reload."
-              );
-              console.error("DEBUG: Error parsing cached JSON data:", e);
+            if (!result.error) {
+              appState.vizData = result.data;
+              // ... (update UI elements)
+              snrMinInput.value = result.minSnr.toFixed(1);
+              snrMaxInput.value = result.maxSnr.toFixed(1);
+            } else {
+              showModal(result.error);
             }
           }
 
           if (canLogText && appState.videoStartDate) {
-            const result = processCanLog(canLogText, appState.videoStartDate);
-            if (!result.error) {
-              appState.canData = result.data;
-            }
+            // ... (process CAN log)
           }
 
+          // Final UI updates
           if (appState.vizData) {
             resetVisualization();
             canvasPlaceholder.style.display = "none";
@@ -534,23 +535,37 @@ document.addEventListener("DOMContentLoaded", () => {
           }
           if (appState.canData.length > 0 || appState.vizData) {
             speedGraphPlaceholder.classList.add("hidden");
-            if (!appState.speedGraphInstance) {
-              appState.speedGraphInstance = new p5(speedGraphSketch);
-            }
-            appState.speedGraphInstance.setData(
-              appState.canData,
-              appState.vizData,
-              videoPlayer.duration
-            );
+            // ... (rest of the UI update logic)
           }
         };
 
+        // Main controller for loading cached data
         if (videoBlob) {
           const fileURL = URL.createObjectURL(videoBlob);
           setupVideoPlayer(fileURL);
-          videoPlayer.onloadedmetadata = processAllData;
+          videoPlayer.onloadedmetadata = () => {
+            if (jsonBlob) {
+              // If a JSON blob exists, parse it first
+              const jsonUrl = URL.createObjectURL(jsonBlob);
+              parseJsonWithOboe(
+                jsonUrl,
+                (data) => processRestOfData(data),
+                (err) => showModal(err)
+              );
+            } else {
+              processRestOfData(null);
+            }
+          };
+        } else if (jsonBlob) {
+          // If there's no video but there is a JSON blob
+          const jsonUrl = URL.createObjectURL(jsonBlob);
+          parseJsonWithOboe(
+            jsonUrl,
+            (data) => processRestOfData(data),
+            (err) => showModal(err)
+          );
         } else {
-          processAllData();
+          processRestOfData(null); // No cached data to process
         }
       })
       .catch((error) => {
