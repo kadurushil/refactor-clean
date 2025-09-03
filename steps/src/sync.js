@@ -29,14 +29,17 @@ export function animationLoop() {
   // Check if visualization data and video start date are available
   if (appState.vizData && appState.videoStartDate) {
     // Get the offset from the input field, default to 0 if not a valid number
+    // --- START: Corrected Logic ---
     const offsetMs = parseFloat(offsetInput.value) || 0;
-    // Calculate the target radar time in milliseconds
-    const targetRadarTimeMs = currentMediaTime * 1000;
-    // Find the index of the radar frame that corresponds to the target time
+    // The master clock represents the VIDEO's timeline.
+    // To find the corresponding RADAR time, we must add the offset.
+    const targetRadarTimeMs = currentMediaTime * 1000 + offsetMs;
+
     const targetFrame = findRadarFrameIndexForTime(
       targetRadarTimeMs,
       appState.vizData
     );
+    // --- END: Corrected Logic ---
     if (targetFrame !== appState.currentFrame) {
       // Update the displayed frame if it's different from the current one
       updateFrame(targetFrame, false);
@@ -45,7 +48,7 @@ export function animationLoop() {
 
   // Periodically check for drift between master clock and video element
   const now = performance.now();
-  if (now - appState.lastSyncTime > 500) {
+  if (now - appState.lastSyncTime > 150) {
     const videoTime = videoPlayer.currentTime;
     const drift = Math.abs(currentMediaTime - videoTime);
     // Resync if drift is > 150ms

@@ -402,6 +402,22 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+// In src/main.js, add this new event listener
+videoPlayer.addEventListener("seeked", () => {
+  // This event fires every time a seek operation completes.
+  // We only act if our flag has been set.
+  if (appState.needsPostSeekUpdate) {
+    console.log(
+      "Video has finished seeking. Performing final debug overlay update."
+    );
+    // Now we can be sure videoPlayer.currentTime is accurate.
+    updateDebugOverlay(videoPlayer.currentTime);
+
+    // Reset the flag so this logic doesn't run on every seek
+    appState.needsPostSeekUpdate = false;
+  }
+});
+
 function calculateAndSetOffset() {
   const jsonTimestampInfo = extractTimestampInfo(appState.jsonFilename);
   const videoTimestampInfo = extractTimestampInfo(appState.videoFilename);
@@ -540,4 +556,54 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error("DEBUG: Error during Promise.all data loading:", error);
       });
   });
+});
+
+// In src/main.js, add this new event listener
+offsetInput.addEventListener("keydown", (event) => {
+  // Check if the key pressed was 'Enter'
+  if (event.key === "Enter") {
+    // Prevent the default browser action for the Enter key (like submitting a form)
+    event.preventDefault();
+
+    // Make sure visualization data is loaded before proceeding
+    if (!appState.vizData) return;
+
+    console.log(
+      `Enter pressed. Forcing resync with new offset: ${offsetInput.value}`
+    );
+
+    // If the video is playing, pause it to allow for precise frame tuning.
+    if (appState.isPlaying) {
+      playPauseBtn.click();
+    }
+
+    // Call updateFrame, forcing it to resync the video to the current radar frame
+    // using the new offset value from the input box.
+    updateFrame(appState.currentFrame, true);
+  }
+});
+
+// In src/main.js, REPLACE the 'change' event listener with this:
+timelineSlider.addEventListener("change", () => {
+  if (!appState.vizData || appState.isPlaying) return;
+
+  const currentRadarFrame = appState.vizData.radarFrames[appState.currentFrame];
+  if (!currentRadarFrame) return;
+
+  const targetRadarTimeMs = currentRadarFrame.timestampMs;
+  const offsetMs = parseFloat(offsetInput.value) || 0;
+  const currentVideoTimeMs = videoPlayer.currentTime * 1000;
+  const driftMs = currentVideoTimeMs + offsetMs - targetRadarTimeMs;
+
+  if (Math.abs(driftMs) > 50) {
+    console.log(
+      `Setting flag for post-seek update. Initial drift: ${driftMs.toFixed(
+        0
+      )}ms`
+    );
+    // 1. Set the flag to true
+    appState.needsPostSeekUpdate = true;
+    // 2. Initiate the final seek operation
+    updateFrame(appState.currentFrame, true);
+  }
 });

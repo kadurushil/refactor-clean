@@ -107,7 +107,7 @@ export function updateFrame(frame, forceVideoSeek) {
   }
   // --- END OF NEW BLOCK ---
 
-    let timeForUpdates = videoPlayer.currentTime; // NEW: Default to the video's current time
+  let timeForUpdates = videoPlayer.currentTime; // NEW: Default to the video's current time
 
   if (
     forceVideoSeek &&
@@ -214,10 +214,15 @@ export function updateDebugOverlay(currentMediaTime) {
       appState.vizData &&
       appState.vizData.radarFrames[appState.currentFrame]
     ) {
+      // --- START: Corrected Debug Logic ---
       const currentRadarFrame =
         appState.vizData.radarFrames[appState.currentFrame];
       const targetRadarTimeMs = currentRadarFrame.timestampMs;
-      const driftMs = currentMediaTime * 1000 - targetRadarTimeMs;
+      const offsetMs = parseFloat(offsetInput.value) || 0; // Read the current offset
+
+      // Make the drift calculation "offset-aware"
+      const driftMs = currentMediaTime * 1000 + offsetMs - targetRadarTimeMs;
+      // --- END: Corrected Debug Logic ---
 
       // Style the drift value to be green if sync is good, and red if it's off.
       const driftColor = Math.abs(driftMs) > 40 ? "#FF6347" : "#98FB98"; // Tomato red or Pale green
