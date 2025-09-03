@@ -120,62 +120,65 @@ jsonFileInput.addEventListener("change", (event) => {
   calculateAndSetOffset();
   saveFileToDB("json", file); // Save the file object for the next session
 
-  const reader = new FileReader();
+  // 1. Show a loading modal immediately.
+  showModal("Parsing large JSON file, please wait...");
 
-  // 1. Show the modal immediately.
-  showModal("Loading large JSON file, this may take a moment...");
+  // 2. Create a temporary URL for the streaming parser.
+  const fileURL = URL.createObjectURL(file);
 
-  reader.onload = (e) => {
-    // 2. Use setTimeout to schedule the heavy work for the next event loop cycle.
-    // This gives the browser time to render the modal before it freezes.
-    setTimeout(() => {
-        const jsonString = e.target.result;
-        // Note: We don't need to save to DB here, as we saved the file object earlier.
+  // 3. Use the robust streaming parser.
+  parseJsonWithOboe(
+    fileURL,
+    async (parsedData) => {
+      // This is the success callback, running after the file is parsed.
+      // We make it async so we can `await` the next step.
 
-        const result = parseVisualizationJson(
-            jsonString,
-            appState.radarStartTimeMs,
-            appState.videoStartDate
+      const result = await parseVisualizationJson(
+        parsedData,
+        appState.radarStartTimeMs,
+        appState.videoStartDate
+      );
+
+      // Revoke the temporary URL to free up memory.
+      URL.revokeObjectURL(fileURL);
+
+      if (result.error) {
+        showModal(result.error);
+        return;
+      }
+
+      appState.vizData = result.data;
+      appState.globalMinSnr = result.minSnr;
+      appState.globalMaxSnr = result.maxSnr;
+
+      // Update UI with the correct, awaited data.
+      snrMinInput.value = appState.globalMinSnr.toFixed(1);
+      snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
+      resetVisualization();
+      canvasPlaceholder.style.display = "none";
+      featureToggles.classList.remove("hidden");
+
+      if (!appState.p5_instance) {
+        appState.p5_instance = new p5(radarSketch);
+      }
+
+      if (appState.speedGraphInstance) {
+        appState.speedGraphInstance.setData(
+          appState.canData,
+          appState.vizData,
+          videoPlayer.duration
         );
+      }
 
-        if (result.error) {
-            showModal(result.error);
-            return;
-        }
-
-        appState.vizData = result.data;
-        appState.globalMinSnr = result.minSnr;
-        appState.globalMaxSnr = result.maxSnr;
-
-        // Update UI
-        snrMinInput.value = appState.globalMinSnr.toFixed(1);
-        snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
-        resetVisualization();
-        canvasPlaceholder.style.display = "none";
-        featureToggles.classList.remove("hidden");
-
-        if (!appState.p5_instance) {
-            appState.p5_instance = new p5(radarSketch);
-        }
-
-        if (appState.speedGraphInstance) {
-            appState.speedGraphInstance.setData(
-            appState.canData,
-            appState.vizData,
-            videoPlayer.duration
-            );
-        }
-        
-        // Close the loading modal
-        document.getElementById("modal-ok-btn").click();
-    }, 50); // A small 50ms delay is enough for the UI to update.
-  };
-
-  reader.onerror = () => {
-      showModal("Error reading the selected file.");
-  };
-
-  reader.readAsText(file);
+      // Close the loading modal.
+      document.getElementById("modal-ok-btn").click();
+    },
+    (error) => {
+      // This is the error callback for the streaming parser.
+      showModal(error);
+      URL.revokeObjectURL(fileURL);
+    }
+  );
 });
 
 // Event listener for video file input change.
