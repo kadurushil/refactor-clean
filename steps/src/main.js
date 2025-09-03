@@ -111,74 +111,119 @@ clearCacheBtn.addEventListener("click", async () => {
 });
 
 jsonFileInput.addEventListener("change", (event) => {
+
   const file = event.target.files[0];
+
   if (!file) return;
-
+ 
   appState.jsonFilename = file.name;
+
   localStorage.setItem("jsonFilename", appState.jsonFilename);
+
   calculateAndSetOffset();
+
   saveFileToDB("json", file); // Save the file object for the next session
-
+ 
   // 1. Show a loading modal immediately.
+
   showModal("Parsing large JSON file, please wait...");
-
+ 
   // 2. Create a temporary URL for the streaming parser.
+
   const fileURL = URL.createObjectURL(file);
-
+ 
   // 3. Use the robust streaming parser.
+
   parseJsonWithOboe(
+
     fileURL,
+
     async (parsedData) => {
+
       // This is the success callback, running after the file is parsed.
+
       // We make it async so we can `await` the next step.
-
+ 
       const result = await parseVisualizationJson(
+
         parsedData,
+
         appState.radarStartTimeMs,
+
         appState.videoStartDate
+
       );
-
+ 
       // Revoke the temporary URL to free up memory.
-      URL.revokeObjectURL(fileURL);
 
+      URL.revokeObjectURL(fileURL);
+ 
       if (result.error) {
+
         showModal(result.error);
+
         return;
-      }
 
+      }
+ 
       appState.vizData = result.data;
+
       appState.globalMinSnr = result.minSnr;
+
       appState.globalMaxSnr = result.maxSnr;
-
+ 
       // Update UI with the correct, awaited data.
+
       snrMinInput.value = appState.globalMinSnr.toFixed(1);
+
       snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
+
       resetVisualization();
+
       canvasPlaceholder.style.display = "none";
+
       featureToggles.classList.remove("hidden");
-
+ 
       if (!appState.p5_instance) {
+
         appState.p5_instance = new p5(radarSketch);
-      }
 
+      }
+ 
       if (appState.speedGraphInstance) {
-        appState.speedGraphInstance.setData(
-          appState.canData,
-          appState.vizData,
-          videoPlayer.duration
-        );
-      }
 
+        appState.speedGraphInstance.setData(
+
+          appState.canData,
+
+          appState.vizData,
+
+          videoPlayer.duration
+
+        );
+
+      }
+ 
       // Close the loading modal.
+
       document.getElementById("modal-ok-btn").click();
+
     },
+
     (error) => {
+
       // This is the error callback for the streaming parser.
+
       showModal(error);
+
       URL.revokeObjectURL(fileURL);
+
     }
+
   );
+
 });
+ 
 
 // Event listener for video file input change.
 videoFileInput.addEventListener("change", (event) => {
