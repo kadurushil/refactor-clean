@@ -100,7 +100,6 @@ function setupVideoPlayer(fileURL) {
 // Event listener for loading JSON file.
 loadJsonBtn.addEventListener("click", () => jsonFileInput.click());
 loadVideoBtn.addEventListener("click", () => videoFileInput.click());
-loadCanBtn.addEventListener("click", () => canFileInput.click());
 
 clearCacheBtn.addEventListener("click", async () => {
   const confirmed = await showModal("Clear all cached data and reload?", true);
@@ -225,9 +224,7 @@ videoFileInput.addEventListener("change", (event) => {
 });
 
 // Event listener for CAN file input change.
-canFileInput.addEventListener("change", (event) => {
-  const file = event.target.files[0];
-  if (!file) return;
+  
   appState.canLogFilename = file.name;
   localStorage.setItem("canLogFilename", appState.canLogFilename);
 
@@ -264,7 +261,7 @@ canFileInput.addEventListener("change", (event) => {
     }
   };
   reader.readAsText(file);
-});
+
 
 // Event listener for offset input change.
 offsetInput.addEventListener("input", () => {
