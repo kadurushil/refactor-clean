@@ -1,5 +1,4 @@
 import { appState } from "./state.js";
-import { findLastCanIndexBefore } from "./utils.js";
 import { VIDEO_FPS } from "./constants.js"; // Import VIDEO_FPS for debug overlay calculations
 
 // --- DOM Element References --- //
@@ -23,25 +22,39 @@ export const speedSlider = document.getElementById("speed-slider");
 export const speedDisplay = document.getElementById("speed-display");
 export const featureToggles = document.getElementById("feature-toggles");
 export const toggleSnrColor = document.getElementById("toggle-snr-color");
-export const toggleClusterColor = document.getElementById("toggle-cluster-color");
+export const toggleClusterColor = document.getElementById(
+  "toggle-cluster-color"
+);
 export const toggleInlierColor = document.getElementById("toggle-inlier-color");
-export const toggleStationaryColor = document.getElementById("toggle-stationary-color");
+export const toggleStationaryColor = document.getElementById(
+  "toggle-stationary-color"
+);
 export const toggleVelocity = document.getElementById("toggle-velocity");
 export const toggleTracks = document.getElementById("toggle-tracks");
 export const toggleEgoSpeed = document.getElementById("toggle-ego-speed");
 export const toggleFrameNorm = document.getElementById("toggle-frame-norm");
-export const toggleDebugOverlay = document.getElementById("toggle-debug-overlay");
+export const toggleDebugOverlay = document.getElementById(
+  "toggle-debug-overlay"
+);
 export const egoSpeedDisplay = document.getElementById("ego-speed-display");
 export const canSpeedDisplay = document.getElementById("can-speed-display");
 export const debugOverlay = document.getElementById("debug-overlay");
-export const toggleDebug2Overlay = document.getElementById("toggle-debug2-overlay");
+export const toggleDebug2Overlay = document.getElementById(
+  "toggle-debug2-overlay"
+);
 export const snrMinInput = document.getElementById("snr-min-input");
 export const snrMaxInput = document.getElementById("snr-max-input");
 export const applySnrBtn = document.getElementById("apply-snr-btn");
-export const autoOffsetIndicator = document.getElementById("auto-offset-indicator");
+export const autoOffsetIndicator = document.getElementById(
+  "auto-offset-indicator"
+);
 export const clearCacheBtn = document.getElementById("clear-cache-btn");
-export const speedGraphContainer = document.getElementById("speed-graph-container");
-export const speedGraphPlaceholder = document.getElementById("speed-graph-placeholder");
+export const speedGraphContainer = document.getElementById(
+  "speed-graph-container"
+);
+export const speedGraphPlaceholder = document.getElementById(
+  "speed-graph-placeholder"
+);
 export const modalContainer = document.getElementById("modal-container");
 export const modalOverlay = document.getElementById("modal-overlay");
 export const modalContent = document.getElementById("modal-content");
@@ -49,7 +62,9 @@ export const modalText = document.getElementById("modal-text");
 export const modalOkBtn = document.getElementById("modal-ok-btn");
 export const modalCancelBtn = document.getElementById("modal-cancel-btn");
 export const toggleCloseUp = document.getElementById("toggle-close-up");
-export const togglePredictedPos = document.getElementById("toggle-predicted-pos");
+export const togglePredictedPos = document.getElementById(
+  "toggle-predicted-pos"
+);
 export const toggleCovariance = document.getElementById("toggle-covariance");
 
 //----------------------UPDATE FRAME Function----------------------//
@@ -77,8 +92,22 @@ export function updateFrame(frame, forceVideoSeek) {
     egoSpeedDisplay.classList.add("hidden"); // Hide ego speed display.
   }
 
-  // --- Start of fix ---
-  let timeForUpdates = videoPlayer.currentTime; // NEW: Default to the video's current time
+  // --- ADD THIS NEW BLOCK ---
+  if (
+    frameData &&
+    frameData.canVehSpeed_kmph !== null &&
+    !isNaN(frameData.canVehSpeed_kmph)
+  ) {
+    canSpeedDisplay.textContent = `CAN: ${frameData.canVehSpeed_kmph.toFixed(
+      1
+    )} km/h`;
+    canSpeedDisplay.classList.remove("hidden");
+  } else {
+    canSpeedDisplay.classList.add("hidden");
+  }
+  // --- END OF NEW BLOCK ---
+
+    let timeForUpdates = videoPlayer.currentTime; // NEW: Default to the video's current time
 
   if (
     forceVideoSeek &&
@@ -103,7 +132,6 @@ export function updateFrame(frame, forceVideoSeek) {
 
   if (!appState.isPlaying) {
     // MODIFIED: Use our new synchronized time variable
-    updateCanDisplay(timeForUpdates);
     updateDebugOverlay(timeForUpdates);
   }
   // --- End of fix ---
@@ -126,29 +154,6 @@ export function resetVisualization() {
 
 //----------------------CAN DISPLAY UPDATE Function----------------------//
 // Updates the CAN speed display based on the current media time.
-export function updateCanDisplay(currentMediaTime) {
-  if (
-    appState.canData.length > 0 &&
-    videoPlayer.src &&
-    appState.videoStartDate
-  ) {
-    const videoAbsoluteTimeMs =
-      appState.videoStartDate.getTime() + currentMediaTime * 1000;
-    const canIndex = findLastCanIndexBefore(
-      videoAbsoluteTimeMs,
-      appState.canData
-    );
-    if (canIndex !== -1) {
-      const currentCanMessage = appState.canData[canIndex]; // Get the CAN message at the found index
-      canSpeedDisplay.textContent = `CAN: ${currentCanMessage.speed} km/h`; // Display CAN speed
-      canSpeedDisplay.classList.remove("hidden");
-    } else {
-      canSpeedDisplay.classList.add("hidden"); // Hide CAN speed display
-    }
-  } else {
-    canSpeedDisplay.classList.add("hidden"); // Hide CAN speed display.
-  }
-}
 
 //----------------------DEBUG OVERLAY UPDATE Function----------------------//
 // Updates the debug overlay with various synchronization and time information.

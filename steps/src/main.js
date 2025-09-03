@@ -19,11 +19,7 @@
 import { animationLoop } from "./sync.js";
 import { radarSketch } from "./p5/radarSketch.js";
 import { speedGraphSketch } from "./p5/speedGraphSketch.js";
-import {
-  processCanLog,
-  parseVisualizationJson,
-  parseJsonWithOboe,
-} from "./fileParsers.js";
+import { parseVisualizationJson, parseJsonWithOboe } from "./fileParsers.js";
 import {
   MAX_TRAJECTORY_LENGTH,
   VIDEO_FPS,
@@ -34,7 +30,6 @@ import {
 } from "./constants.js";
 import {
   findRadarFrameIndexForTime,
-  findLastCanIndexBefore,
   extractTimestampInfo,
   parseTimestamp,
   throttle,
@@ -47,10 +42,8 @@ import {
   videoPlaceholder,
   loadJsonBtn,
   loadVideoBtn,
-  loadCanBtn,
   jsonFileInput,
   videoFileInput,
-  canFileInput,
   playPauseBtn,
   stopBtn,
   timelineSlider,
@@ -70,7 +63,6 @@ import {
   toggleDebugOverlay,
   toggleDebug2Overlay,
   egoSpeedDisplay,
-  canSpeedDisplay,
   debugOverlay,
   snrMinInput,
   snrMaxInput,
@@ -82,7 +74,6 @@ import {
   toggleCloseUp,
   updateFrame,
   resetVisualization,
-  updateCanDisplay,
   updateDebugOverlay,
 } from "./dom.js";
 import { showModal } from "./modal.js";
@@ -111,11 +102,10 @@ clearCacheBtn.addEventListener("click", async () => {
 });
 
 jsonFileInput.addEventListener("change", (event) => {
-
   const file = event.target.files[0];
 
   if (!file) return;
- 
+
   appState.jsonFilename = file.name;
 
   localStorage.setItem("jsonFilename", appState.jsonFilename);
@@ -123,55 +113,49 @@ jsonFileInput.addEventListener("change", (event) => {
   calculateAndSetOffset();
 
   saveFileToDB("json", file); // Save the file object for the next session
- 
+
   // 1. Show a loading modal immediately.
 
   showModal("Parsing large JSON file, please wait...");
- 
+
   // 2. Create a temporary URL for the streaming parser.
 
   const fileURL = URL.createObjectURL(file);
- 
+
   // 3. Use the robust streaming parser.
 
   parseJsonWithOboe(
-
     fileURL,
 
     async (parsedData) => {
-
       // This is the success callback, running after the file is parsed.
 
       // We make it async so we can `await` the next step.
- 
-      const result = await parseVisualizationJson(
 
+      const result = await parseVisualizationJson(
         parsedData,
 
         appState.radarStartTimeMs,
 
         appState.videoStartDate
-
       );
- 
+
       // Revoke the temporary URL to free up memory.
 
       URL.revokeObjectURL(fileURL);
- 
-      if (result.error) {
 
+      if (result.error) {
         showModal(result.error);
 
         return;
-
       }
- 
+
       appState.vizData = result.data;
 
       appState.globalMinSnr = result.minSnr;
 
       appState.globalMaxSnr = result.maxSnr;
- 
+
       // Update UI with the correct, awaited data.
 
       snrMinInput.value = appState.globalMinSnr.toFixed(1);
@@ -183,47 +167,38 @@ jsonFileInput.addEventListener("change", (event) => {
       canvasPlaceholder.style.display = "none";
 
       featureToggles.classList.remove("hidden");
- 
+
       if (!appState.p5_instance) {
-
         appState.p5_instance = new p5(radarSketch);
-
       }
- 
-      if (appState.speedGraphInstance) {
 
-        appState.speedGraphInstance.setData(
-
-          appState.canData,
-
-          appState.vizData,
-
-          videoPlayer.duration
-
-        );
-
+      if (appState.vizData) {
+        speedGraphPlaceholder.classList.add("hidden");
+        if (!appState.speedGraphInstance) {
+          appState.speedGraphInstance = new p5(speedGraphSketch);
+        }
+        if (videoPlayer.duration) {
+          appState.speedGraphInstance.setData(
+            appState.vizData,
+            videoPlayer.duration
+          );
+        }
       }
- 
+
       // Close the loading modal.
 
       document.getElementById("modal-ok-btn").click();
-
     },
 
     (error) => {
-
       // This is the error callback for the streaming parser.
 
       showModal(error);
 
       URL.revokeObjectURL(fileURL);
-
     }
-
   );
-
 });
- 
 
 // Event listener for video file input change.
 videoFileInput.addEventListener("change", (event) => {
@@ -234,17 +209,6 @@ videoFileInput.addEventListener("change", (event) => {
   saveFileToDB("video", file);
 
   calculateAndSetOffset();
-
-  if (appState.rawCanLogText) {
-    const result = processCanLog(
-      appState.rawCanLogText,
-      appState.videoStartDate
-    );
-    if (!result.error) {
-      appState.canData = result.data;
-      appState.rawCanLogText = null;
-    }
-  }
 
   if (appState.vizData) {
     console.log("DEBUG: Video loaded after JSON. Re-calculating timestamps.");
@@ -263,53 +227,12 @@ videoFileInput.addEventListener("change", (event) => {
   videoPlayer.onloadedmetadata = () => {
     if (appState.speedGraphInstance) {
       appState.speedGraphInstance.setData(
-        appState.canData,
         appState.vizData,
         videoPlayer.duration
       );
     }
   };
 });
-
-// Event listener for CAN file input change.
-  
-  appState.canLogFilename = file.name;
-  localStorage.setItem("canLogFilename", appState.canLogFilename);
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const logContent = e.target.result;
-    saveFileToDB("canLogText", logContent);
-
-    const result = processCanLog(logContent, appState.videoStartDate);
-
-    if (result.error) {
-      showModal(result.error);
-      appState.rawCanLogText = result.rawCanLogText;
-      return;
-    }
-
-    appState.canData = result.data;
-    appState.rawCanLogText = null;
-
-    if (appState.canData.length > 0 || appState.vizData) {
-      speedGraphPlaceholder.classList.add("hidden");
-      if (!appState.speedGraphInstance) {
-        appState.speedGraphInstance = new p5(speedGraphSketch);
-      }
-      if (videoPlayer.duration) {
-        appState.speedGraphInstance.setData(
-          appState.canData,
-          appState.vizData,
-          videoPlayer.duration
-        );
-      }
-    } else {
-      showModal(`No CAN messages with ID 0x30F found.`);
-    }
-  };
-  reader.readAsText(file);
-
 
 // Event listener for offset input change.
 offsetInput.addEventListener("input", () => {
@@ -525,7 +448,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     appState.videoFilename = localStorage.getItem("videoFilename");
     appState.jsonFilename = localStorage.getItem("jsonFilename");
-    appState.canLogFilename = localStorage.getItem("canLogFilename");
 
     calculateAndSetOffset();
 
@@ -535,14 +457,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const jsonPromise = new Promise((resolve) =>
       loadFileFromDB("json", resolve)
     );
-    const canLogPromise = new Promise((resolve) =>
-      loadFileFromDB("canLogText", resolve)
-    );
 
     // At the end of main.js, inside the DOMContentLoaded listener
 
-    Promise.all([videoPromise, jsonPromise, canLogPromise])
-      .then(([videoBlob, jsonBlob, canLogText]) => {
+    Promise.all([videoPromise, jsonPromise])
+      .then(([videoBlob, jsonBlob]) => {
         // Renamed jsonString to jsonBlob
         console.log("DEBUG: All data fetched from IndexedDB.");
 
@@ -565,10 +484,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           }
 
-          if (canLogText && appState.videoStartDate) {
-            // ... (process CAN log)
-          }
-
           // Final UI updates
           if (appState.vizData) {
             resetVisualization();
@@ -578,9 +493,17 @@ document.addEventListener("DOMContentLoaded", () => {
               appState.p5_instance = new p5(radarSketch);
             }
           }
-          if (appState.canData.length > 0 || appState.vizData) {
+          if (appState.vizData) {
             speedGraphPlaceholder.classList.add("hidden");
-            // ... (rest of the UI update logic)
+            if (!appState.speedGraphInstance) {
+              appState.speedGraphInstance = new p5(speedGraphSketch);
+            }
+            if (videoPlayer.duration) {
+              appState.speedGraphInstance.setData(
+                appState.vizData,
+                videoPlayer.duration
+              );
+            }
           }
         };
 

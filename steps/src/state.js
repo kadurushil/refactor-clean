@@ -2,10 +2,6 @@ export const appState = {
   // Stores the parsed visualization data (radar frames, tracks, etc.)
   vizData: null,
   // Stores the processed CAN bus data (speed, time)
-  canData: [],
-  // Temporarily holds raw CAN log text if video start date is not yet available for processing
-  rawCanLogText: null,
-  // The Date object representing the start time of the video
   videoStartDate: null,
   // The timestamp (in milliseconds) of the first radar frame, extracted from the JSON filename
   radarStartTimeMs: 0,
@@ -26,8 +22,6 @@ export const appState = {
   // The filename of the loaded video file
   videoFilename: "",
   // The filename of the loaded CAN log file
-  canLogFilename: "",
-  // Boolean indicating if the close-up interaction mode is active
   isCloseUpMode: false,
   // Timestamp (from performance.now()) when the master clock started for synchronized playback
   masterClockStart: 0,

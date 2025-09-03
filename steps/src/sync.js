@@ -5,7 +5,6 @@ import {
   offsetInput,
   stopBtn,
   updateFrame,
-  updateCanDisplay,
   updateDebugOverlay,
 } from "./dom.js";
 import { findRadarFrameIndexForTime } from "./utils.js";
@@ -64,8 +63,6 @@ export function animationLoop() {
     return;
   }
 
-  // Update CAN bus data display
-  updateCanDisplay(currentMediaTime);
   // Update debug overlay information
   updateDebugOverlay(currentMediaTime);
   // Redraw the speed graph if an instance exists

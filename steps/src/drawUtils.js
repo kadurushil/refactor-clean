@@ -525,9 +525,25 @@ export function drawCovarianceEllipse(p, position, covarianceP, plotScales) {
   const trace = a + d;
   const determinant = a * d - b * b;
 
-  const lambda1 = trace / 2 + Math.sqrt(Math.pow(trace, 2) / 4 - determinant);
-  const lambda2 = trace / 2 - Math.sqrt(Math.pow(trace, 2) / 4 - determinant);
+  //const lambda1 = trace / 2 + Math.sqrt(Math.pow(trace, 2) / 4 - determinant);
+  //const lambda2 = trace / 2 - Math.sqrt(Math.pow(trace, 2) / 4 - determinant);
+  // --- START: New robust calculation with logging ---
+  let sqrtTermVal = Math.pow(trace, 2) / 4 - determinant;
 
+  // Check for a negative value, which causes NaN errors
+  if (sqrtTermVal < 0) {
+    // Log a warning so we know it happened, as you suggested
+    console.warn(
+      `Clamping negative sqrtTermVal in frame ${appState.currentFrame} to prevent NaN. Original value: ${sqrtTermVal}`
+    );
+    // Clamp the value to 0. This allows drawing to continue instead of breaking.
+    sqrtTermVal = 0;
+  }
+
+  const sqrtTerm = Math.sqrt(sqrtTermVal);
+  const lambda1 = trace / 2 + sqrtTerm;
+  const lambda2 = trace / 2 - sqrtTerm;
+  // --- END: New robust calculation with logging ---
   const chi2 = 5.991;
   const majorAxis = Math.sqrt(chi2 * lambda1);
   const minorAxis = Math.sqrt(chi2 * lambda2);
@@ -542,8 +558,16 @@ export function drawCovarianceEllipse(p, position, covarianceP, plotScales) {
   p.noFill();
   p.stroke(255, 0, 0, 150);
   p.strokeWeight(1);
-  p.translate(position[0] * plotScales.plotScaleX, position[1] * plotScales.plotScaleY);
+  p.translate(
+    position[0] * plotScales.plotScaleX,
+    position[1] * plotScales.plotScaleY
+  );
   p.rotate(angle);
-  p.ellipse(0, 0, majorAxis * 2 * plotScales.plotScaleX, minorAxis * 2 * plotScales.plotScaleY);
+  p.ellipse(
+    0,
+    0,
+    majorAxis * 2 * plotScales.plotScaleX,
+    minorAxis * 2 * plotScales.plotScaleY
+  );
   p.pop();
 }

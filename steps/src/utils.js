@@ -24,28 +24,7 @@ export function findRadarFrameIndexForTime(targetTimeMs, vizData) {
   return ans;
 }
 
-export function findLastCanIndexBefore(targetTime, canData) {
-  // Check for empty or invalid CAN data
-  if (!canData || canData.length === 0) return -1;
 
-  // Initialize low, high, and answer variables for binary search
-  // 'ans' will store the index of the last CAN data point found before the target time
-  // 'low' and 'high' define the search range
-  let low = 0,
-    high = canData.length - 1,
-    ans = -1; // Initialize ans to -1, indicating no suitable frame found yet.
-  while (low <= high) {
-    let mid = Math.floor((low + high) / 2);
-    if (canData[mid].time <= targetTime) {
-      ans = mid;
-      low = mid + 1;
-    } else {
-      high = mid - 1;
-    }
-  }
-  // Return the index of the found CAN data point.
-  return ans;
-}
 
 export function extractTimestampInfo(filename) {
   // Return null if filename is not provided

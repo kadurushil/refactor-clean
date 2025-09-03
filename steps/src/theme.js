@@ -22,20 +22,15 @@ function setTheme(theme) {
 
   // Redraw the speed graph to apply theme changes
   if (appState.speedGraphInstance) {
-    // Check if there's data available to draw on the speed graph
-    if (
-      (appState.canData.length > 0 || appState.vizData) &&
-      videoPlayer.duration
-    ) {
-      // If data exists, redraw the static parts of the graph to a buffer
-      // This ensures the background and static elements reflect the new theme
-      appState.speedGraphInstance.drawStaticGraphToBuffer(
-        appState.canData,
-        appState.vizData
+    // Check if there's data available to redraw
+    if (appState.vizData && videoPlayer.duration) {
+      // Re-run setData. This is the most reliable way to redraw the graph
+      // with the new theme, as it recalculates and redraws everything.
+      appState.speedGraphInstance.setData(
+        appState.vizData,
+        videoPlayer.duration
       );
     }
-    // Request a redraw of the speed graph to display the updated buffer
-    appState.speedGraphInstance.redraw();
   }
 }
 
