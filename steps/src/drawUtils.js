@@ -331,6 +331,8 @@ export function drawTrajectories(p, plotScales) {
  * @param {p5} p - The p5 instance.
  * @param {object} plotScales - The calculated scales for plotting.
  */
+// In src/drawUtils.js
+
 export function drawTrackMarkers(p, plotScales) {
   const showDetails = toggleVelocity.checked;
   const useStationary = toggleStationaryColor.checked;
@@ -341,16 +343,22 @@ export function drawTrackMarkers(p, plotScales) {
   const localMovingColor = movingColor(p);
 
   for (const track of appState.vizData.tracks) {
+
+    // --- START: Add the Same Safeguard Here ---
+    // This robust check ensures the track and its historyLog are valid before use.
+    if (!track || !track.historyLog || !Array.isArray(track.historyLog)) {
+        // We don't need to log a warning here again, as drawTrajectories already did.
+        // We can just safely skip this malformed track.
+        continue;
+    }
+    // --- END: Add the Same Safeguard Here ---
+
     const log = track.historyLog.find(
       (log) => log.frameIdx === appState.currentFrame + 1
     );
 
     if (log) {
-      // --- MODIFIED LOGIC STARTS HERE ---
-      // 1. Get the corrected position directly.
       const pos = log.correctedPosition;
-
-      // 2. Only draw the marker and details if the corrected position is valid (not null).
       if (pos && pos.length === 2 && pos[0] !== null && pos[1] !== null) {
         const size = 5;
         const x = pos[0] * plotScales.plotScaleX;
@@ -359,7 +367,6 @@ export function drawTrackMarkers(p, plotScales) {
 
         p.push();
         p.strokeWeight(2);
-        // This part remains the same: it styles the marker based on stationary status
         if (useStationary && log.isStationary === true) {
           p.stroke(localStationaryColor);
           p.noFill();
@@ -367,7 +374,7 @@ export function drawTrackMarkers(p, plotScales) {
           p.square(x, y, size * 1.5);
           velocityColor = localStationaryColor;
         } else {
-          let markerColor = p.color(0, 0, 255); // Default blue
+          let markerColor = p.color(0, 0, 255);
           if (useStationary && log.isStationary === false) {
             markerColor = localMovingColor;
             velocityColor = localMovingColor;
@@ -378,7 +385,6 @@ export function drawTrackMarkers(p, plotScales) {
         }
         p.pop();
 
-        // The logic to show velocity and text details also moves inside this block
         if (
           showDetails &&
           log.predictedVelocity &&
@@ -412,7 +418,6 @@ export function drawTrackMarkers(p, plotScales) {
           p.pop();
         }
       }
-      // --- MODIFIED LOGIC ENDS HERE ---
     }
   }
 }
