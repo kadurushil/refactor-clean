@@ -1,79 +1,127 @@
-// -------------------------- IndexedDB for Caching ----------------- //
+// In src/db.js, replace the entire file content with this:
+
 let db;
 
-//---------------------------Initialize DB----------------------------//
-
 // Initializes the IndexedDB database.
-// @param {function} callback - A function to be called once the database is initialized.
+// Opens or creates the 'visualizerDB' database.
 export function initDB(callback) {
-  // Open the database with the name "visualizerDB" and version 1.
   const request = indexedDB.open("visualizerDB", 1);
 
-  // Event handler for when the database needs to be upgraded (e.g., first time creation or version change).
   request.onupgradeneeded = function (event) {
     const db = event.target.result;
-    // Create an object store named "files" if it doesn't already exist.
     if (!db.objectStoreNames.contains("files")) {
       db.createObjectStore("files");
+ // Creates an object store named 'files' if it doesn't exist.
     }
   };
 
-  // Event handler for a successful database opening.
   request.onsuccess = function (event) {
     db = event.target.result;
     console.log("Database initialized");
-    // Call the provided callback function.
+ // Assigns the opened database to the 'db' variable.
     if (callback) callback();
   };
 
-  // Event handler for an error during database opening.
   request.onerror = function (event) {
     console.error("IndexedDB error:", event.target.errorCode);
+    // Even if DB fails, call the callback so the app doesn't hang
+ // Logs any errors during database operations.
+ // Calls the callback even if there's an error to prevent the app from hanging.
+    if (callback) callback(); 
   };
 }
 
-//---------------------------save file------------------------------//
-
-// Saves a file (or any value) to the IndexedDB.
-// @param {string} key - The key to store the value under.
-// @param {*} value - The value to be stored.
-export function saveFileToDB(key, value) {
-  // If the database is not initialized, return.
+/**
+ * Saves a file and its metadata to IndexedDB for versioning and integrity checks.
+ * @param {string} key The key to store the file under (e.g., 'json', 'video').
+ * @param {File} file The file object to be cached.
+ */
+// Saves a file (Blob) along with its metadata into the IndexedDB.
+export function saveFileWithMetadata(key, file) {
   if (!db) return;
-  // Start a read-write transaction on the "files" object store.
+
   const transaction = db.transaction(["files"], "readwrite");
   const store = transaction.objectStore("files");
-  // Put (add or update) the value with the given key.
-  const request = store.put(value, key);
-  // Event handler for a successful save operation.
-  request.onsuccess = () => console.log(`File '${key}' saved to DB.`);
-  // Event handler for an error during saving.
-  request.onerror = (event) =>
-    console.error(`Error saving file '${key}':`, event.target.error);
+  
+ // Creates a read-write transaction and gets the 'files' object store.
+  // Store an object containing the blob and its metadata
+  const dataToStore = {
+    filename: file.name,
+    size: file.size,
+    type: file.type,
+    blob: file 
+ // Prepares the data object to be stored, including filename, size, type, and the file itself (as a Blob).
+  };
+
+  const request = store.put(dataToStore, key);
+
+  request.onsuccess = () => console.log(`File '${file.name}' saved to DB with metadata.`);
+  
+  // Gracefully handle errors, especially quota limits
+  transaction.onerror = (event) => {
+    if (event.target.error.name === 'QuotaExceededError') {
+        alert("Could not cache file: Browser storage quota exceeded. The app will still work for this session.");
+    } else {
+ // Handles potential errors during the save operation, such as QuotaExceededError.
+        console.error(`Error saving file '${key}':`, event.target.error);
+    }
+  };
 }
 
-//---------------------------load file--------------------------------//
+/**
+ * Loads a file from IndexedDB only if its filename and size match expected values.
+ * @param {string} key The key of the file to load.
+ * @param {string} expectedFilename The filename we expect to find.
+ * @returns {Promise<Blob|null>} A Promise that resolves with the Blob if it's fresh, otherwise null.
+ */
+// Loads a file from IndexedDB, performing checks for filename and size to ensure data integrity.
+export function loadFreshFileFromDB(key, expectedFilename) {
+    return new Promise((resolve) => {
+        if (!db || !expectedFilename) {
+            resolve(null);
+            return;
+        }
 
-export function loadFileFromDB(key, callback) {
-  // If the database is not initialized, return.
-  if (!db) return;
-  // Start a read-only transaction on the "files" object store.
-  const transaction = db.transaction(["files"], "readonly");
-  const store = transaction.objectStore("files");
-  // Get the value associated with the given key.
-  const request = store.get(key);
-  // Event handler for a successful retrieval.
-  request.onsuccess = function () {
-    // If a result is found, call the callback with the result.
-    if (request.result) {
-      callback(request.result);
-    } else {
-      console.log(`File '${key}' not found in DB.`);
-      callback(null);
-    }
-  }; // Event handler for an error during loading.
-  request.onerror = (event) => {
-    console.error(`Error loading file '${key}':`, event.target.error);
-    callback(null);
-  };
+        const transaction = db.transaction(["files"], "readonly");
+ // Creates a read-only transaction.
+        const store = transaction.objectStore("files");
+        const request = store.get(key);
+
+        request.onsuccess = function () {
+            const cachedData = request.result;
+            if (!cachedData) {
+                console.log(`Cache miss for key '${key}': No data found.`);
+ // If no data is found for the key, resolve with null.
+                resolve(null);
+                return;
+            }
+
+            // 1. Versioning Check: Do the filenames match?
+            if (cachedData.filename !== expectedFilename) {
+ // Checks if the cached filename matches the expected filename.
+                console.warn(`Cache miss for key '${key}': Stale data found (Filename mismatch).`);
+                resolve(null);
+                return;
+            }
+
+            // 2. Integrity Check: Do the sizes match?
+ // Checks if the cached file size matches the stored size metadata.
+            if (cachedData.blob.size !== cachedData.size) {
+                console.error(`Cache miss for key '${key}': Corrupted data found (Size mismatch).`);
+                resolve(null);
+                return;
+            }
+
+            // All checks passed!
+ // If all checks pass, resolve with the cached Blob.
+            console.log(`Cache hit for '${expectedFilename}'`);
+            resolve(cachedData.blob);
+        };
+
+        request.onerror = (event) => {
+            console.error(`Error loading file '${key}' from DB:`, event.target.error);
+ // Logs any errors during the load operation.
+            resolve(null);
+        };
+    });
 }
