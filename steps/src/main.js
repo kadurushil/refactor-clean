@@ -16,6 +16,7 @@
 // - main.js:           The main application entry point that wires everything
 // ===========================================================================================================
 
+import { showModal, updateModalProgress } from "./modal.js"; // Modify this import
 import { animationLoop } from "./sync.js";
 import { radarSketch } from "./p5/radarSketch.js";
 import { speedGraphSketch } from "./p5/speedGraphSketch.js";
@@ -76,7 +77,6 @@ import {
   resetVisualization,
   updateDebugOverlay,
 } from "./dom.js";
-import { showModal } from "./modal.js";
 import { initializeTheme } from "./theme.js";
 import { initDB, saveFileToDB, loadFileFromDB } from "./db.js";
 
@@ -101,103 +101,78 @@ clearCacheBtn.addEventListener("click", async () => {
   }
 });
 
+// In src/main.js, REPLACE the jsonFileInput event listener with this:
 jsonFileInput.addEventListener("change", (event) => {
-  const file = event.target.files[0];
+    const file = event.target.files[0];
+    if (!file) return;
 
-  if (!file) return;
+    appState.jsonFilename = file.name;
+    localStorage.setItem("jsonFilename", appState.jsonFilename);
+    calculateAndSetOffset();
+    saveFileToDB("json", file); // We still cache the raw file
 
-  appState.jsonFilename = file.name;
+    // 1. Show the modal with the progress bar
+    showModal("Parsing large JSON file...", false, true);
+    updateModalProgress(0);
 
-  localStorage.setItem("jsonFilename", appState.jsonFilename);
+    // 2. Create a new Worker from our script
+    const worker = new Worker('./src/parser.worker.js');
 
-  calculateAndSetOffset();
+    // 3. Set up listeners for messages FROM the worker
+    worker.onmessage = async (e) => {
+        const { type, data, message, percent } = e.data;
 
-  saveFileToDB("json", file); // Save the file object for the next session
+        if (type === 'progress') {
+            // Update the progress bar whenever the worker reports progress
+            updateModalProgress(percent);
+        } else if (type === 'complete') {
+            // Worker is done! Process the data it sent back.
+            updateModalProgress(100);
+            
+            const result = await parseVisualizationJson(
+                data, // Use the data object directly from the worker
+                appState.radarStartTimeMs,
+                appState.videoStartDate
+            );
 
-  // 1. Show a loading modal immediately.
+            if (result.error) {
+                showModal(result.error);
+                return;
+            }
 
-  showModal("Parsing large JSON file, please wait...");
+            appState.vizData = result.data;
+            appState.globalMinSnr = result.minSnr;
+            appState.globalMaxSnr = result.maxSnr;
+            snrMinInput.value = appState.globalMinSnr.toFixed(1);
+            snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
 
-  // 2. Create a temporary URL for the streaming parser.
+            resetVisualization();
+            canvasPlaceholder.style.display = "none";
+            featureToggles.classList.remove("hidden");
 
-  const fileURL = URL.createObjectURL(file);
+            if (!appState.p5_instance) {
+                appState.p5_instance = new p5(radarSketch);
+            }
+            if (appState.vizData && videoPlayer.duration) {
+                if (!appState.speedGraphInstance) {
+                    appState.speedGraphInstance = new p5(speedGraphSketch);
+                }
+                appState.speedGraphInstance.setData(appState.vizData, videoPlayer.duration);
+            }
+            
+            // Close the modal and terminate the worker
+            document.getElementById("modal-ok-btn").click();
+            worker.terminate();
 
-  // 3. Use the robust streaming parser.
-
-  parseJsonWithOboe(
-    fileURL,
-
-    async (parsedData) => {
-      // This is the success callback, running after the file is parsed.
-
-      // We make it async so we can `await` the next step.
-
-      const result = await parseVisualizationJson(
-        parsedData,
-
-        appState.radarStartTimeMs,
-
-        appState.videoStartDate
-      );
-
-      // Revoke the temporary URL to free up memory.
-
-      URL.revokeObjectURL(fileURL);
-
-      if (result.error) {
-        showModal(result.error);
-
-        return;
-      }
-
-      appState.vizData = result.data;
-
-      appState.globalMinSnr = result.minSnr;
-
-      appState.globalMaxSnr = result.maxSnr;
-
-      // Update UI with the correct, awaited data.
-
-      snrMinInput.value = appState.globalMinSnr.toFixed(1);
-
-      snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
-
-      resetVisualization();
-
-      canvasPlaceholder.style.display = "none";
-
-      featureToggles.classList.remove("hidden");
-
-      if (!appState.p5_instance) {
-        appState.p5_instance = new p5(radarSketch);
-      }
-
-      if (appState.vizData) {
-        speedGraphPlaceholder.classList.add("hidden");
-        if (!appState.speedGraphInstance) {
-          appState.speedGraphInstance = new p5(speedGraphSketch);
+        } else if (type === 'error') {
+            // The worker ran into an error
+            showModal(message);
+            worker.terminate();
         }
-        if (videoPlayer.duration) {
-          appState.speedGraphInstance.setData(
-            appState.vizData,
-            videoPlayer.duration
-          );
-        }
-      }
+    };
 
-      // Close the loading modal.
-
-      document.getElementById("modal-ok-btn").click();
-    },
-
-    (error) => {
-      // This is the error callback for the streaming parser.
-
-      showModal(error);
-
-      URL.revokeObjectURL(fileURL);
-    }
-  );
+    // 4. Send the file TO the worker to start the job
+    worker.postMessage({ file: file });
 });
 
 // Event listener for video file input change.
@@ -452,6 +427,8 @@ function calculateAndSetOffset() {
 }
 
 // Application Initialization
+// In src/main.js, REPLACE the entire 'DOMContentLoaded' listener with this:
+
 document.addEventListener("DOMContentLoaded", () => {
   initializeTheme();
   console.log("DEBUG: DOMContentLoaded fired. Starting session load.");
@@ -467,22 +444,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     calculateAndSetOffset();
 
-    const videoPromise = new Promise((resolve) =>
-      loadFileFromDB("video", resolve)
-    );
-    const jsonPromise = new Promise((resolve) =>
-      loadFileFromDB("json", resolve)
-    );
-
-    // At the end of main.js, inside the DOMContentLoaded listener
+    const videoPromise = new Promise((resolve) => loadFileFromDB("video", resolve));
+    const jsonPromise = new Promise((resolve) => loadFileFromDB("json", resolve));
 
     Promise.all([videoPromise, jsonPromise])
       .then(([videoBlob, jsonBlob]) => {
-        // Renamed jsonString to jsonBlob
         console.log("DEBUG: All data fetched from IndexedDB.");
 
-        const processRestOfData = async (parsedJson) => {
-          // This is our main processing logic
+        // This function will be called with the fully parsed JSON data when ready.
+        const finalizeSetup = async (parsedJson) => {
           if (parsedJson) {
             const result = await parseVisualizationJson(
               parsedJson,
@@ -492,7 +462,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (!result.error) {
               appState.vizData = result.data;
-              // ... (update UI elements)
+              appState.globalMinSnr = result.minSnr;
+              appState.globalMaxSnr = result.maxSnr;
               snrMinInput.value = result.minSnr.toFixed(1);
               snrMaxInput.value = result.maxSnr.toFixed(1);
             } else {
@@ -500,6 +471,12 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           }
 
+          // Setup video player
+          if (videoBlob) {
+            const fileURL = URL.createObjectURL(videoBlob);
+            setupVideoPlayer(fileURL);
+          }
+          
           // Final UI updates
           if (appState.vizData) {
             resetVisualization();
@@ -509,47 +486,35 @@ document.addEventListener("DOMContentLoaded", () => {
               appState.p5_instance = new p5(radarSketch);
             }
           }
-          if (appState.vizData) {
-            speedGraphPlaceholder.classList.add("hidden");
-            if (!appState.speedGraphInstance) {
-              appState.speedGraphInstance = new p5(speedGraphSketch);
-            }
-            if (videoPlayer.duration) {
-              appState.speedGraphInstance.setData(
-                appState.vizData,
-                videoPlayer.duration
-              );
-            }
-          }
         };
 
-        // Main controller for loading cached data
-        if (videoBlob) {
-          const fileURL = URL.createObjectURL(videoBlob);
-          setupVideoPlayer(fileURL);
-          videoPlayer.onloadedmetadata = () => {
-            if (jsonBlob) {
-              // If a JSON blob exists, parse it first
-              const jsonUrl = URL.createObjectURL(jsonBlob);
-              parseJsonWithOboe(
-                jsonUrl,
-                (data) => processRestOfData(data),
-                (err) => showModal(err)
-              );
-            } else {
-              processRestOfData(null);
+        if (jsonBlob) {
+          // --- CACHED JSON FOUND: USE WORKER ---
+          showModal("Loading data from cache...", false, true);
+          updateModalProgress(0);
+
+          const worker = new Worker('./src/parser.worker.js');
+
+          worker.onmessage = async (e) => {
+            const { type, data, message, percent } = e.data;
+            if (type === 'progress') {
+              updateModalProgress(percent);
+            } else if (type === 'complete') {
+              updateModalProgress(100);
+              await finalizeSetup(data);
+              document.getElementById("modal-ok-btn").click();
+              worker.terminate();
+            } else if (type === 'error') {
+              showModal(message);
+              worker.terminate();
             }
           };
-        } else if (jsonBlob) {
-          // If there's no video but there is a JSON blob
-          const jsonUrl = URL.createObjectURL(jsonBlob);
-          parseJsonWithOboe(
-            jsonUrl,
-            (data) => processRestOfData(data),
-            (err) => showModal(err)
-          );
+          
+          worker.postMessage({ file: jsonBlob });
+
         } else {
-          processRestOfData(null); // No cached data to process
+          // --- NO CACHED JSON ---
+          finalizeSetup(null);
         }
       })
       .catch((error) => {

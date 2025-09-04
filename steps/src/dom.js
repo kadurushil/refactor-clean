@@ -22,39 +22,25 @@ export const speedSlider = document.getElementById("speed-slider");
 export const speedDisplay = document.getElementById("speed-display");
 export const featureToggles = document.getElementById("feature-toggles");
 export const toggleSnrColor = document.getElementById("toggle-snr-color");
-export const toggleClusterColor = document.getElementById(
-  "toggle-cluster-color"
-);
+export const toggleClusterColor = document.getElementById("toggle-cluster-color");
 export const toggleInlierColor = document.getElementById("toggle-inlier-color");
-export const toggleStationaryColor = document.getElementById(
-  "toggle-stationary-color"
-);
+export const toggleStationaryColor = document.getElementById("toggle-stationary-color");
 export const toggleVelocity = document.getElementById("toggle-velocity");
 export const toggleTracks = document.getElementById("toggle-tracks");
 export const toggleEgoSpeed = document.getElementById("toggle-ego-speed");
 export const toggleFrameNorm = document.getElementById("toggle-frame-norm");
-export const toggleDebugOverlay = document.getElementById(
-  "toggle-debug-overlay"
-);
+export const toggleDebugOverlay = document.getElementById("toggle-debug-overlay");
 export const egoSpeedDisplay = document.getElementById("ego-speed-display");
 export const canSpeedDisplay = document.getElementById("can-speed-display");
 export const debugOverlay = document.getElementById("debug-overlay");
-export const toggleDebug2Overlay = document.getElementById(
-  "toggle-debug2-overlay"
-);
+export const toggleDebug2Overlay = document.getElementById("toggle-debug2-overlay");
 export const snrMinInput = document.getElementById("snr-min-input");
 export const snrMaxInput = document.getElementById("snr-max-input");
 export const applySnrBtn = document.getElementById("apply-snr-btn");
-export const autoOffsetIndicator = document.getElementById(
-  "auto-offset-indicator"
-);
+export const autoOffsetIndicator = document.getElementById("auto-offset-indicator");
 export const clearCacheBtn = document.getElementById("clear-cache-btn");
-export const speedGraphContainer = document.getElementById(
-  "speed-graph-container"
-);
-export const speedGraphPlaceholder = document.getElementById(
-  "speed-graph-placeholder"
-);
+export const speedGraphContainer = document.getElementById("speed-graph-container");
+export const speedGraphPlaceholder = document.getElementById("speed-graph-placeholder");
 export const modalContainer = document.getElementById("modal-container");
 export const modalOverlay = document.getElementById("modal-overlay");
 export const modalContent = document.getElementById("modal-content");
@@ -62,10 +48,12 @@ export const modalText = document.getElementById("modal-text");
 export const modalOkBtn = document.getElementById("modal-ok-btn");
 export const modalCancelBtn = document.getElementById("modal-cancel-btn");
 export const toggleCloseUp = document.getElementById("toggle-close-up");
-export const togglePredictedPos = document.getElementById(
-  "toggle-predicted-pos"
-);
+export const togglePredictedPos = document.getElementById("toggle-predicted-pos");
 export const toggleCovariance = document.getElementById("toggle-covariance");
+// In src/dom.js, add these exports
+export const modalProgressContainer = document.getElementById("modal-progress-container");
+export const modalProgressBar = document.getElementById("modal-progress-bar");
+export const modalProgressText = document.getElementById("modal-progress-text");
 
 //----------------------UPDATE FRAME Function----------------------//
 // Updates the UI to reflect the current radar frame and synchronizes video playback.

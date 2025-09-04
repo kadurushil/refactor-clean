@@ -1,21 +1,31 @@
 import {
-  modalText,
   modalCancelBtn,
   modalContainer,
   modalOverlay,
   modalContent,
+} from "./dom.js";
+
+// First, import the new DOM elements at the top
+import {
+  modalText,
+  //...
   modalOkBtn,
+  modalProgressContainer, // Add this
+  modalProgressBar, // Add this
+  modalProgressText, // Add this
 } from "./dom.js";
 
 // --- Custom Modal Logic --- //
 // Variable to store the resolve function of the Promise, allowing the modal to return a value.
-let modalResolve = null; 
-export function showModal(message, isConfirm = false) {
+let modalResolve = null;
+export function showModal(message, isConfirm = false, showProgress = false) {
   return new Promise((resolve) => {
     // Set the message text for the modal.
     modalText.textContent = message;
     // Show/hide the cancel button based on whether it's a confirmation modal.
     modalCancelBtn.classList.toggle("hidden", !isConfirm);
+    modalProgressContainer.classList.toggle("hidden", !showProgress);
+
     // Make the modal container visible.
     modalContainer.classList.remove("hidden");
     // Add a slight delay for CSS transitions to take effect, making the modal appear smoothly.
@@ -27,12 +37,28 @@ export function showModal(message, isConfirm = false) {
     modalResolve = resolve;
   });
 }
+// Add this new exported function to update the progress bar
+export function updateModalProgress(percent) {
+  if (modalProgressBar && modalProgressText) {
+    const p = Math.round(percent);
+    modalProgressBar.style.width = `${p}%`;
+    modalProgressText.textContent =
+      p < 100 ? `Parsing... ${p}%` : "Finalizing...";
+  }
+}
+
 // Hides the modal and resolves the Promise with the given value.
 function hideModal(value) {
   modalOverlay.classList.add("opacity-0");
   modalContent.classList.add("scale-95");
   setTimeout(() => {
     modalContainer.classList.add("hidden");
+    // Reset progress bar for the next time
+    if (modalProgressContainer && modalProgressBar && modalProgressText) {
+      modalProgressContainer.classList.add("hidden");
+      modalProgressBar.style.width = "0%";
+      modalProgressText.textContent = "";
+    }
     if (modalResolve) modalResolve(value);
   }, 200);
 }

@@ -1,3 +1,5 @@
+// In src/parser.worker.js
+
 // Import the lightweight and worker-safe Clarinet library
 importScripts('https://cdn.jsdelivr.net/npm/clarinet@0.12.5/clarinet.min.js');
 
@@ -9,69 +11,62 @@ self.onmessage = async function(event) {
     }
 
     try {
-        console.log('Worker: Starting robust parsing with debugging...');
-
         const fileSize = file.size;
         let bytesRead = 0;
         let lastReportedProgress = -1;
 
         const parser = clarinet.parser();
-        const vizData = { radarFrames: [], tracks: [] };
-        
-        // A simple state machine to track our location
-        let state = {
-            inRadarFrames: false,
-            inTracks: false,
-            currentObject: null,
-            currentKey: ''
-        };
 
-        parser.onkey = (key) => {
-            state.currentKey = key;
-            if (key === 'radarFrames') state.inRadarFrames = true;
-            if (key === 'tracks') state.inTracks = true;
-        };
+        // --- START: New Robust Parsing Logic ---
+        // This logic correctly builds a complete object tree from the stream.
+        let result; // This will hold the final, fully parsed object.
+        const stack = []; // A stack to keep track of current object/array.
+        let key = null;   // The current object key.
 
-        parser.onopenobject = () => {
-            // We only care about objects inside our target arrays
-            if (state.inRadarFrames || state.inTracks) {
-                state.currentObject = {};
-            }
-        };
-        
-        parser.oncloseobject = () => {
-            if (state.currentObject) {
-                if (state.inRadarFrames) {
-                    vizData.radarFrames.push(state.currentObject);
-                } else if (state.inTracks) {
-                    vizData.tracks.push(state.currentObject);
+        const getParent = () => stack.length > 0 ? stack[stack.length - 1] : null;
+
+        const assign = (value) => {
+            const parent = getParent();
+            if (parent) {
+                if (Array.isArray(parent)) {
+                    parent.push(value);
+                } else {
+                    parent[key] = value;
                 }
-                state.currentObject = null; // Reset for the next object
+            } else {
+                result = value;
             }
         };
 
-        parser.onclosearray = () => {
-            // When we finish an array, update our state
-            if (state.inRadarFrames) state.inRadarFrames = false;
-            if (state.inTracks) state.inTracks = false;
+        parser.onopenobject = (k) => {
+            key = k;
+            const newObject = {};
+            assign(newObject);
+            stack.push(newObject);
         };
         
-        parser.onvalue = (value) => {
-            if (state.currentObject && state.currentKey) {
-                state.currentObject[state.currentKey] = value;
-            }
+        parser.onkey = (k) => {
+            key = k;
         };
+        
+        parser.onopenarray = () => {
+            const newArray = [];
+            assign(newArray);
+            stack.push(newArray);
+        };
+
+        parser.onvalue = (value) => {
+            assign(value);
+        };
+
+        parser.oncloseobject = () => stack.pop();
+        parser.onclosearray = () => stack.pop();
+        // --- END: New Robust Parsing Logic ---
 
         parser.onend = () => {
-            // --- DEBUGGING MESSAGES ---
-            console.log("Worker: Parsing complete.");
-            console.log("Worker: Final vizData structure:", vizData);
-            console.log("Worker: Number of radar frames parsed:", vizData.radarFrames ? vizData.radarFrames.length : 'undefined');
-            console.log("Worker: Number of tracks parsed:", vizData.tracks ? vizData.tracks.length : 'undefined');
-            // --- END DEBUGGING ---
-
             self.postMessage({ type: 'progress', percent: 100 });
-            self.postMessage({ type: 'complete', data: vizData });
+            // Send the fully constructed 'result' object back to the main thread.
+            self.postMessage({ type: 'complete', data: result });
         };
 
         parser.onerror = (err) => {
@@ -79,7 +74,7 @@ self.onmessage = async function(event) {
             self.postMessage({ type: 'error', message: 'Failed to parse JSON structure.' });
         };
 
-        // --- Stream Reading Logic (remains the same) ---
+        // --- Stream Reading Logic (this part remains the same) ---
         const stream = file.stream();
         const reader = stream.getReader();
         const decoder = new TextDecoder();

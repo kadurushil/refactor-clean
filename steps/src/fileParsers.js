@@ -9,7 +9,7 @@
 // This function can be deleted if it exists: parseJsonWithOboe
 
 // Add this simplified streaming function
-export function parseJsonWithOboe(fileURL, onComplete, onError) {
+export function parseJsonWithOboe(fileURL, onComplete, onError, onProgress) {
   const vizData = {
     radarFrames: [],
     tracks: [],
@@ -24,6 +24,13 @@ export function parseJsonWithOboe(fileURL, onComplete, onError) {
       vizData.tracks.push(track);
       return oboe.drop;
     })
+    // Add the progress listener
+    .on("progress", (progress) => {
+      // Oboe.js provides a progress object with a 'percent' property
+      if (onProgress) {
+        onProgress(progress.percent);
+      }
+    })
     .done(() => {
       console.log("Oboe.js parsing complete.");
       onComplete(vizData);
@@ -35,7 +42,6 @@ export function parseJsonWithOboe(fileURL, onComplete, onError) {
       );
     });
 }
-
 
 //--------------------JSON POST-PROCESSOR (ASYNCHRONOUS & SAFE)------------------------//
 
