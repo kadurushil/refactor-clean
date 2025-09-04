@@ -256,6 +256,20 @@ export function drawPointCloud(p, points, plotScales) {
 export function drawTrajectories(p, plotScales) {
   // Iterate through each tracked object.
   for (const track of appState.vizData.tracks) {
+    
+    // --- START: Enhanced Safeguard and Detailed Logging ---
+    // This check is now more robust. It ensures the track object exists,
+    // that it has a historyLog property, and that historyLog is an array.
+    if (!track || !track.historyLog || !Array.isArray(track.historyLog)) {
+        // If any check fails, print a detailed warning to the console and skip.
+        console.warn(
+            `[Visualizer Warning] Malformed track object found at frame ${appState.currentFrame + 1}. The 'historyLog' property is missing or not an array. Skipping this track.`,
+            { problematicTrack: track } // This logs the entire object for inspection.
+        );
+        continue; // Safely skip to the next track in the loop.
+    }
+    // --- END: Enhanced Safeguard and Detailed Logging ---
+
     // Filter history logs to include only frames up to the current one.
     const logs = track.historyLog.filter(
       (log) => log.frameIdx <= appState.currentFrame + 1
