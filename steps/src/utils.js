@@ -129,3 +129,20 @@ export function throttle(func, delay) {
     return func(...args); // Apply the original function with its arguments.
   };
 }
+
+/**
+ * Formats milliseconds into a MM:SS.ms string.
+ * @param {number} milliseconds The time in milliseconds.
+ * @returns {string} The formatted time string.
+ */
+export function formatTime(milliseconds) {
+    if (isNaN(milliseconds) || milliseconds < 0) {
+        return "00:00.000";
+    }
+    const totalSeconds = milliseconds / 1000;
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    const ms = Math.round(milliseconds % 1000);
+
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
+}

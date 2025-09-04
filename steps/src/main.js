@@ -34,6 +34,7 @@ import {
   extractTimestampInfo,
   parseTimestamp,
   throttle,
+  formatTime,
 } from "./utils.js";
 import { appState } from "./state.js";
 import {
@@ -76,11 +77,14 @@ import {
   updateFrame,
   resetVisualization,
   updateDebugOverlay,
+  timelineTooltip,
 } from "./dom.js";
 
 import { initializeTheme } from "./theme.js";
 
 import { initDB, saveFileWithMetadata, loadFreshFileFromDB } from "./db.js";
+
+let seekDebounceTimer = null; // Add this line
 
 // Sets up the video player with the given file URL.
 function setupVideoPlayer(fileURL) {
@@ -130,30 +134,38 @@ function loadVideoWithProgress(videoObject) {
 
   // This one-time event is for re-syncing data once the video's metadata is ready
 
-
-videoPlayer.addEventListener('loadedmetadata', () => {
-    // This is the perfect time to re-sync data if needed
-    if (appState.vizData) {
+  videoPlayer.addEventListener(
+    "loadedmetadata",
+    () => {
+      // This is the perfect time to re-sync data if needed
+      if (appState.vizData) {
         console.log("DEBUG: Video metadata loaded. Re-calculating timestamps.");
         appState.vizData.radarFrames.forEach((frame) => {
-            frame.timestampMs = appState.radarStartTimeMs + frame.timestamp - appState.videoStartDate.getTime();
+          frame.timestampMs =
+            appState.radarStartTimeMs +
+            frame.timestamp -
+            appState.videoStartDate.getTime();
         });
         resetVisualization();
-    }
-    
-    // --- START: New Speed Graph Logic ---
-    // If we have data and the video is ready, create/update the speed graph
-    if (appState.vizData && videoPlayer.duration > 0) {
+      }
+
+      // --- START: New Speed Graph Logic ---
+      // If we have data and the video is ready, create/update the speed graph
+      if (appState.vizData && videoPlayer.duration > 0) {
         speedGraphPlaceholder.classList.add("hidden");
         if (!appState.speedGraphInstance) {
-            appState.speedGraphInstance = new p5(speedGraphSketch);
+          appState.speedGraphInstance = new p5(speedGraphSketch);
         }
-        appState.speedGraphInstance.setData(appState.vizData, videoPlayer.duration);
-    }
-    // --- END: New Speed Graph Logic ---
+        appState.speedGraphInstance.setData(
+          appState.vizData,
+          videoPlayer.duration
+        );
+      }
+      // --- END: New Speed Graph Logic ---
+    },
+    { once: true }
+  ); // { once: true } makes sure this runs only once per load
 
-}, { once: true }); // { once: true } makes sure this runs only once per load
-  
   // { once: true } //makes sure this runs only once per load
 
   // Add the listeners for progress tracking
@@ -339,10 +351,20 @@ stopBtn.addEventListener("click", () => {
 });
 
 // Event listener for timeline slider input.
-timelineSlider.addEventListener(
-  "input",
-  throttle((event) => {
-    if (!appState.vizData) return;
+// In src/main.js, REPLACE the existing timelineSlider 'input' event listener with this:
+
+timelineSlider.addEventListener("input", (event) => {
+  if (!appState.vizData) return;
+
+  // --- 1. Live Seeking (Throttled for performance) ---
+  // This part gives you the immediate visual feedback as you drag the slider.
+  // We use a simple timestamp check to prevent it from running too often.
+  const now = performance.now();
+  if (
+    !timelineSlider.lastInputTime ||
+    now - timelineSlider.lastInputTime > 32
+  ) {
+    // ~30fps throttle
     if (appState.isPlaying) {
       videoPlayer.pause();
       appState.isPlaying = false;
@@ -351,9 +373,64 @@ timelineSlider.addEventListener(
     const frame = parseInt(event.target.value, 10);
     updateFrame(frame, true);
     appState.mediaTimeStart = videoPlayer.currentTime;
-    appState.masterClockStart = performance.now();
-  }, 16)
-);
+    appState.masterClockStart = now;
+    timelineSlider.lastInputTime = now;
+  }
+
+  // --- 2. Final, Precise Sync (Debounced for reliability) ---
+  // This part ensures a perfect sync only AFTER you stop moving the slider.
+  clearTimeout(seekDebounceTimer); // Always cancel the previously scheduled sync
+
+  seekDebounceTimer = setTimeout(() => {
+    console.log("Slider movement stopped. Performing final, debounced resync.");
+    const finalFrame = parseInt(event.target.value, 10);
+    updateFrame(finalFrame, true); // Perform the final, precise seek
+
+    // Also update the debug overlay with the final, settled time
+    updateDebugOverlay(videoPlayer.currentTime);
+  }, 250); // Wait for 250ms of inactivity before firing
+});
+// In src/main.js, add this new block of event listeners
+
+// --- Timeline Scrub-to-Seek Preview Logic ---
+
+timelineSlider.addEventListener("mouseover", () => {
+  if (appState.vizData) {
+    timelineTooltip.classList.remove("hidden");
+  }
+});
+
+timelineSlider.addEventListener("mouseout", () => {
+  timelineTooltip.classList.add("hidden");
+});
+
+timelineSlider.addEventListener("mousemove", (event) => {
+  if (!appState.vizData) return;
+
+  // 1. Calculate the hover position as a fraction (0.0 to 1.0)
+  const rect = timelineSlider.getBoundingClientRect();
+  const hoverFraction = (event.clientX - rect.left) / rect.width;
+
+  // 2. Calculate the corresponding frame index
+  const sliderMax = parseInt(timelineSlider.max, 10) || (appState.vizData.radarFrames.length - 1);
+let frameIndex = Math.round(hoverFraction * sliderMax);
+// The value is already clamped by this calculation, but an extra check is safe
+frameIndex = Math.max(0, Math.min(frameIndex, sliderMax));
+
+  const frameData = appState.vizData.radarFrames[frameIndex];
+  if (!frameData) return;
+
+  // 3. Update the tooltip's content
+  const formattedTime = formatTime(frameData.timestampMs);
+  timelineTooltip.innerHTML = `Frame: ${
+    frameIndex + 1
+  }<br>Time: ${formattedTime}`;
+
+  // 4. Position the tooltip horizontally above the cursor
+  // The horizontal position is the mouse's X relative to the slider's start
+  const tooltipX = event.clientX - rect.left;
+  timelineTooltip.style.left = `${tooltipX}px`;
+});
 
 // Event listener for speed slider input.
 speedSlider.addEventListener("input", (event) => {
@@ -449,22 +526,6 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-// In src/main.js, add this new event listener
-videoPlayer.addEventListener("seeked", () => {
-  // This event fires every time a seek operation completes.
-  // We only act if our flag has been set.
-  if (appState.needsPostSeekUpdate) {
-    console.log(
-      "Video has finished seeking. Performing final debug overlay update."
-    );
-    // Now we can be sure videoPlayer.currentTime is accurate.
-    updateDebugOverlay(videoPlayer.currentTime);
-
-    // Reset the flag so this logic doesn't run on every seek
-    appState.needsPostSeekUpdate = false;
-  }
-});
-
 function calculateAndSetOffset() {
   const jsonTimestampInfo = extractTimestampInfo(appState.jsonFilename);
   const videoTimestampInfo = extractTimestampInfo(appState.videoFilename);
@@ -508,13 +569,14 @@ document.addEventListener("DOMContentLoaded", () => {
   initializeTheme();
   console.log("DEBUG: DOMContentLoaded fired. Starting session load.");
 
-  initDB(async () => { // Make the callback async to use await
+  initDB(async () => {
+    // Make the callback async to use await
     console.log("DEBUG: Database initialized.");
     const savedOffset = localStorage.getItem("visualizerOffset");
     if (savedOffset !== null) {
       offsetInput.value = savedOffset;
     }
-    
+
     // Get the filenames we EXPECT to load from localStorage
     appState.videoFilename = localStorage.getItem("videoFilename");
     appState.jsonFilename = localStorage.getItem("jsonFilename");
@@ -522,10 +584,15 @@ document.addEventListener("DOMContentLoaded", () => {
     calculateAndSetOffset();
 
     // Asynchronously load files, performing freshness and integrity checks
-    const videoBlob = await loadFreshFileFromDB("video", appState.videoFilename);
+    const videoBlob = await loadFreshFileFromDB(
+      "video",
+      appState.videoFilename
+    );
     const jsonBlob = await loadFreshFileFromDB("json", appState.jsonFilename);
 
-    console.log("DEBUG: Freshness checks complete. Proceeding with valid data.");
+    console.log(
+      "DEBUG: Freshness checks complete. Proceeding with valid data."
+    );
 
     // This function processes the parsed JSON and sets up the main visualization state
     const finalizeSetup = async (parsedJson) => {
@@ -564,31 +631,30 @@ document.addEventListener("DOMContentLoaded", () => {
       showModal("Loading data from cache...", false, true);
       updateModalProgress(0);
 
-      const worker = new Worker('./src/parser.worker.js');
+      const worker = new Worker("./src/parser.worker.js");
 
       worker.onmessage = async (e) => {
         const { type, data, message, percent } = e.data;
 
-        if (type === 'progress') {
+        if (type === "progress") {
           updateModalProgress(percent);
-        } else if (type === 'complete') {
+        } else if (type === "complete") {
           updateModalProgress(100);
           await finalizeSetup(data); // Process the parsed JSON
-          
+
           // Hide the JSON loading modal before starting the video load
           document.getElementById("modal-ok-btn").click();
           worker.terminate();
-          
+
           // Now that JSON is ready, load the video (which will show its own modal)
           loadVideoWithProgress(videoBlob);
-        } else if (type === 'error') {
+        } else if (type === "error") {
           showModal(message);
           worker.terminate();
         }
       };
-      
-      worker.postMessage({ file: jsonBlob });
 
+      worker.postMessage({ file: jsonBlob });
     } else {
       // CASE 2: No cached JSON. Finalize setup with null data and just load the video if it exists.
       await finalizeSetup(null);
@@ -618,31 +684,6 @@ offsetInput.addEventListener("keydown", (event) => {
 
     // Call updateFrame, forcing it to resync the video to the current radar frame
     // using the new offset value from the input box.
-    updateFrame(appState.currentFrame, true);
-  }
-});
-
-// In src/main.js, REPLACE the 'change' event listener with this:
-timelineSlider.addEventListener("change", () => {
-  if (!appState.vizData || appState.isPlaying) return;
-
-  const currentRadarFrame = appState.vizData.radarFrames[appState.currentFrame];
-  if (!currentRadarFrame) return;
-
-  const targetRadarTimeMs = currentRadarFrame.timestampMs;
-  const offsetMs = parseFloat(offsetInput.value) || 0;
-  const currentVideoTimeMs = videoPlayer.currentTime * 1000;
-  const driftMs = currentVideoTimeMs + offsetMs - targetRadarTimeMs;
-
-  if (Math.abs(driftMs) > 50) {
-    console.log(
-      `Setting flag for post-seek update. Initial drift: ${driftMs.toFixed(
-        0
-      )}ms`
-    );
-    // 1. Set the flag to true
-    appState.needsPostSeekUpdate = true;
-    // 2. Initiate the final seek operation
     updateFrame(appState.currentFrame, true);
   }
 });

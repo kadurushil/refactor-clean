@@ -50,10 +50,10 @@ export const modalCancelBtn = document.getElementById("modal-cancel-btn");
 export const toggleCloseUp = document.getElementById("toggle-close-up");
 export const togglePredictedPos = document.getElementById("toggle-predicted-pos");
 export const toggleCovariance = document.getElementById("toggle-covariance");
-// In src/dom.js, add these exports
 export const modalProgressContainer = document.getElementById("modal-progress-container");
 export const modalProgressBar = document.getElementById("modal-progress-bar");
 export const modalProgressText = document.getElementById("modal-progress-text");
+export const timelineTooltip = document.getElementById("timeline-tooltip");
 
 //----------------------UPDATE FRAME Function----------------------//
 // Updates the UI to reflect the current radar frame and synchronizes video playback.

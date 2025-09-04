@@ -1,0 +1,95 @@
+Improvements:- 
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+1.) Data Analysis & Interaction
+
+	a)Object Selection & Persistent Info Panel:
+
+Idea: Allow the user to click on a track marker (+). This would "select" the object, highlighting its trajectory permanently. A new sidebar panel would appear, displaying the selected object's detailed data (ID, current speed, TTC, position, etc.) in real-time as the visualization plays.
+
+Benefit: Makes it much easier to analyze the behavior of a single, specific object throughout the entire log without needing to hover over it.
+
+	b)Measurement Tool:
+
+Idea: Add a "ruler" mode. The user could click two points on the radar canvas (e.g., the ego vehicle and a track, or two different tracks) to see a line drawn between them with the real-world distance in meters displayed.
+
+Benefit: Allows for quick and easy spatial analysis, like checking the distance between vehicles in a critical scenario.
+
+	c)Advanced Data Filtering:
+
+Idea: Add a small "Filter" panel with inputs that allow you to dynamically filter what's shown on screen. For example:
+
+"Only show points with SNR > 15"
+
+"Only show tracks with Speed > 50 km/h"
+
+"Only show tracks with TTC < 2.0 seconds"
+
+Benefit: Helps to de-clutter the visualization and focus only on the data that is relevant to a specific investigation.
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+2.) Visualization Enhancements
+
+	a) Ego Vehicle Representation:
+
+Idea: Draw a simple car icon or a shaded rectangle at the center-bottom of the radar plot to represent the "ego vehicle" (your car).
+
+Benefit: Provides an immediate and clear visual anchor, making the spatial relationship between your vehicle and the surrounding tracks much more intuitive.
+
+
+	b) Fading Trajectories:
+
+Idea: Modify the track drawing logic so that older points in an object's trajectory are drawn with progressively higher transparency (fading out).
+
+Benefit: This creates a "comet tail" effect that gives a much better intuitive sense of the object's recent direction of travel.
+
+	c)Bounding Boxes for Tracks:
+
+Idea: If your tracking data ever includes object dimensions (length and width), we could replace the simple "+" marker with a 2D rectangle (a bounding box) that represents the object's size.
+
+Benefit: Provides a much more realistic representation of the scene and the space occupied by other vehicles.
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+3.)User Experience (UX) & Workflow
+
+	a)Session Management ("Projects"):
+
+Idea: Add "Save Session" and "Load Session" buttons. A session file (.json) would save the names of the loaded files, the manually tuned time offset, and the state of all the UI toggles.
+
+Benefit: Allows you to instantly return to a specific analysis setup without having to reload all files and re-configure the UI every time.
+
+
+	b)More Keyboard Shortcuts:
+
+Idea: Implement more shortcuts for power users.
+
+Spacebar for Play/Pause.
+
+M to mute/unmute the video.
+
+Number keys (1, 2, 3...) to quickly switch between the coloring modes (SNR, Cluster, etc.).
+
+Benefit: Speeds up the workflow significantly for frequent users.
+
+
+	c)Resizable Layout:
+
+Idea: Implement a draggable vertical divider between the radar canvas and the video panel, allowing the user to resize them to focus on one or the other.
+
+Benefit: Provides flexibility for different analysis tasks. Sometimes you want a bigger video, other times a bigger radar plot.
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+4.)Data Export & Integration
+
+	a)Save Canvas Snapshot:
+
+Idea: A simple "Camera" button that saves the current view of the radar canvas as a PNG image file.
+
+Benefit: Perfect for quickly capturing interesting moments for reports, presentations, or bug tracking.
+
+
+
+
+
+

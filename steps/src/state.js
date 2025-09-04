@@ -29,6 +29,5 @@ export const appState = {
   mediaTimeStart: 0,
   // Timestamp (from performance.now()) of the last synchronization check
   lastSyncTime: 0,
-  // new flag for seek finished
-  needsPostSeekUpdate: false, 
+
 };
