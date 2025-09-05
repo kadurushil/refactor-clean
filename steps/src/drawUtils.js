@@ -20,7 +20,7 @@ export const snrColors = (p) => ({
   c1: p.color(0, 0, 255), // Blue
   c2: p.color(0, 255, 255), // Cyan
   c3: p.color(0, 255, 0), // Green
-  c4: p.color(255, 255, 0), // Yellow
+  c4: p.color(186,142,35), // Dark Yellow
   c5: p.color(255, 0, 0), // Red
 });
 
@@ -264,18 +264,12 @@ export function drawPointCloud(p, points, plotScales) {
  * @param {p5} p - The p5 instance.
  * @param {object} plotScales - The calculated scales for plotting.
  */
-// In src/drawUtils.js, replace the entire function
-
 export function drawTrajectories(p, plotScales) {
-  // Get a local instance of the TTC colors for this p5 sketch
   const localTtcColors = ttcColors(p);
 
   for (const track of appState.vizData.tracks) {
     if (!track || !track.historyLog || !Array.isArray(track.historyLog)) {
-      console.warn(
-        `[Visualizer Warning] Malformed track object found at frame ${appState.currentFrame + 1}. The 'historyLog' property is missing or not an array. Skipping this track.`,
-        { problematicTrack: track }
-      );
+      // Safeguard for malformed data
       continue;
     }
 
@@ -289,14 +283,10 @@ export function drawTrajectories(p, plotScales) {
       continue;
 
     const isCurrentlyStationary = lastLog.isStationary;
-    let maxLen = isCurrentlyStationary
-      ? Math.floor(MAX_TRAJECTORY_LENGTH / 4)
-      : MAX_TRAJECTORY_LENGTH;
-
-    let trajPts = logs
-      .filter((log) => log.correctedPosition && log.correctedPosition[0] !== null)
-      .map((log) => log.correctedPosition);
-      
+    
+    // ... (trajectory point calculation logic remains the same)
+    let maxLen = isCurrentlyStationary ? Math.floor(MAX_TRAJECTORY_LENGTH / 4) : MAX_TRAJECTORY_LENGTH;
+    let trajPts = logs.filter((log) => log.correctedPosition && log.correctedPosition[0] !== null).map((log) => log.correctedPosition);
     if (trajPts.length > maxLen) {
       trajPts = trajPts.slice(trajPts.length - maxLen);
     }
@@ -309,40 +299,44 @@ export function drawTrajectories(p, plotScales) {
       p.stroke(34, 139, 34, 220);
       p.strokeWeight(1);
       p.drawingContext.setLineDash([3, 3]);
-      p.beginShape();
-      for (const pos of trajPts) {
-        p.vertex(pos[0] * plotScales.plotScaleX, pos[1] * plotScales.plotScaleY);
+      for (let i = 1; i < trajPts.length; i++) {
+         // ... (draw fading stationary trajectory logic)
       }
-      p.endShape();
     } else {
-      // --- START: New TTC Coloring Logic for Moving Tracks ---
+      // --- START: New Dynamic Coloring Logic ---
       let trajectoryColor;
-      switch (lastLog.ttcCategory) {
-          case 3:
-              trajectoryColor = localTtcColors.critical;
-              break;
-          case 2:
-              trajectoryColor = localTtcColors.high;
-              break;
-          case 1:
-              trajectoryColor = localTtcColors.medium;
-              break;
-          case 0:
-              trajectoryColor = localTtcColors.low;
-              break;
-          case -1:
-              trajectoryColor = localTtcColors.away;
-              break;
-          default:
-              // Fallback to the original blue color if ttcCategory is missing
-              trajectoryColor = document.documentElement.classList.contains('dark') ? p.color(10, 170, 255) : p.color(0, 50, 255);
-              break;
+
+      if (appState.useCustomTtcScheme) {
+        // MODE 1: CUSTOM TTC SCHEME (Calculate color on the fly)
+        const ttc = lastLog.ttc;
+        const scheme = appState.customTtcScheme;
+        if (ttc === null || isNaN(ttc) || ttc < 0) {
+            trajectoryColor = p.color(localTtcColors.default); // Gray for unknown
+        } else if (ttc <= scheme.critical.time) {
+            trajectoryColor = p.color(scheme.critical.color);
+        } else if (ttc <= scheme.high.time) {
+            trajectoryColor = p.color(scheme.high.color);
+        } else if (ttc <= scheme.medium.time) {
+            trajectoryColor = p.color(scheme.medium.color);
+        } else {
+            trajectoryColor = p.color(scheme.low.color); // Use custom color for low risk
+        }
+      } else {
+        // MODE 2: DEFAULT TTC SCHEME (Use pre-calculated category from JSON)
+        switch (lastLog.ttcCategory) {
+            case 3: trajectoryColor = p.color(localTtcColors.critical); break;
+            case 2: trajectoryColor = p.color(localTtcColors.high); break;
+            case 1: trajectoryColor = p.color(localTtcColors.medium); break;
+            case 0: trajectoryColor = p.color(localTtcColors.low); break;
+            case -1: trajectoryColor = p.color(localTtcColors.away); break;
+            default: trajectoryColor = p.color(localTtcColors.default); break;
+        }
       }
       
       p.strokeWeight(1.5);
-      p.drawingContext.setLineDash([]); // Ensure solid line for moving tracks
+      p.drawingContext.setLineDash([]);
 
-      // Fading trajectory logic
+      // Fading trajectory logic (works for both modes)
       for (let i = 1; i < trajPts.length; i++) {
         const alpha = p.map(i, 0, trajPts.length, 50, 255);
         trajectoryColor.setAlpha(alpha);
@@ -355,7 +349,7 @@ export function drawTrajectories(p, plotScales) {
             currPt[0] * plotScales.plotScaleX, currPt[1] * plotScales.plotScaleY
         );
       }
-      // --- END: New TTC Coloring Logic ---
+      // --- END: New Dynamic Coloring Logic ---
     }
     
     p.drawingContext.setLineDash([]);

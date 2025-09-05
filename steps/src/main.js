@@ -198,9 +198,6 @@ clearCacheBtn.addEventListener("click", async () => {
   }
 });
 // Event listener for saving the session
-// FILE: steps/src/main.js
-
-// REPLACE the existing 'saveSessionBtn' event listener with this entire block:
 saveSessionBtn.addEventListener('click', () => {
     // We can only save a session if at least one data file has been loaded.
     if (!appState.jsonFilename && !appState.videoFilename) {
@@ -210,14 +207,13 @@ saveSessionBtn.addEventListener('click', () => {
 
     // Collect all relevant state into a single object.
     const sessionState = {
-        version: 1, // For future compatibility
+        version: 1,
         jsonFilename: appState.jsonFilename,
         videoFilename: appState.videoFilename,
         offset: offsetInput.value,
         playbackSpeed: speedSlider.value,
         snrMin: snrMinInput.value,
         snrMax: snrMaxInput.value,
-        // Save the checked state of every toggle checkbox.
         toggles: {
             snrColor: toggleSnrColor.checked,
             clusterColor: toggleClusterColor.checked,
@@ -239,31 +235,25 @@ saveSessionBtn.addEventListener('click', () => {
     const blob = new Blob([sessionString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
 
-    // --- START: New dynamic filename logic ---
-    // Get the current date and time to create a timestamp.
+    // --- Dynamic Filename Logic ---
     const now = new Date();
-    // Helper function to ensure numbers are two digits (e.g., 5 -> "05").
     const pad = (num) => String(num).padStart(2, '0');
-    
-    // Format the date as YYYY-MM-DD
     const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-    // Format the time as HH-mm-ss
     const time = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-    
-    // Combine them into a user-friendly timestamp.
     const timestamp = `${date}_${time}`;
     const defaultFilename = `visualizer-session_${timestamp}.json`;
-    // --- END: New dynamic filename logic ---
 
-    // Create a temporary link to trigger the file download.
+    // --- Trigger "Save As" Dialog ---
     const a = document.createElement('a');
     a.href = url;
-    // Use the new dynamic filename here. The browser will open a "Save As" dialog.
-    a.download = defaultFilename; 
-    document.body.appendChild(a);
-    a.click(); // Programmatically click the link to start the download.
     
-    // Clean up the temporary link and URL.
+    // This is the key instruction for the browser. It suggests a filename
+    // and signals that this should open a "Save As" dialog.
+    a.download = defaultFilename; 
+    
+    document.body.appendChild(a);
+    a.click(); // Programmatically clicking the link triggers the download/save dialog.
+    
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 });

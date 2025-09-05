@@ -92,7 +92,7 @@
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col min-h-screen">
   <header class="bg-white dark:bg-gray-800 shadow-md p-4 z-10 relative">
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-      Radar and Video Visualizer
+      Radar and Video Synchronizer
     </h1>
     <p class="text-sm text-gray-600 dark:text-gray-400">
       High-precision, timestamp-synchronized playback.
@@ -181,7 +181,56 @@
               class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
             Show Covariance</label>
         </div>
-        <div class="flex items-center gap-4">
+        <!-- START: Add This Entire New Block for Custom TTC Controls -->
+        <div class="border-t border-gray-200 dark:border-gray-700 w-full mt-4 pt-4">
+          <div class="text-sm font-medium mb-2 text-center">Track Coloring Mode</div>
+          <div class="flex justify-center items-center gap-6 mb-3">
+            <label class="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="radio" name="ttc-mode" id="ttc-mode-default" class="form-radio h-4 w-4 text-blue-600"
+                checked>
+              Default TTC
+            </label>
+            <label class="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="radio" name="ttc-mode" id="ttc-mode-custom" class="form-radio h-4 w-4 text-blue-600">
+              Custom TTC
+            </label>
+          </div>
+
+          <!-- This container will be shown/hidden by JavaScript -->
+          <div id="custom-ttc-panel"
+            class="hidden flex-col md:flex-row flex-wrap justify-center items-center gap-x-6 gap-y-3">
+            <!-- Critical Risk -->
+            <div class="flex items-center gap-2">
+              <input type="color" id="ttc-color-critical" value="#ff0000" class="w-8 h-8 rounded-md">
+              <label for="ttc-time-critical" class="text-sm">Critical if TTC &lt;=</label>
+              <input type="number" id="ttc-time-critical" value="5" step="0.1"
+                class="w-20 p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 rounded-lg text-sm">
+              <span class="text-sm">s</span>
+            </div>
+            <!-- High Risk -->
+            <div class="flex items-center gap-2">
+              <input type="color" id="ttc-color-high" value="#ffa500" class="w-8 h-8 rounded-md">
+              <label for="ttc-time-high" class="text-sm">High if TTC &lt;=</label>
+              <input type="number" id="ttc-time-high" value="10" step="0.1"
+                class="w-20 p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 rounded-lg text-sm">
+              <span class="text-sm">s</span>
+            </div>
+            <!-- Medium Risk -->
+            <div class="flex items-center gap-2">
+              <input type="color" id="ttc-color-medium" value="#FFC300" class="w-8 h-8 rounded-md">
+              <label for="ttc-time-medium" class="text-sm">Medium if TTC &lt;=</label>
+              <input type="number" id="ttc-time-medium" value="30" step="0.1"
+                class="w-20 p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 rounded-lg text-sm">
+              <span class="text-sm">s</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="color" id="ttc-color-low" value="#00ff00" class="w-8 h-8 rounded-md">
+              <label class="text-sm">Low Risk (everything else)</label>
+            </div>
+          </div>
+        </div>
+        <!-- END: Add This Entire New Block -->
+        <div class="flex items-center gap-4 hidden">
           <div class="flex items-center gap-2">
             <label for="snr-min-input" class="text-sm font-medium">Min SNR:</label><input type="number"
               id="snr-min-input" step="0.1"
@@ -247,8 +296,12 @@
           class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
           Clear Cache
         </button>
-        <button id="save-session-btn" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">Save Session</button>
-        <button id="load-session-btn" class="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium">Load Session</button>
+        <button id="save-session-btn"
+          class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">Save
+          Session</button>
+        <button id="load-session-btn"
+          class="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium">Load
+          Session</button>
         <div class="flex items-center gap-2">
           <label for="offset-input" class="text-sm font-medium">
             Offset (ms):<br /><small>(+ve values if radar<br />
@@ -303,7 +356,7 @@
     </div>
   </div>
   <input type="file" id="json-file-input" class="hidden" accept=".json" />
-  <input type="file" id="video-file-input"class="hidden" accept="video/*" />
+  <input type="file" id="video-file-input" class="hidden" accept="video/*" />
   <input type="file" id="session-file-input" class="hidden" accept=".json" />
   <script type="module" src="./src/main.js"></script>
 </body>

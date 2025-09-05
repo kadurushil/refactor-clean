@@ -61,6 +61,17 @@ export const videoInfoOverlay = document.getElementById("video-info-overlay");
 export const saveSessionBtn = document.getElementById("save-session-btn");
 export const loadSessionBtn = document.getElementById("load-session-btn");
 export const sessionFileInput = document.getElementById("session-file-input");
+export const ttcModeDefault = document.getElementById('ttc-mode-default');
+export const ttcModeCustom = document.getElementById('ttc-mode-custom');
+export const customTtcPanel = document.getElementById('custom-ttc-panel');
+export const ttcColorCritical = document.getElementById('ttc-color-critical');
+export const ttcTimeCritical = document.getElementById('ttc-time-critical');
+export const ttcColorHigh = document.getElementById('ttc-color-high');
+export const ttcTimeHigh = document.getElementById('ttc-time-high');
+export const ttcColorMedium = document.getElementById('ttc-color-medium');
+export const ttcTimeMedium = document.getElementById('ttc-time-medium');
+export const ttcColorLow = document.getElementById('ttc-color-low');
+
 
 //----------------------UPDATE FRAME Function----------------------//
 // Updates the UI to reflect the current radar frame and synchronizes video playback.
@@ -280,3 +291,44 @@ export function updatePersistentOverlays(currentMediaTime) {
         Abs Time: ${formatUTCTime(absVideoTime)}
     `;
 }
+
+
+const customTtcInputs = [
+    ttcColorCritical, ttcTimeCritical,
+    ttcColorHigh, ttcTimeHigh,
+    ttcColorMedium, ttcTimeMedium, 
+];
+
+function updateCustomTtcScheme() {
+    appState.customTtcScheme.critical.time = parseFloat(ttcTimeCritical.value);
+    appState.customTtcScheme.critical.color = ttcColorCritical.value;
+    appState.customTtcScheme.high.time = parseFloat(ttcTimeHigh.value);
+    appState.customTtcScheme.high.color = ttcColorHigh.value;
+    appState.customTtcScheme.medium.time = parseFloat(ttcTimeMedium.value);
+    appState.customTtcScheme.medium.color = ttcColorMedium.value;
+
+    if (appState.p5_instance) {
+        appState.p5_instance.redraw();
+    }
+}
+
+ttcModeDefault.addEventListener('change', () => {
+    if (ttcModeDefault.checked) {
+        appState.useCustomTtcScheme = false;
+        customTtcPanel.classList.add('hidden');
+        if (appState.p5_instance) appState.p5_instance.redraw();
+    }
+});
+
+ttcModeCustom.addEventListener('change', () => {
+    if (ttcModeCustom.checked) {
+        appState.useCustomTtcScheme = true;
+        customTtcPanel.classList.remove('hidden');
+        updateCustomTtcScheme(); // Apply current custom values immediately
+    }
+});
+
+// Add listeners to all custom inputs to update the scheme on the fly
+customTtcInputs.forEach(input => {
+    input.addEventListener('input', updateCustomTtcScheme);
+});

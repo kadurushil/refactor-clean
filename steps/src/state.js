@@ -29,5 +29,12 @@ export const appState = {
   mediaTimeStart: 0,
   // Timestamp (from performance.now()) of the last synchronization check
   lastSyncTime: 0,
-
+  useCustomTtcScheme: false, // Flag to switch between default and custom
+  customTtcScheme: {
+    // Default values match the UI
+    critical: { time: 5, color: "#ff0000" },
+    high: { time: 10, color: "#ffa500" },
+    medium: { time: 30, color: "#BA8E23" },
+    low: { color: "#00ff00" }, // Add this new line
+  },
 };
