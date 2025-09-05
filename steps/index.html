@@ -148,11 +148,9 @@
           <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-inlier-color"
               class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
             Color by Inlier</label>
-          <!-- ADD THIS LINE -->
           <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
               id="toggle-stationary-color" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
             Color by Stationary</label>
-          <!-- END OF ADDED LINE -->
           <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-velocity"
               class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" checked />
             Show Object Details</label>
@@ -171,7 +169,6 @@
           <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
               id="toggle-debug2-overlay" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
             Show Advanced Debug</label>
-
           <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-close-up"
               class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
             CLOSE-UP</label>
@@ -250,6 +247,8 @@
           class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
           Clear Cache
         </button>
+        <button id="save-session-btn" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">Save Session</button>
+        <button id="load-session-btn" class="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium">Load Session</button>
         <div class="flex items-center gap-2">
           <label for="offset-input" class="text-sm font-medium">
             Offset (ms):<br /><small>(+ve values if radar<br />
@@ -303,9 +302,9 @@
       </div>
     </div>
   </div>
-  <input type="file" id="json-file-input" class="hidden" accept=".json" /><input type="file" id="video-file-input"
-    class="hidden" accept="video/*" />
-
+  <input type="file" id="json-file-input" class="hidden" accept=".json" />
+  <input type="file" id="video-file-input"class="hidden" accept="video/*" />
+  <input type="file" id="session-file-input" class="hidden" accept=".json" />
   <script type="module" src="./src/main.js"></script>
 </body>
 

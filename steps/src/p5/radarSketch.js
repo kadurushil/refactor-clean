@@ -105,7 +105,13 @@ export const radarSketch = function (p) {
             if (log && log.covarianceP) {
               const pos = log.predictedPosition;
               if (pos && pos[0] !== null) {
-                drawCovarianceEllipse(p, pos, log.covarianceP, plotScales);
+                drawCovarianceEllipse(
+                  p,
+                  pos,
+                  log.covarianceP,
+                  plotScales,
+                  log.isStationary
+                );
               }
             }
           }

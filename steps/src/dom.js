@@ -58,6 +58,9 @@ export const modalProgressText = document.getElementById("modal-progress-text");
 export const timelineTooltip = document.getElementById("timeline-tooltip");
 export const radarInfoOverlay = document.getElementById("radar-info-overlay");
 export const videoInfoOverlay = document.getElementById("video-info-overlay");
+export const saveSessionBtn = document.getElementById("save-session-btn");
+export const loadSessionBtn = document.getElementById("load-session-btn");
+export const sessionFileInput = document.getElementById("session-file-input");
 
 //----------------------UPDATE FRAME Function----------------------//
 // Updates the UI to reflect the current radar frame and synchronizes video playback.

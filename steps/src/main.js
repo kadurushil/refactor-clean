@@ -78,6 +78,11 @@ import {
   resetVisualization,
   updateDebugOverlay,
   timelineTooltip,
+  saveSessionBtn,
+  loadSessionBtn,
+  sessionFileInput,
+  togglePredictedPos,
+  toggleCovariance,
 } from "./dom.js";
 
 import { initializeTheme } from "./theme.js";
@@ -192,6 +197,145 @@ clearCacheBtn.addEventListener("click", async () => {
     window.location.reload();
   }
 });
+// Event listener for saving the session
+// FILE: steps/src/main.js
+
+// REPLACE the existing 'saveSessionBtn' event listener with this entire block:
+saveSessionBtn.addEventListener('click', () => {
+    // We can only save a session if at least one data file has been loaded.
+    if (!appState.jsonFilename && !appState.videoFilename) {
+        showModal("Nothing to save. Please load data files first.");
+        return;
+    }
+
+    // Collect all relevant state into a single object.
+    const sessionState = {
+        version: 1, // For future compatibility
+        jsonFilename: appState.jsonFilename,
+        videoFilename: appState.videoFilename,
+        offset: offsetInput.value,
+        playbackSpeed: speedSlider.value,
+        snrMin: snrMinInput.value,
+        snrMax: snrMaxInput.value,
+        // Save the checked state of every toggle checkbox.
+        toggles: {
+            snrColor: toggleSnrColor.checked,
+            clusterColor: toggleClusterColor.checked,
+            inlierColor: toggleInlierColor.checked,
+            stationaryColor: toggleStationaryColor.checked,
+            velocity: toggleVelocity.checked,
+            tracks: toggleTracks.checked,
+            egoSpeed: toggleEgoSpeed.checked,
+            frameNorm: toggleFrameNorm.checked,
+            debugOverlay: toggleDebugOverlay.checked,
+            debug2Overlay: toggleDebug2Overlay.checked,
+            closeUp: toggleCloseUp.checked,
+            predictedPos: togglePredictedPos.checked,
+            covariance: toggleCovariance.checked,
+        }
+    };
+
+    const sessionString = JSON.stringify(sessionState, null, 2);
+    const blob = new Blob([sessionString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    // --- START: New dynamic filename logic ---
+    // Get the current date and time to create a timestamp.
+    const now = new Date();
+    // Helper function to ensure numbers are two digits (e.g., 5 -> "05").
+    const pad = (num) => String(num).padStart(2, '0');
+    
+    // Format the date as YYYY-MM-DD
+    const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    // Format the time as HH-mm-ss
+    const time = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    
+    // Combine them into a user-friendly timestamp.
+    const timestamp = `${date}_${time}`;
+    const defaultFilename = `visualizer-session_${timestamp}.json`;
+    // --- END: New dynamic filename logic ---
+
+    // Create a temporary link to trigger the file download.
+    const a = document.createElement('a');
+    a.href = url;
+    // Use the new dynamic filename here. The browser will open a "Save As" dialog.
+    a.download = defaultFilename; 
+    document.body.appendChild(a);
+    a.click(); // Programmatically click the link to start the download.
+    
+    // Clean up the temporary link and URL.
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+});
+
+// When "Load Session" is clicked, it triggers the hidden file input.
+loadSessionBtn.addEventListener("click", () => {
+  sessionFileInput.click();
+});
+
+// This listener handles the selected session file.
+
+sessionFileInput.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => { // Make the function async to use 'await'
+        try {
+            const sessionState = JSON.parse(e.target.result);
+
+            // Basic validation to ensure it's a valid session file.
+            if (sessionState.version !== 1 || !sessionState.jsonFilename) {
+                showModal("Error: Invalid or corrupted session file.");
+                return;
+            }
+
+            // --- START: New Robust Session Check ---
+
+            // 1. Before doing anything else, check if the required files exist in the cache.
+            // We use the same 'loadFreshFileFromDB' function that the startup process uses.
+            const videoBlob = await loadFreshFileFromDB("video", sessionState.videoFilename);
+            const jsonBlob = await loadFreshFileFromDB("json", sessionState.jsonFilename);
+
+            // 2. If either file is missing from the cache, show an informative error and stop.
+            if (!jsonBlob || !videoBlob) {
+                showModal(`Session load failed: The required data files are not in the application's cache. 
+                
+                Please manually load '${sessionState.jsonFilename}' and '${sessionState.videoFilename}' before loading this session.`);
+                
+                event.target.value = ''; // Reset file input
+                return;
+            }
+
+            // 3. If we get here, it means the files ARE in the cache and match the session!
+            // It is now safe to set localStorage and reload the page.
+            
+            localStorage.setItem('jsonFilename', sessionState.jsonFilename || '');
+            localStorage.setItem('videoFilename', sessionState.videoFilename || '');
+            localStorage.setItem('visualizerOffset', sessionState.offset || '0');
+            localStorage.setItem('playbackSpeed', sessionState.playbackSpeed || '1');
+            localStorage.setItem('snrMin', sessionState.snrMin || '');
+            localStorage.setItem('snrMax', sessionState.snrMax || '');
+            if (sessionState.toggles) {
+                localStorage.setItem('togglesState', JSON.stringify(sessionState.toggles));
+            }
+
+            // Inform the user and then reload the page to apply the session.
+            showModal("Session files found in cache. The application will now reload.").then(() => {
+                window.location.reload();
+            });
+            // --- END: New Robust Session Check ---
+
+        } catch (error) {
+            showModal("Error: Could not parse the session file. It may be invalid.");
+            console.error("Session load error:", error);
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = ''; // Clear the input for future loads.
+});
+
+// --- END: Add Session Management Logic ---
 
 // In main.js, REPLACE your existing jsonFileInput event listener with this entire block:
 
@@ -231,7 +375,7 @@ jsonFileInput.addEventListener("change", (event) => {
         worker.terminate(); // Terminate worker on error
         return;
       }
-      
+
       if (appState.p5_instance) {
         appState.p5_instance.remove();
         appState.p5_instance = null;
@@ -241,7 +385,7 @@ jsonFileInput.addEventListener("change", (event) => {
         appState.speedGraphInstance = null;
         speedGraphPlaceholder.classList.remove("hidden");
       }
-      
+
       appState.vizData = result.data;
       appState.globalMinSnr = result.minSnr;
       appState.globalMaxSnr = result.maxSnr;
@@ -255,22 +399,24 @@ jsonFileInput.addEventListener("change", (event) => {
       if (!appState.p5_instance) {
         appState.p5_instance = new p5(radarSketch);
       }
-      
+
       // --- START: This is the new, corrected logic ---
       // After processing the new JSON, check if a video is already loaded and ready.
       // If it is, this is the trigger to create or update the speed graph.
       if (appState.vizData && videoPlayer.duration > 0) {
-          speedGraphPlaceholder.classList.add("hidden");
-          if (!appState.speedGraphInstance) {
-              appState.speedGraphInstance = new p5(speedGraphSketch);
-          }
-          appState.speedGraphInstance.setData(appState.vizData, videoPlayer.duration);
+        speedGraphPlaceholder.classList.add("hidden");
+        if (!appState.speedGraphInstance) {
+          appState.speedGraphInstance = new p5(speedGraphSketch);
+        }
+        appState.speedGraphInstance.setData(
+          appState.vizData,
+          videoPlayer.duration
+        );
       }
       // --- END: This is the new, corrected logic ---
 
       document.getElementById("modal-ok-btn").click();
       worker.terminate();
-
     } else if (type === "error") {
       showModal(message);
       worker.terminate();
@@ -608,22 +754,65 @@ function calculateAndSetOffset() {
 }
 
 // Application Initialization
-// In src/main.js, REPLACE the entire 'DOMContentLoaded' listener with this:
 
-// In src/main.js, replace the existing DOMContentLoaded listener with this entire block:
+// FILE: steps/src/main.js
 
-// In src/main.js, replace the existing DOMContentLoaded listener with this entire block:
+// REPLACE the entire 'document.addEventListener("DOMContentLoaded", ...)' block with this:
 document.addEventListener("DOMContentLoaded", () => {
   initializeTheme();
   console.log("DEBUG: DOMContentLoaded fired. Starting session load.");
 
   initDB(async () => {
-    // Make the callback async to use await
     console.log("DEBUG: Database initialized.");
+
+    // --- START: Restore Session and UI State from localStorage ---
     const savedOffset = localStorage.getItem("visualizerOffset");
     if (savedOffset !== null) {
       offsetInput.value = savedOffset;
     }
+
+    const savedSpeed = localStorage.getItem("playbackSpeed");
+    if (savedSpeed) {
+      speedSlider.value = savedSpeed;
+      speedDisplay.textContent = `${parseFloat(savedSpeed).toFixed(1)}x`;
+      videoPlayer.playbackRate = savedSpeed;
+    }
+
+    const savedSnrMin = localStorage.getItem("snrMin");
+    if (savedSnrMin) snrMinInput.value = savedSnrMin;
+
+    const savedSnrMax = localStorage.getItem("snrMax");
+    if (savedSnrMax) snrMaxInput.value = savedSnrMax;
+
+    // If custom SNR values were part of the session, apply them to the app state.
+    if (savedSnrMin && savedSnrMax) {
+      appState.globalMinSnr = parseFloat(savedSnrMin);
+      appState.globalMaxSnr = parseFloat(savedSnrMax);
+    }
+
+    // Restore the state of all toggle checkboxes.
+    const savedToggles = localStorage.getItem("togglesState");
+    if (savedToggles) {
+      try {
+        const toggles = JSON.parse(savedToggles);
+        toggleSnrColor.checked = toggles.snrColor;
+        toggleClusterColor.checked = toggles.clusterColor;
+        toggleInlierColor.checked = toggles.inlierColor;
+        toggleStationaryColor.checked = toggles.stationaryColor;
+        toggleVelocity.checked = toggles.velocity;
+        toggleTracks.checked = toggles.tracks;
+        toggleEgoSpeed.checked = toggles.egoSpeed;
+        toggleFrameNorm.checked = toggles.frameNorm;
+        toggleDebugOverlay.checked = toggles.debugOverlay;
+        toggleDebug2Overlay.checked = toggles.debug2Overlay;
+        toggleCloseUp.checked = toggles.closeUp;
+        togglePredictedPos.checked = toggles.predictedPos;
+        toggleCovariance.checked = toggles.covariance;
+      } catch (e) {
+        console.error("Could not parse saved toggle state.", e);
+      }
+    }
+    // --- END: Restore Session and UI State ---
 
     // Get the filenames we EXPECT to load from localStorage
     appState.videoFilename = localStorage.getItem("videoFilename");
@@ -631,7 +820,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     calculateAndSetOffset();
 
-    // Asynchronously load files, performing freshness and integrity checks
     const videoBlob = await loadFreshFileFromDB(
       "video",
       appState.videoFilename
@@ -642,7 +830,6 @@ document.addEventListener("DOMContentLoaded", () => {
       "DEBUG: Freshness checks complete. Proceeding with valid data."
     );
 
-    // This function processes the parsed JSON and sets up the main visualization state
     const finalizeSetup = async (parsedJson) => {
       if (parsedJson) {
         const result = await parseVisualizationJson(
@@ -653,16 +840,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!result.error) {
           appState.vizData = result.data;
-          appState.globalMinSnr = result.minSnr;
-          appState.globalMaxSnr = result.maxSnr;
-          snrMinInput.value = result.minSnr.toFixed(1);
-          snrMaxInput.value = result.maxSnr.toFixed(1);
+          // Note: We use the saved SNR values if they exist, otherwise the file's global values.
+          appState.globalMinSnr = savedSnrMin
+            ? parseFloat(savedSnrMin)
+            : result.minSnr;
+          appState.globalMaxSnr = savedSnrMax
+            ? parseFloat(savedSnrMax)
+            : result.maxSnr;
+          snrMinInput.value = savedSnrMin || result.minSnr.toFixed(1);
+          snrMaxInput.value = savedSnrMax || result.maxSnr.toFixed(1);
         } else {
           showModal(result.error);
         }
       }
 
-      // Final UI updates for the radar canvas
       if (appState.vizData) {
         resetVisualization();
         canvasPlaceholder.style.display = "none";
@@ -673,38 +864,27 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     };
 
-    // --- Main Loading Logic ---
     if (jsonBlob) {
-      // CASE 1: Cached JSON exists. Parse it first with a progress bar.
       showModal("Loading data from cache...", false, true);
       updateModalProgress(0);
-
       const worker = new Worker("./src/parser.worker.js");
-
       worker.onmessage = async (e) => {
         const { type, data, message, percent } = e.data;
-
         if (type === "progress") {
           updateModalProgress(percent);
         } else if (type === "complete") {
           updateModalProgress(100);
-          await finalizeSetup(data); // Process the parsed JSON
-
-          // Hide the JSON loading modal before starting the video load
+          await finalizeSetup(data);
           document.getElementById("modal-ok-btn").click();
           worker.terminate();
-
-          // Now that JSON is ready, load the video (which will show its own modal)
           loadVideoWithProgress(videoBlob);
         } else if (type === "error") {
           showModal(message);
           worker.terminate();
         }
       };
-
       worker.postMessage({ file: jsonBlob });
     } else {
-      // CASE 2: No cached JSON. Finalize setup with null data and just load the video if it exists.
       await finalizeSetup(null);
       loadVideoWithProgress(videoBlob);
     }

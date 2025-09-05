@@ -24,6 +24,17 @@ export const snrColors = (p) => ({
   c5: p.color(255, 0, 0), // Red
 });
 
+// In src/drawUtils.js, add this near the other color constants
+
+export const ttcColors = (p) => ({
+  critical: p.color(255, 0, 0), // Red for TTC <= 5s
+  high: p.color(255, 165, 0), // Orange for 5s < TTC <= 10s
+  medium: p.color(255, 255, 0), // Yellow for 10s < TTC <= 30s
+  low: p.color(0, 255, 0), // Green for TTC > 30s
+  away: p.color(0, 191, 255), // Deep Sky Blue for moving away
+  default: p.color(128, 128, 128), // Gray for unknown/default
+});
+
 // Defines a palette of colors for different clusters.
 export const clusterColors = (p) => [
   p.color(230, 25, 75), // Red
@@ -253,74 +264,100 @@ export function drawPointCloud(p, points, plotScales) {
  * @param {p5} p - The p5 instance.
  * @param {object} plotScales - The calculated scales for plotting.
  */
-export function drawTrajectories(p, plotScales) {
-  // Iterate through each tracked object.
-  for (const track of appState.vizData.tracks) {
-    
-    // --- START: Enhanced Safeguard and Detailed Logging ---
-    // This check is now more robust. It ensures the track object exists,
-    // that it has a historyLog property, and that historyLog is an array.
-    if (!track || !track.historyLog || !Array.isArray(track.historyLog)) {
-        // If any check fails, print a detailed warning to the console and skip.
-        console.warn(
-            `[Visualizer Warning] Malformed track object found at frame ${appState.currentFrame + 1}. The 'historyLog' property is missing or not an array. Skipping this track.`,
-            { problematicTrack: track } // This logs the entire object for inspection.
-        );
-        continue; // Safely skip to the next track in the loop.
-    }
-    // --- END: Enhanced Safeguard and Detailed Logging ---
+// In src/drawUtils.js, replace the entire function
 
-    // Filter history logs to include only frames up to the current one.
+export function drawTrajectories(p, plotScales) {
+  // Get a local instance of the TTC colors for this p5 sketch
+  const localTtcColors = ttcColors(p);
+
+  for (const track of appState.vizData.tracks) {
+    if (!track || !track.historyLog || !Array.isArray(track.historyLog)) {
+      console.warn(
+        `[Visualizer Warning] Malformed track object found at frame ${appState.currentFrame + 1}. The 'historyLog' property is missing or not an array. Skipping this track.`,
+        { problematicTrack: track }
+      );
+      continue;
+    }
+
     const logs = track.historyLog.filter(
       (log) => log.frameIdx <= appState.currentFrame + 1
     );
-    // Skip if there are not enough points to draw a trajectory.
     if (logs.length < 2) continue;
 
-    // Get the last log entry.
     const lastLog = logs[logs.length - 1];
-    // Skip if the trajectory is too old.
     if (appState.currentFrame + 1 - lastLog.frameIdx > MAX_TRAJECTORY_LENGTH)
       continue;
 
-    // Adjust trajectory length based on whether the object is stationary.
     const isCurrentlyStationary = lastLog.isStationary;
     let maxLen = isCurrentlyStationary
       ? Math.floor(MAX_TRAJECTORY_LENGTH / 4)
       : MAX_TRAJECTORY_LENGTH;
 
-    // Filter and map corrected positions for the trajectory.
     let trajPts = logs
-      .filter(
-        (log) => log.correctedPosition && log.correctedPosition[0] !== null
-      )
+      .filter((log) => log.correctedPosition && log.correctedPosition[0] !== null)
       .map((log) => log.correctedPosition);
-    // Slice the trajectory to the maximum allowed length.
+      
     if (trajPts.length > maxLen) {
       trajPts = trajPts.slice(trajPts.length - maxLen);
     }
-    // Begin drawing the trajectory.
+    
     p.push();
     p.noFill();
+    
     if (isCurrentlyStationary) {
-      p.stroke(34, 139, 34, 220); // Forest green
+      // Stationary tracks are always green and dashed
+      p.stroke(34, 139, 34, 220);
       p.strokeWeight(1);
       p.drawingContext.setLineDash([3, 3]);
+      p.beginShape();
+      for (const pos of trajPts) {
+        p.vertex(pos[0] * plotScales.plotScaleX, pos[1] * plotScales.plotScaleY);
+      }
+      p.endShape();
     } else {
-      // Set color and weight for moving trajectories based on theme.
-      p.stroke(
-        document.documentElement.classList.contains("dark")
-          ? p.color(10, 170, 255, 250)
-          : p.color(0, 50, 255, 250)
-      );
+      // --- START: New TTC Coloring Logic for Moving Tracks ---
+      let trajectoryColor;
+      switch (lastLog.ttcCategory) {
+          case 3:
+              trajectoryColor = localTtcColors.critical;
+              break;
+          case 2:
+              trajectoryColor = localTtcColors.high;
+              break;
+          case 1:
+              trajectoryColor = localTtcColors.medium;
+              break;
+          case 0:
+              trajectoryColor = localTtcColors.low;
+              break;
+          case -1:
+              trajectoryColor = localTtcColors.away;
+              break;
+          default:
+              // Fallback to the original blue color if ttcCategory is missing
+              trajectoryColor = document.documentElement.classList.contains('dark') ? p.color(10, 170, 255) : p.color(0, 50, 255);
+              break;
+      }
+      
       p.strokeWeight(1.5);
+      p.drawingContext.setLineDash([]); // Ensure solid line for moving tracks
+
+      // Fading trajectory logic
+      for (let i = 1; i < trajPts.length; i++) {
+        const alpha = p.map(i, 0, trajPts.length, 50, 255);
+        trajectoryColor.setAlpha(alpha);
+        p.stroke(trajectoryColor);
+        
+        const prevPt = trajPts[i - 1];
+        const currPt = trajPts[i];
+        p.line(
+            prevPt[0] * plotScales.plotScaleX, prevPt[1] * plotScales.plotScaleY,
+            currPt[0] * plotScales.plotScaleX, currPt[1] * plotScales.plotScaleY
+        );
+      }
+      // --- END: New TTC Coloring Logic ---
     }
-    // Draw the trajectory as a continuous line.
-    p.beginShape();
-    for (const pos of trajPts)
-      p.vertex(pos[0] * plotScales.plotScaleX, pos[1] * plotScales.plotScaleY);
-    // End drawing and reset line dash.
-    p.endShape();
+    
     p.drawingContext.setLineDash([]);
     p.pop();
   }
@@ -343,13 +380,12 @@ export function drawTrackMarkers(p, plotScales) {
   const localMovingColor = movingColor(p);
 
   for (const track of appState.vizData.tracks) {
-
     // --- START: Add the Same Safeguard Here ---
     // This robust check ensures the track and its historyLog are valid before use.
     if (!track || !track.historyLog || !Array.isArray(track.historyLog)) {
-        // We don't need to log a warning here again, as drawTrajectories already did.
-        // We can just safely skip this malformed track.
-        continue;
+      // We don't need to log a warning here again, as drawTrajectories already did.
+      // We can just safely skip this malformed track.
+      continue;
     }
     // --- END: Add the Same Safeguard Here ---
 
@@ -532,7 +568,16 @@ export function handleCloseUpDisplay(p, plotScales) {
   }
 }
 
-export function drawCovarianceEllipse(p, position, covarianceP, plotScales) {
+export function drawCovarianceEllipse(
+  p,
+  position,
+  covarianceP,
+  plotScales,
+  isStationary
+) {
+  // Only draw the ellipse for tracks that are not stationary.
+  if (isStationary) return;
+
   const pPos = [
     [covarianceP[0][0], covarianceP[0][1]],
     [covarianceP[1][0], covarianceP[1][1]],
