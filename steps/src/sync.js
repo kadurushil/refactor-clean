@@ -6,6 +6,7 @@ import {
   stopBtn,
   updateFrame,
   updateDebugOverlay,
+  updatePersistentOverlays,
 } from "./dom.js";
 import { findRadarFrameIndexForTime } from "./utils.js";
 
@@ -67,7 +68,7 @@ export function animationLoop() {
   }
 
   // Update debug overlay information
-  updateDebugOverlay(currentMediaTime);
+  updatePersistentOverlays(currentMediaTime);
   // Redraw the speed graph if an instance exists
   if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
 

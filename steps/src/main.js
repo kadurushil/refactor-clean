@@ -84,7 +84,9 @@ import { initializeTheme } from "./theme.js";
 
 import { initDB, saveFileWithMetadata, loadFreshFileFromDB } from "./db.js";
 
-let seekDebounceTimer = null; // Add this line
+let seekDebounceTimer = null; //timeline slider variables.
+let lastScrollTime = 0; //timeline slider variables.
+let scrollSpeed = 0; //timeline slider variables.
 
 // Sets up the video player with the given file URL.
 function setupVideoPlayer(fileURL) {
@@ -191,7 +193,8 @@ clearCacheBtn.addEventListener("click", async () => {
   }
 });
 
-// In src/main.js, REPLACE the jsonFileInput event listener with this:
+// In main.js, REPLACE your existing jsonFileInput event listener with this entire block:
+
 jsonFileInput.addEventListener("change", (event) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -213,24 +216,22 @@ jsonFileInput.addEventListener("change", (event) => {
     const { type, data, message, percent } = e.data;
 
     if (type === "progress") {
-      // Update the progress bar whenever the worker reports progress
       updateModalProgress(percent);
     } else if (type === "complete") {
-      // Worker is done! Process the data it sent back.
       updateModalProgress(100);
 
       const result = await parseVisualizationJson(
-        data, // Use the data object directly from the worker
+        data,
         appState.radarStartTimeMs,
         appState.videoStartDate
       );
 
       if (result.error) {
         showModal(result.error);
+        worker.terminate(); // Terminate worker on error
         return;
       }
-      // --- START: New Cleanup Logic ---
-      // If p5.js instances already exist, remove them completely
+      
       if (appState.p5_instance) {
         appState.p5_instance.remove();
         appState.p5_instance = null;
@@ -238,10 +239,9 @@ jsonFileInput.addEventListener("change", (event) => {
       if (appState.speedGraphInstance) {
         appState.speedGraphInstance.remove();
         appState.speedGraphInstance = null;
-        // Also reset the placeholder text
         speedGraphPlaceholder.classList.remove("hidden");
       }
-      // --- END: New Cleanup Logic ---
+      
       appState.vizData = result.data;
       appState.globalMinSnr = result.minSnr;
       appState.globalMaxSnr = result.maxSnr;
@@ -255,21 +255,23 @@ jsonFileInput.addEventListener("change", (event) => {
       if (!appState.p5_instance) {
         appState.p5_instance = new p5(radarSketch);
       }
-      if (appState.vizData && videoPlayer.duration) {
-        if (!appState.speedGraphInstance) {
-          appState.speedGraphInstance = new p5(speedGraphSketch);
-        }
-        appState.speedGraphInstance.setData(
-          appState.vizData,
-          videoPlayer.duration
-        );
+      
+      // --- START: This is the new, corrected logic ---
+      // After processing the new JSON, check if a video is already loaded and ready.
+      // If it is, this is the trigger to create or update the speed graph.
+      if (appState.vizData && videoPlayer.duration > 0) {
+          speedGraphPlaceholder.classList.add("hidden");
+          if (!appState.speedGraphInstance) {
+              appState.speedGraphInstance = new p5(speedGraphSketch);
+          }
+          appState.speedGraphInstance.setData(appState.vizData, videoPlayer.duration);
       }
+      // --- END: This is the new, corrected logic ---
 
-      // Close the modal and terminate the worker
       document.getElementById("modal-ok-btn").click();
       worker.terminate();
+
     } else if (type === "error") {
-      // The worker ran into an error
       showModal(message);
       worker.terminate();
     }
@@ -390,8 +392,53 @@ timelineSlider.addEventListener("input", (event) => {
     updateDebugOverlay(videoPlayer.currentTime);
   }, 250); // Wait for 250ms of inactivity before firing
 });
-// In src/main.js, add this new block of event listeners
 
+// --- Timeline Scroll-to-Seek Logic ---
+
+timelineSlider.addEventListener("wheel", (event) => {
+  if (!appState.vizData) return;
+
+  // 1. Prevent the page from scrolling up and down
+  event.preventDefault();
+
+  // 2. Calculate scroll speed
+  const now = performance.now();
+  const timeDelta = now - (lastScrollTime || now); // Handle first scroll
+  lastScrollTime = now;
+  // Calculate speed as "events per second", giving more weight to recent, fast scrolls
+  scrollSpeed = timeDelta > 0 ? 1000 / timeDelta : scrollSpeed;
+
+  // 3. Map scroll speed to a dynamic seek multiplier
+  // This creates a nice acceleration curve. The '50' is a sensitivity value you can adjust.
+  const speedMultiplier = 1 + Math.floor(scrollSpeed / 4);
+  const baseSeekAmount = 1; // Base frames to move on a slow scroll
+  let seekAmount = Math.max(baseSeekAmount, speedMultiplier);
+
+  // 4. Calculate the new frame index
+  const direction = Math.sign(event.deltaY); // +1 for down/right, -1 for up/left
+  const currentFrame = parseInt(timelineSlider.value, 10);
+  let newFrame = currentFrame + seekAmount * direction;
+
+  // Clamp the new frame to the valid range
+  const totalFrames = appState.vizData.radarFrames.length - 1;
+  newFrame = Math.max(0, Math.min(newFrame, totalFrames));
+
+  // 5. Update the UI
+  if (appState.isPlaying) {
+    playPauseBtn.click(); // Pause if playing
+  }
+  updateFrame(newFrame, true);
+
+  // 6. Reuse the debouncer for a final, precise sync after scrolling stops
+  clearTimeout(seekDebounceTimer);
+  seekDebounceTimer = setTimeout(() => {
+    console.log("Scrolling stopped. Performing final, debounced resync.");
+    updateFrame(newFrame, true);
+    updatePersistentOverlays(videoPlayer.currentTime);
+  }, 300); // Wait 300ms after the last scroll event
+});
+
+// In src/main.js, add this new block of event listeners
 // --- Timeline Scrub-to-Seek Preview Logic ---
 
 timelineSlider.addEventListener("mouseover", () => {
@@ -412,10 +459,11 @@ timelineSlider.addEventListener("mousemove", (event) => {
   const hoverFraction = (event.clientX - rect.left) / rect.width;
 
   // 2. Calculate the corresponding frame index
-  const sliderMax = parseInt(timelineSlider.max, 10) || (appState.vizData.radarFrames.length - 1);
-let frameIndex = Math.round(hoverFraction * sliderMax);
-// The value is already clamped by this calculation, but an extra check is safe
-frameIndex = Math.max(0, Math.min(frameIndex, sliderMax));
+  const sliderMax =
+    parseInt(timelineSlider.max, 10) || appState.vizData.radarFrames.length - 1;
+  let frameIndex = Math.round(hoverFraction * sliderMax);
+  // The value is already clamped by this calculation, but an extra check is safe
+  frameIndex = Math.max(0, Math.min(frameIndex, sliderMax));
 
   const frameData = appState.vizData.radarFrames[frameIndex];
   if (!frameData) return;

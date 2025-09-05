@@ -1,5 +1,7 @@
 import { appState } from "./state.js";
-import { VIDEO_FPS } from "./constants.js"; // Import VIDEO_FPS for debug overlay calculations
+import { formatUTCTime } from "./utils.js";
+// Also import VIDEO_FPS from constants
+import { VIDEO_FPS } from "./constants.js";
 
 // --- DOM Element References --- //
 
@@ -54,6 +56,8 @@ export const modalProgressContainer = document.getElementById("modal-progress-co
 export const modalProgressBar = document.getElementById("modal-progress-bar");
 export const modalProgressText = document.getElementById("modal-progress-text");
 export const timelineTooltip = document.getElementById("timeline-tooltip");
+export const radarInfoOverlay = document.getElementById("radar-info-overlay");
+export const videoInfoOverlay = document.getElementById("video-info-overlay");
 
 //----------------------UPDATE FRAME Function----------------------//
 // Updates the UI to reflect the current radar frame and synchronizes video playback.
@@ -120,7 +124,7 @@ export function updateFrame(frame, forceVideoSeek) {
 
   if (!appState.isPlaying) {
     // MODIFIED: Use our new synchronized time variable
-    updateDebugOverlay(timeForUpdates);
+    updatePersistentOverlays(timeForUpdates);
   }
   // --- End of fix ---
 
@@ -233,4 +237,43 @@ export function updateDebugOverlay(currentMediaTime) {
   }
 
   debugOverlay.innerHTML = content.join("<br>"); // Update debug overlay content.
+}
+
+
+export function updatePersistentOverlays(currentMediaTime) {
+    // If we don't have the necessary data, hide the overlays and exit.
+    if (!appState.vizData || !appState.videoStartDate) {
+        radarInfoOverlay.classList.add('hidden');
+        videoInfoOverlay.classList.add('hidden');
+        return;
+    }
+
+    // Otherwise, make sure they are visible.
+    radarInfoOverlay.classList.remove('hidden');
+    videoInfoOverlay.classList.remove('hidden');
+
+    // --- Update Radar Overlay ---
+    const currentRadarFrame = appState.vizData.radarFrames[appState.currentFrame];
+    if (currentRadarFrame) {
+        const absRadarTime = new Date(appState.videoStartDate.getTime() + currentRadarFrame.timestampMs);
+        const targetRadarTimeMs = currentRadarFrame.timestampMs;
+        const offsetMs = parseFloat(offsetInput.value) || 0;
+        const driftMs = (currentMediaTime * 1000 + offsetMs) - targetRadarTimeMs;
+        const driftColor = Math.abs(driftMs) > 50 ? "#FF6347" : "#98FB98"; // Tomato red or Pale green
+
+        radarInfoOverlay.innerHTML = `
+            Frame: ${appState.currentFrame + 1}
+            Abs Time: ${formatUTCTime(absRadarTime)}
+            Drift: <b style="color: ${driftColor};">${driftMs.toFixed(0)}ms</b>
+        `;
+    }
+    
+    // --- Update Video Overlay ---
+    const absVideoTime = new Date(appState.videoStartDate.getTime() + (currentMediaTime * 1000));
+    const videoFrame = Math.floor(currentMediaTime * VIDEO_FPS);
+
+    videoInfoOverlay.innerHTML = `
+        Frame: ${videoFrame}
+        Abs Time: ${formatUTCTime(absVideoTime)}
+    `;
 }

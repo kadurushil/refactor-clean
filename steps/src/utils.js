@@ -146,3 +146,20 @@ export function formatTime(milliseconds) {
 
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
 }
+
+/**
+ * Formats a Date object into a HH:MM:SS.ms UTC string.
+ * @param {Date} date The date object to format.
+ * @returns {string} The formatted time string.
+ */
+export function formatUTCTime(date) {
+    if (!date || isNaN(date.getTime())) {
+        return "00:00:00.000";
+    }
+    const hours = String(date.getUTCHours()).padStart(2, '0');
+    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+    const milliseconds = String(date.getUTCMilliseconds()).padStart(3, '0');
+    return `${hours}:${minutes}:${seconds}.${milliseconds}`;
+}
+
