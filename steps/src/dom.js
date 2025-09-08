@@ -319,9 +319,9 @@ export function updatePersistentOverlays(currentMediaTime) {
 
     radarInfoOverlay.innerHTML = `
             Frame: ${appState.currentFrame + 1}
-            Abs Time: ${formatUTCTime(absRadarTime)}
-            Drift: <b style="color: ${driftColor};">${driftMs.toFixed(0)}ms</b>
-            Mode: <b>${colorMode}</b>
+            | Abs Time: ${formatUTCTime(absRadarTime)}
+            | Color Mode: <b>${colorMode}</b>
+            | Drift: <b style="color: ${driftColor};">${driftMs.toFixed(0)}ms  </b>
         `;
   }
 
@@ -333,7 +333,7 @@ export function updatePersistentOverlays(currentMediaTime) {
 
   videoInfoOverlay.innerHTML = `
         Frame: ${videoFrame}
-        Abs Time: ${formatUTCTime(absVideoTime)}
+        | Abs Time: ${formatUTCTime(absVideoTime)}
     `;
 }
 
