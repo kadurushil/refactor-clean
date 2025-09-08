@@ -83,6 +83,7 @@ import {
   sessionFileInput,
   togglePredictedPos,
   toggleCovariance,
+  updatePersistentOverlays,
 } from "./dom.js";
 
 import { initializeTheme } from "./theme.js";
