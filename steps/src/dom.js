@@ -24,25 +24,39 @@ export const speedSlider = document.getElementById("speed-slider");
 export const speedDisplay = document.getElementById("speed-display");
 export const featureToggles = document.getElementById("feature-toggles");
 export const toggleSnrColor = document.getElementById("toggle-snr-color");
-export const toggleClusterColor = document.getElementById("toggle-cluster-color");
+export const toggleClusterColor = document.getElementById(
+  "toggle-cluster-color"
+);
 export const toggleInlierColor = document.getElementById("toggle-inlier-color");
-export const toggleStationaryColor = document.getElementById("toggle-stationary-color");
+export const toggleStationaryColor = document.getElementById(
+  "toggle-stationary-color"
+);
 export const toggleVelocity = document.getElementById("toggle-velocity");
 export const toggleTracks = document.getElementById("toggle-tracks");
 export const toggleEgoSpeed = document.getElementById("toggle-ego-speed");
 export const toggleFrameNorm = document.getElementById("toggle-frame-norm");
-export const toggleDebugOverlay = document.getElementById("toggle-debug-overlay");
+export const toggleDebugOverlay = document.getElementById(
+  "toggle-debug-overlay"
+);
 export const egoSpeedDisplay = document.getElementById("ego-speed-display");
 export const canSpeedDisplay = document.getElementById("can-speed-display");
 export const debugOverlay = document.getElementById("debug-overlay");
-export const toggleDebug2Overlay = document.getElementById("toggle-debug2-overlay");
+export const toggleDebug2Overlay = document.getElementById(
+  "toggle-debug2-overlay"
+);
 export const snrMinInput = document.getElementById("snr-min-input");
 export const snrMaxInput = document.getElementById("snr-max-input");
 export const applySnrBtn = document.getElementById("apply-snr-btn");
-export const autoOffsetIndicator = document.getElementById("auto-offset-indicator");
+export const autoOffsetIndicator = document.getElementById(
+  "auto-offset-indicator"
+);
 export const clearCacheBtn = document.getElementById("clear-cache-btn");
-export const speedGraphContainer = document.getElementById("speed-graph-container");
-export const speedGraphPlaceholder = document.getElementById("speed-graph-placeholder");
+export const speedGraphContainer = document.getElementById(
+  "speed-graph-container"
+);
+export const speedGraphPlaceholder = document.getElementById(
+  "speed-graph-placeholder"
+);
 export const modalContainer = document.getElementById("modal-container");
 export const modalOverlay = document.getElementById("modal-overlay");
 export const modalContent = document.getElementById("modal-content");
@@ -50,9 +64,13 @@ export const modalText = document.getElementById("modal-text");
 export const modalOkBtn = document.getElementById("modal-ok-btn");
 export const modalCancelBtn = document.getElementById("modal-cancel-btn");
 export const toggleCloseUp = document.getElementById("toggle-close-up");
-export const togglePredictedPos = document.getElementById("toggle-predicted-pos");
+export const togglePredictedPos = document.getElementById(
+  "toggle-predicted-pos"
+);
 export const toggleCovariance = document.getElementById("toggle-covariance");
-export const modalProgressContainer = document.getElementById("modal-progress-container");
+export const modalProgressContainer = document.getElementById(
+  "modal-progress-container"
+);
 export const modalProgressBar = document.getElementById("modal-progress-bar");
 export const modalProgressText = document.getElementById("modal-progress-text");
 export const timelineTooltip = document.getElementById("timeline-tooltip");
@@ -61,17 +79,27 @@ export const videoInfoOverlay = document.getElementById("video-info-overlay");
 export const saveSessionBtn = document.getElementById("save-session-btn");
 export const loadSessionBtn = document.getElementById("load-session-btn");
 export const sessionFileInput = document.getElementById("session-file-input");
-export const ttcModeDefault = document.getElementById('ttc-mode-default');
-export const ttcModeCustom = document.getElementById('ttc-mode-custom');
-export const customTtcPanel = document.getElementById('custom-ttc-panel');
-export const ttcColorCritical = document.getElementById('ttc-color-critical');
-export const ttcTimeCritical = document.getElementById('ttc-time-critical');
-export const ttcColorHigh = document.getElementById('ttc-color-high');
-export const ttcTimeHigh = document.getElementById('ttc-time-high');
-export const ttcColorMedium = document.getElementById('ttc-color-medium');
-export const ttcTimeMedium = document.getElementById('ttc-time-medium');
-export const ttcColorLow = document.getElementById('ttc-color-low');
-
+export const ttcModeDefault = document.getElementById("ttc-mode-default");
+export const ttcModeCustom = document.getElementById("ttc-mode-custom");
+export const customTtcPanel = document.getElementById("custom-ttc-panel");
+export const ttcColorCritical = document.getElementById("ttc-color-critical");
+export const ttcTimeCritical = document.getElementById("ttc-time-critical");
+export const ttcColorHigh = document.getElementById("ttc-color-high");
+export const ttcTimeHigh = document.getElementById("ttc-time-high");
+export const ttcColorMedium = document.getElementById("ttc-color-medium");
+export const ttcTimeMedium = document.getElementById("ttc-time-medium");
+export const ttcColorLow = document.getElementById("ttc-color-low");
+export const collapsibleMenu = document.getElementById("collapsible-menu");
+export const toggleMenuBtn = document.getElementById("toggle-menu-btn");
+export const fullscreenBtn = document.getElementById("fullscreen-btn");
+export const mainContent = document.querySelector("main");
+export const closeMenuBtn = document.getElementById("close-menu-btn");
+export const fullscreenEnterIcon = document.getElementById(
+  "fullscreen-enter-icon"
+);
+export const fullscreenExitIcon = document.getElementById(
+  "fullscreen-exit-icon"
+);
 
 //----------------------UPDATE FRAME Function----------------------//
 // Updates the UI to reflect the current radar frame and synchronizes video playback.
@@ -253,82 +281,94 @@ export function updateDebugOverlay(currentMediaTime) {
   debugOverlay.innerHTML = content.join("<br>"); // Update debug overlay content.
 }
 
-
 export function updatePersistentOverlays(currentMediaTime) {
-    // If we don't have the necessary data, hide the overlays and exit.
-    if (!appState.vizData || !appState.videoStartDate) {
-        radarInfoOverlay.classList.add('hidden');
-        videoInfoOverlay.classList.add('hidden');
-        return;
-    }
+  // If we don't have the necessary data, hide the overlays and exit.
+  const isDebug1Visible = toggleDebugOverlay.checked;
+  const isDebug2Visible = toggleDebug2Overlay.checked;
+  
+  if (!appState.vizData || !appState.videoStartDate) {
+    radarInfoOverlay.classList.add("hidden");
+    videoInfoOverlay.classList.add("hidden");
+    return;
+  }
+  if (isDebug1Visible && isDebug2Visible) {
+    radarInfoOverlay.classList.add("hidden");
+    videoInfoOverlay.classList.add("hidden");
+    return;
+  }
+  // Otherwise, make sure they are visible.
+  radarInfoOverlay.classList.remove("hidden");
+  videoInfoOverlay.classList.remove("hidden");
 
-    // Otherwise, make sure they are visible.
-    radarInfoOverlay.classList.remove('hidden');
-    videoInfoOverlay.classList.remove('hidden');
+  // --- Update Radar Overlay ---
+  const currentRadarFrame = appState.vizData.radarFrames[appState.currentFrame];
+  if (currentRadarFrame) {
+    const absRadarTime = new Date(
+      appState.videoStartDate.getTime() + currentRadarFrame.timestampMs
+    );
+    const targetRadarTimeMs = currentRadarFrame.timestampMs;
+    const offsetMs = parseFloat(offsetInput.value) || 0;
+    const driftMs = currentMediaTime * 1000 + offsetMs - targetRadarTimeMs;
+    const driftColor = Math.abs(driftMs) > 50 ? "#FF6347" : "#98FB98"; // Tomato red or Pale green
 
-    // --- Update Radar Overlay ---
-    const currentRadarFrame = appState.vizData.radarFrames[appState.currentFrame];
-    if (currentRadarFrame) {
-        const absRadarTime = new Date(appState.videoStartDate.getTime() + currentRadarFrame.timestampMs);
-        const targetRadarTimeMs = currentRadarFrame.timestampMs;
-        const offsetMs = parseFloat(offsetInput.value) || 0;
-        const driftMs = (currentMediaTime * 1000 + offsetMs) - targetRadarTimeMs;
-        const driftColor = Math.abs(driftMs) > 50 ? "#FF6347" : "#98FB98"; // Tomato red or Pale green
-
-        radarInfoOverlay.innerHTML = `
+    radarInfoOverlay.innerHTML = `
             Frame: ${appState.currentFrame + 1}
             Abs Time: ${formatUTCTime(absRadarTime)}
             Drift: <b style="color: ${driftColor};">${driftMs.toFixed(0)}ms</b>
         `;
-    }
-    
-    // --- Update Video Overlay ---
-    const absVideoTime = new Date(appState.videoStartDate.getTime() + (currentMediaTime * 1000));
-    const videoFrame = Math.floor(currentMediaTime * VIDEO_FPS);
+  }
 
-    videoInfoOverlay.innerHTML = `
+  // --- Update Video Overlay ---
+  const absVideoTime = new Date(
+    appState.videoStartDate.getTime() + currentMediaTime * 1000
+  );
+  const videoFrame = Math.floor(currentMediaTime * VIDEO_FPS);
+
+  videoInfoOverlay.innerHTML = `
         Frame: ${videoFrame}
         Abs Time: ${formatUTCTime(absVideoTime)}
     `;
 }
 
-
 const customTtcInputs = [
-    ttcColorCritical, ttcTimeCritical,
-    ttcColorHigh, ttcTimeHigh,
-    ttcColorMedium, ttcTimeMedium, 
+  ttcColorCritical,
+  ttcTimeCritical,
+  ttcColorHigh,
+  ttcTimeHigh,
+  ttcColorMedium,
+  ttcTimeMedium,
 ];
 
 function updateCustomTtcScheme() {
-    appState.customTtcScheme.critical.time = parseFloat(ttcTimeCritical.value);
-    appState.customTtcScheme.critical.color = ttcColorCritical.value;
-    appState.customTtcScheme.high.time = parseFloat(ttcTimeHigh.value);
-    appState.customTtcScheme.high.color = ttcColorHigh.value;
-    appState.customTtcScheme.medium.time = parseFloat(ttcTimeMedium.value);
-    appState.customTtcScheme.medium.color = ttcColorMedium.value;
+  appState.customTtcScheme.critical.time = parseFloat(ttcTimeCritical.value);
+  appState.customTtcScheme.critical.color = ttcColorCritical.value;
+  appState.customTtcScheme.high.time = parseFloat(ttcTimeHigh.value);
+  appState.customTtcScheme.high.color = ttcColorHigh.value;
+  appState.customTtcScheme.medium.time = parseFloat(ttcTimeMedium.value);
+  appState.customTtcScheme.medium.color = ttcColorMedium.value;
 
-    if (appState.p5_instance) {
-        appState.p5_instance.redraw();
-    }
+  if (appState.p5_instance) {
+    appState.p5_instance.redraw();
+  }
 }
 
-ttcModeDefault.addEventListener('change', () => {
-    if (ttcModeDefault.checked) {
-        appState.useCustomTtcScheme = false;
-        customTtcPanel.classList.add('hidden');
-        if (appState.p5_instance) appState.p5_instance.redraw();
-    }
+ttcModeDefault.addEventListener("change", () => {
+  if (ttcModeDefault.checked) {
+    appState.useCustomTtcScheme = false;
+    customTtcPanel.classList.add("hidden");
+    if (appState.p5_instance) appState.p5_instance.redraw();
+  }
 });
 
-ttcModeCustom.addEventListener('change', () => {
-    if (ttcModeCustom.checked) {
-        appState.useCustomTtcScheme = true;
-        customTtcPanel.classList.remove('hidden');
-        updateCustomTtcScheme(); // Apply current custom values immediately
-    }
+ttcModeCustom.addEventListener("change", () => {
+  if (ttcModeCustom.checked) {
+    appState.useCustomTtcScheme = true;
+    customTtcPanel.classList.remove("hidden");
+    updateCustomTtcScheme(); // Apply current custom values immediately
+  }
 });
 
 // Add listeners to all custom inputs to update the scheme on the fly
-customTtcInputs.forEach(input => {
-    input.addEventListener('input', updateCustomTtcScheme);
+customTtcInputs.forEach((input) => {
+  input.addEventListener("input", updateCustomTtcScheme);
 });

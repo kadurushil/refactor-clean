@@ -69,6 +69,8 @@ export function animationLoop() {
 
   // Update debug overlay information
   updatePersistentOverlays(currentMediaTime);
+  updateDebugOverlay(currentMediaTime); 
+
   // Redraw the speed graph if an instance exists
   if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
 

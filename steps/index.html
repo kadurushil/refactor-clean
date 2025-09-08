@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- DARK MODE: The 'dark' class will be toggled here by JavaScript -->
 <html lang="en">
 
 <head>
@@ -7,16 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Radar and Video Visualizer - Timestamp Synchronized</title>
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png" />
-  <script src="https://cdn.tailwindcss.com"></script> <!--CSS link-->
-  <script src="https://unpkg.com/oboe@2.1.5/dist/oboe-browser.min.js"></script><!--Oboe link-->
-
-  <!-- DARK MODE: Step 1 - Configure Tailwind to use the 'class' strategy for dark mode -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/oboe@2.1.5/dist/oboe-browser.min.js"></script>
   <script>
     tailwind.config = {
       darkMode: "class",
     };
   </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script> <!--P5 link-->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -31,12 +28,7 @@
       font-family: "Roboto Mono", monospace;
     }
 
-    .p5Canvas {
-      border-radius: 0.5rem;
-      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1),
-        0 2px 4px -2px rgb(0 0 0 / 0.1);
-    }
-
+    .p5Canvas,
     video {
       border-radius: 0.5rem;
       box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1),
@@ -67,22 +59,11 @@
         0 -2px 4px -2px rgb(0 0 0 / 0.1);
     }
 
-    #modal-overlay {
-      transition: opacity 0.2s ease-in-out;
-    }
-
+    #modal-overlay,
     #modal-content {
-      transition: transform 0.2s ease-in-out;
+      transition: all 0.2s ease-in-out;
     }
 
-
-    /* ... (your existing styles) ... */
-
-    #modal-content {
-      transition: transform 0.2s ease-in-out;
-    }
-
-    /* ADD THIS NEW CSS RULE */
     #progress-bar {
       transition: width 0.1s linear;
     }
@@ -90,16 +71,18 @@
 </head>
 
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col min-h-screen">
-  <header class="bg-white dark:bg-gray-800 shadow-md p-4 z-10 relative">
+  <header class="bg-white dark:bg-gray-800 shadow-md p-4 z-20 relative">
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
       Radar and Video Synchronizer
     </h1>
     <p class="text-sm text-gray-600 dark:text-gray-400">
       High-precision, timestamp-synchronized playback.
     </p>
-
-    <!-- DARK MODE: Step 2 - Add the toggle button -->
-    <div class="absolute top-4 right-4">
+    <div class="absolute top-4 right-4 flex items-center gap-2">
+      <button id="fullscreen-btn" type="button"
+        class="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium rounded-lg text-xs px-4 py-2 transition-colors">
+        FULLSCREEN ( F11 )
+      </button>
       <button id="theme-toggle" type="button"
         class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
         <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -114,21 +97,125 @@
     </div>
   </header>
 
-  <main class="flex-grow container mx-auto p-4 flex flex-col lg:flex-row gap-6">
+  <!-- Sidebar (Initially hidden) -->
+  <aside id="collapsible-menu"
+    class="fixed top-0 left-0 h-full bg-white dark:bg-gray-800 shadow-xl z-30 transform -translate-x-full transition-transform duration-300 ease-in-out w-full max-w-sm flex flex-col">
+    <div class="flex items-center justify-between p-4 border-b dark:border-gray-700">
+      <h2 class="text-xl font-bold">Display Settings</h2>
+      <button id="close-menu-btn"
+        class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg p-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Scrollable Content Area -->
+    <div class="flex-grow p-4 overflow-y-auto">
+      <div id="feature-toggles" class="flex flex-col items-start gap-4">
+        <!-- Checkboxes -->
+        <div class="flex flex-col items-start gap-3 w-full">
+          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-snr-color"
+              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" /> Color by SNR (S)</label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-cluster-color"
+              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" /> Color by Cluster</label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-inlier-color"
+              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" /> Color by Inlier</label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
+              id="toggle-stationary-color" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
+            Color by Stationary</label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-velocity"
+              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" checked /> Show Object Details
+            (D)</label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-tracks"
+              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" checked /> Show Tracks (T)</label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-ego-speed"
+              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" checked /> Show Ego Speed</label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-frame-norm"
+              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" /> Per-Frame SNR</label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-debug-overlay"
+              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" /> Show Debug Info</label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
+              id="toggle-debug2-overlay" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" /> Show
+            Advanced Debug (A)</label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-close-up"
+              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" /> CLOSE-UP (C)</label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-predicted-pos"
+              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" /> Show Predicted Position
+            (P)</label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-covariance"
+              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" /> Show Covariance</label>
+        </div>
+
+        <!-- SNR Controls -->
+        <div class="border-t border-gray-200 dark:border-gray-700 w-full mt-4 pt-4 flex flex-col gap-3">
+          <h3 class="text-sm font-medium text-center">Global SNR Range</h3>
+          <div class="flex items-center gap-2"><label for="snr-min-input" class="text-sm font-medium w-16">Min
+              SNR:</label><input type="number" id="snr-min-input" step="0.1"
+              class="w-full p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 dark:text-white rounded-lg text-sm" />
+          </div>
+          <div class="flex items-center gap-2"><label for="snr-max-input" class="text-sm font-medium w-16">Max
+              SNR:</label><input type="number" id="snr-max-input" step="0.1"
+              class="w-full p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 dark:text-white rounded-lg text-sm" />
+          </div>
+          <button id="apply-snr-btn"
+            class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">Apply
+            Manual SNR</button>
+        </div>
+
+        <!-- TTC Controls -->
+        <div class="border-t border-gray-200 dark:border-gray-700 w-full mt-4 pt-4">
+          <div class="text-sm font-medium mb-2 text-center">Track Coloring Mode</div>
+          <div class="flex justify-center items-center gap-6 mb-3">
+            <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" name="ttc-mode"
+                id="ttc-mode-default" class="form-radio h-4 w-4 text-blue-600" checked> Default TTC </label>
+            <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" name="ttc-mode"
+                id="ttc-mode-custom" class="form-radio h-4 w-4 text-blue-600"> Custom TTC </label>
+          </div>
+          <div id="custom-ttc-panel" class="hidden flex flex-col gap-3">
+            <div class="flex items-center gap-2"><input type="color" id="ttc-color-critical" value="#ff0000"
+                class="w-8 h-8 rounded-md"><label for="ttc-time-critical" class="text-sm">Critical &lt;=</label><input
+                type="number" id="ttc-time-critical" value="1" step="0.1"
+                class="w-20 p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 rounded-lg text-sm"><span
+                class="text-sm">s</span></div>
+            <div class="flex items-center gap-2"><input type="color" id="ttc-color-high" value="#ffa500"
+                class="w-8 h-8 rounded-md"><label for="ttc-time-high" class="text-sm">High &lt;=</label><input
+                type="number" id="ttc-time-high" value="2" step="0.1"
+                class="w-20 p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 rounded-lg text-sm"><span
+                class="text-sm">s</span></div>
+            <div class="flex items-center gap-2"><input type="color" id="ttc-color-medium" value="#FFC300"
+                class="w-8 h-8 rounded-md"><label for="ttc-time-medium" class="text-sm">Medium &lt;=</label><input
+                type="number" id="ttc-time-medium" value="3" step="0.1"
+                class="w-20 p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 rounded-lg text-sm"><span
+                class="text-sm">s</span></div>
+            <div class="flex items-center gap-2"><input type="color" id="ttc-color-low" value="#00ff00"
+                class="w-8 h-8 rounded-md"><label class="text-sm">Low Risk (else)</label></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Open Menu Button -->
+  <button id="toggle-menu-btn"
+    class="fixed top-20 left-3 z-20 bg-white dark:bg-gray-700 p-2 rounded-md shadow-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+
+  <!-- Main Content -->
+  <main class="flex-grow container mx-auto p-4 pt-8 flex flex-col lg:flex-row gap-6">
     <div class="lg:w-1/2 flex flex-col gap-4">
       <div class="relative">
         <div id="canvas-container"
-          class="w-full h-[60vh] bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-inner flex items-center justify-center">
-          <p id="canvas-placeholder" class="text-gray-500 dark:text-gray-400 text-lg">
-            Load JSON data to start visualization
-          </p>
+          class="w-full h-[75vh] bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-inner flex items-center justify-center">
+          <p id="canvas-placeholder" class="text-gray-500 dark:text-gray-400 text-lg">Load JSON data to start
+            visualization</p>
         </div>
-        <!-- START: Add the new Radar Info Overlay here -->
         <div id="radar-info-overlay"
           class="absolute top-1 left-2 z-10 bg-black bg-opacity-60 text-white font-mono text-xs p-2 rounded-md hidden">
-          <!-- Content will be added by JavaScript -->
         </div>
-        <!-- END: Add the new Radar Info Overlay here -->
         <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center gap-4">
           <div id="ego-speed-display"
             class="bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md hidden font-mono"></div>
@@ -136,138 +223,20 @@
             class="bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md hidden font-mono"></div>
         </div>
       </div>
-      <div id="feature-toggles"
-        class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border dark:border-gray-700 flex flex-col items-center gap-4 hidden">
-        <div class="flex flex-wrap justify-center gap-x-6 gap-y-2">
-          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-snr-color"
-              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
-            Color by SNR</label>
-          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-cluster-color"
-              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
-            Color by Cluster</label>
-          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-inlier-color"
-              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
-            Color by Inlier</label>
-          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
-              id="toggle-stationary-color" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
-            Color by Stationary</label>
-          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-velocity"
-              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" checked />
-            Show Object Details</label>
-          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-tracks"
-              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" checked />
-            Show Tracks</label>
-          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-ego-speed"
-              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" checked />
-            Show Ego Speed</label>
-          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-frame-norm"
-              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
-            Per-Frame SNR</label>
-          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-debug-overlay"
-              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
-            Show Debug Info</label>
-          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
-              id="toggle-debug2-overlay" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
-            Show Advanced Debug</label>
-          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-close-up"
-              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
-            CLOSE-UP</label>
-          <label class="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" id="toggle-predicted-pos"
-              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
-            Show Predicted Position</label>
-          <label class="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" id="toggle-covariance"
-              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />
-            Show Covariance</label>
-        </div>
-        <!-- START: Add This Entire New Block for Custom TTC Controls -->
-        <div class="border-t border-gray-200 dark:border-gray-700 w-full mt-4 pt-4">
-          <div class="text-sm font-medium mb-2 text-center">Track Coloring Mode</div>
-          <div class="flex justify-center items-center gap-6 mb-3">
-            <label class="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="radio" name="ttc-mode" id="ttc-mode-default" class="form-radio h-4 w-4 text-blue-600"
-                checked>
-              Default TTC
-            </label>
-            <label class="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="radio" name="ttc-mode" id="ttc-mode-custom" class="form-radio h-4 w-4 text-blue-600">
-              Custom TTC
-            </label>
-          </div>
-
-          <!-- This container will be shown/hidden by JavaScript -->
-          <div id="custom-ttc-panel"
-            class="hidden flex-col md:flex-row flex-wrap justify-center items-center gap-x-6 gap-y-3">
-            <!-- Critical Risk -->
-            <div class="flex items-center gap-2">
-              <input type="color" id="ttc-color-critical" value="#ff0000" class="w-8 h-8 rounded-md">
-              <label for="ttc-time-critical" class="text-sm">Critical if TTC &lt;=</label>
-              <input type="number" id="ttc-time-critical" value="1" step="0.1"
-                class="w-20 p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 rounded-lg text-sm">
-              <span class="text-sm">s</span>
-            </div>
-            <!-- High Risk -->
-            <div class="flex items-center gap-2">
-              <input type="color" id="ttc-color-high" value="#ffa500" class="w-8 h-8 rounded-md">
-              <label for="ttc-time-high" class="text-sm">High if TTC &lt;=</label>
-              <input type="number" id="ttc-time-high" value="2" step="0.1"
-                class="w-20 p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 rounded-lg text-sm">
-              <span class="text-sm">s</span>
-            </div>
-            <!-- Medium Risk -->
-            <div class="flex items-center gap-2">
-              <input type="color" id="ttc-color-medium" value="#FFC300" class="w-8 h-8 rounded-md">
-              <label for="ttc-time-medium" class="text-sm">Medium if TTC &lt;=</label>
-              <input type="number" id="ttc-time-medium" value="3" step="0.1"
-                class="w-20 p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 rounded-lg text-sm">
-              <span class="text-sm">s</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <input type="color" id="ttc-color-low" value="#00ff00" class="w-8 h-8 rounded-md">
-              <label class="text-sm">Low Risk (everything else)</label>
-            </div>
-          </div>
-        </div>
-        <!-- END: Add This Entire New Block -->
-        <div class="flex items-center gap-4 hidden">
-          <div class="flex items-center gap-2">
-            <label for="snr-min-input" class="text-sm font-medium">Min SNR:</label><input type="number"
-              id="snr-min-input" step="0.1"
-              class="w-20 p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 dark:text-white rounded-lg text-sm" />
-          </div>
-          <div class="flex items-center gap-2">
-            <label for="snr-max-input" class="text-sm font-medium">Max SNR:</label><input type="number"
-              id="snr-max-input" step="0.1"
-              class="w-20 p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 dark:text-white rounded-lg text-sm" />
-          </div>
-          <button id="apply-snr-btn"
-            class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
-            Apply
-          </button>
-        </div>
-      </div>
     </div>
-
     <div class="lg:w-1/2 flex flex-col gap-4">
-      <div class="w-full h-[45vh] bg-black rounded-lg shadow-inner flex items-center justify-center relative">
+      <div class="w-full h-[50vh] bg-black rounded-lg shadow-inner flex items-center justify-center relative">
         <video id="video-player" class="w-full h-full object-contain hidden" muted playsinline></video>
-        <p id="video-placeholder" class="text-gray-500 dark:text-gray-400 text-lg">
-          Load a video file
-        </p>
-        <!-- START: Add the new Video Info Overlay here -->
+        <p id="video-placeholder" class="text-gray-500 dark:text-gray-400 text-lg">Load a video file</p>
         <div id="video-info-overlay"
           class="absolute top-1 left-2 z-10 bg-black bg-opacity-60 text-white font-mono text-xs p-2 rounded-md hidden">
-          <!-- Content will be added by JavaScript -->
         </div>
-        <!-- END: Add the new Video Info Overlay here -->
         <div id="debug-overlay"
           class="absolute top-0 left-0 bg-black bg-opacity-60 text-white p-2 font-mono text-xs hidden w-full"></div>
       </div>
       <div id="speed-graph-container"
         class="w-full h-[27vh] bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-inner flex items-center justify-center">
-        <p id="speed-graph-placeholder" class="text-gray-500 dark:text-gray-400 text-lg">
-          Load JSON to see speed graph
+        <p id="speed-graph-placeholder" class="text-gray-500 dark:text-gray-400 text-lg">Load JSON to see speed graph
         </p>
       </div>
     </div>
@@ -277,25 +246,21 @@
     <div class="mb-4">
       <div id="timeline-tooltip"
         class="absolute hidden bg-gray-900 dark:bg-gray-700 text-white text-xs rounded py-1 px-2 pointer-events-none text-center"
-        style="transform: translate(-50%, -125%);">
-      </div>
+        style="transform: translate(-50%, -125%);"></div>
       <input type="range" id="timeline-slider" min="0" max="0" value="0"
         class="w-full h-2 bg-gray-300 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer" />
     </div>
     <div class="flex flex-wrap items-center justify-center md:justify-between gap-4">
       <div class="flex items-center gap-4 justify-center">
         <button id="load-json-btn"
-          class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-          Load JSON
-        </button>
+          class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">Load
+          JSON</button>
         <button id="load-video-btn"
-          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
-          Load Video
-        </button>
+          class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">Load
+          Video</button>
         <button id="clear-cache-btn"
-          class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
-          Clear Cache
-        </button>
+          class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">Clear
+          Cache</button>
         <button id="save-session-btn"
           class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">Save
           Session</button>
@@ -303,9 +268,8 @@
           class="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium">Load
           Session</button>
         <div class="flex items-center gap-2">
-          <label for="offset-input" class="text-sm font-medium">
-            Offset (ms):<br /><small>(+ve values if radar<br />
-              lags behind video)</small></label>
+          <label for="offset-input" class="text-sm font-medium">Offset (ms):<br /><small>(+ve if radar
+              lags)</small></label>
           <input type="number" id="offset-input" value="0"
             class="w-20 p-2 border border-gray-300 dark:bg-gray-600 dark:border-gray-500 dark:text-white rounded-lg text-sm" />
           <span id="auto-offset-indicator" class="text-green-600 font-semibold text-sm hidden">(auto)</span>
@@ -313,13 +277,9 @@
       </div>
       <div class="flex items-center justify-center gap-4">
         <button id="play-pause-btn"
-          class="px-5 py-2 rounded-lg bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 hover:bg-gray-300 font-semibold w-20">
-          Play
-        </button>
+          class="px-5 py-2 rounded-lg bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 hover:bg-gray-300 font-semibold w-20">Play</button>
         <button id="stop-btn"
-          class="px-5 py-2 rounded-lg bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 hover:bg-gray-300 font-semibold">
-          Stop
-        </button>
+          class="px-5 py-2 rounded-lg bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 hover:bg-gray-300 font-semibold">Stop</button>
         <div class="text-center">
           <span id="frame-counter" class="font-mono text-lg">Frame: 0 / 0</span>
         </div>
@@ -343,18 +303,15 @@
           style="width: 0%"></div>
       </div>
       <span id="modal-progress-text" class="text-sm text-gray-500 dark:text-gray-400 mt-1 block text-center"></span>
-      <div id="modal-buttons" class="flex justify-end gap-4">
-      </div>
-      <div id="modal-buttons" class="flex justify-end gap-4">
+      <div class="flex justify-end gap-4 mt-4">
         <button id="modal-cancel-btn"
-          class="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 hover:bg-gray-300 font-semibold">
-          Cancel</button><button id="modal-ok-btn"
-          class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-semibold">
-          OK
-        </button>
+          class="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 hover:bg-gray-300 font-semibold">Cancel</button>
+        <button id="modal-ok-btn"
+          class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-semibold">OK</button>
       </div>
     </div>
   </div>
+
   <input type="file" id="json-file-input" class="hidden" accept=".json" />
   <input type="file" id="video-file-input" class="hidden" accept="video/*" />
   <input type="file" id="session-file-input" class="hidden" accept=".json" />

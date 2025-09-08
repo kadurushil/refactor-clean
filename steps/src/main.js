@@ -84,6 +84,13 @@ import {
   togglePredictedPos,
   toggleCovariance,
   updatePersistentOverlays,
+  collapsibleMenu,
+  toggleMenuBtn,
+  fullscreenBtn,
+  mainContent,
+  closeMenuBtn,
+  fullscreenEnterIcon,
+  fullscreenExitIcon,
 } from "./dom.js";
 
 import { initializeTheme } from "./theme.js";
@@ -342,6 +349,44 @@ sessionFileInput.addEventListener("change", (event) => {
 });
 
 // --- END: Add Session Management Logic ---
+
+// --- Collapsible Menu Logic ---
+function toggleMenu(show) {
+  if (show) {
+    collapsibleMenu.classList.remove("-translate-x-full");
+    mainContent.classList.add("lg:ml-96");
+  } else {
+    collapsibleMenu.classList.add("-translate-x-full");
+    mainContent.classList.remove("lg:ml-96");
+  }
+}
+
+// Open the menu
+toggleMenuBtn.addEventListener("click", () => toggleMenu(true));
+
+// Close the menu
+closeMenuBtn.addEventListener("click", () => toggleMenu(false));
+
+// --- Fullscreen Logic ---
+fullscreenBtn.addEventListener("click", () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else if (document.exitFullscreen) {
+    document.exitFullscreen();
+  }
+});
+
+// This listener updates the icon whenever fullscreen state changes,
+// whether it's triggered by our button or the F11 key.
+document.addEventListener("fullscreenchange", () => {
+  if (document.fullscreenElement) {
+    fullscreenEnterIcon.classList.add("hidden");
+    fullscreenExitIcon.classList.remove("hidden");
+  } else {
+    fullscreenEnterIcon.classList.remove("hidden");
+    fullscreenExitIcon.classList.add("hidden");
+  }
+});
 
 // In main.js, REPLACE your existing jsonFileInput event listener with this entire block:
 
@@ -703,7 +748,9 @@ document.addEventListener("keydown", (event) => {
   // --- FIX APPLIED HERE ---
   // We only want to block shortcuts if the user is actively typing in a text or number input.
   // This allows shortcuts to work even when other elements, like the timeline slider, are focused.
-  const isTextInputFocused = event.target.tagName === 'INPUT' && (event.target.type === 'text' || event.target.type === 'number');
+  const isTextInputFocused =
+    event.target.tagName === "INPUT" &&
+    (event.target.type === "text" || event.target.type === "number");
   if (isTextInputFocused) {
     return;
   }
@@ -711,7 +758,22 @@ document.addEventListener("keydown", (event) => {
 
   const key = event.key;
   // We can add any new shortcut keys to this array.
-  const recognizedKeys = ["ArrowRight", "ArrowLeft", " ", "1", "2", "3", "4", "t", "d", "c", "r", "p", "a", "s"];
+  const recognizedKeys = [
+    "ArrowRight",
+    "ArrowLeft",
+    " ",
+    "1",
+    "2",
+    "3",
+    "4",
+    "t",
+    "d",
+    "c",
+    "r",
+    "p",
+    "a",
+    "s",
+  ];
 
   if (!appState.vizData || !recognizedKeys.includes(key)) {
     return;
@@ -744,7 +806,7 @@ document.addEventListener("keydown", (event) => {
   }
 
   // --- Number keys for color modes ---
-  if (key >= '1' && key <= '4') {
+  if (key >= "1" && key <= "4") {
     const colorToggles = [
       toggleSnrColor,
       toggleClusterColor,
@@ -777,6 +839,9 @@ document.addEventListener("keydown", (event) => {
   if (key === "a") {
     toggleDebugOverlay.click();
     toggleDebug2Overlay.click();
+  }
+  if (key === "m") {
+    toggleMenuBtn.click();
   }
 });
 
