@@ -704,7 +704,6 @@ colorToggles.forEach((t) => {
     }
     if (appState.p5_instance) appState.p5_instance.redraw();
     updatePersistentOverlays(videoPlayer.currentTime);
-
   });
 });
 
@@ -896,7 +895,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   initDB(async () => {
     console.log("DEBUG: Database initialized.");
-
     // --- START: Restore Session and UI State from localStorage ---
     const savedOffset = localStorage.getItem("visualizerOffset");
     if (savedOffset !== null) {

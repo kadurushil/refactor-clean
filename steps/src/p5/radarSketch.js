@@ -22,7 +22,7 @@ import {
   drawTrackMarkers,
   snrColors,
   handleCloseUpDisplay,
-  drawCovarianceEllipse, // BUG FIX 1: Import the close-up handler
+  drawCovarianceEllipse,
 } from "../drawUtils.js";
 
 export const radarSketch = function (p) {

@@ -20,7 +20,7 @@ export const snrColors = (p) => ({
   c1: p.color(0, 0, 255), // Blue
   c2: p.color(0, 255, 255), // Cyan
   c3: p.color(0, 255, 0), // Green
-  c4: p.color(186,142,35), // Dark Yellow
+  c4: p.color(186, 142, 35), // Dark Yellow
   c5: p.color(255, 0, 0), // Red
 });
 
@@ -283,24 +283,30 @@ export function drawTrajectories(p, plotScales) {
       continue;
 
     const isCurrentlyStationary = lastLog.isStationary;
-    
+
     // ... (trajectory point calculation logic remains the same)
-    let maxLen = isCurrentlyStationary ? Math.floor(MAX_TRAJECTORY_LENGTH / 4) : MAX_TRAJECTORY_LENGTH;
-    let trajPts = logs.filter((log) => log.correctedPosition && log.correctedPosition[0] !== null).map((log) => log.correctedPosition);
+    let maxLen = isCurrentlyStationary
+      ? Math.floor(MAX_TRAJECTORY_LENGTH / 4)
+      : MAX_TRAJECTORY_LENGTH;
+    let trajPts = logs
+      .filter(
+        (log) => log.correctedPosition && log.correctedPosition[0] !== null
+      )
+      .map((log) => log.correctedPosition);
     if (trajPts.length > maxLen) {
       trajPts = trajPts.slice(trajPts.length - maxLen);
     }
-    
+
     p.push();
     p.noFill();
-    
+
     if (isCurrentlyStationary) {
       // Stationary tracks are always green and dashed
       p.stroke(34, 139, 34, 220);
       p.strokeWeight(1);
       p.drawingContext.setLineDash([3, 3]);
       for (let i = 1; i < trajPts.length; i++) {
-         // ... (draw fading stationary trajectory logic)
+        // ... (draw fading stationary trajectory logic)
       }
     } else {
       // --- START: New Dynamic Coloring Logic ---
@@ -311,28 +317,40 @@ export function drawTrajectories(p, plotScales) {
         const ttc = lastLog.ttc;
         const scheme = appState.customTtcScheme;
         if (ttc === null || isNaN(ttc) || ttc < 0) {
-            trajectoryColor = p.color(localTtcColors.default); // Gray for unknown
+          trajectoryColor = p.color(localTtcColors.default); // Gray for unknown
         } else if (ttc <= scheme.critical.time) {
-            trajectoryColor = p.color(scheme.critical.color);
+          trajectoryColor = p.color(scheme.critical.color);
         } else if (ttc <= scheme.high.time) {
-            trajectoryColor = p.color(scheme.high.color);
+          trajectoryColor = p.color(scheme.high.color);
         } else if (ttc <= scheme.medium.time) {
-            trajectoryColor = p.color(scheme.medium.color);
+          trajectoryColor = p.color(scheme.medium.color);
         } else {
-            trajectoryColor = p.color(scheme.low.color); // Use custom color for low risk
+          trajectoryColor = p.color(scheme.low.color); // Use custom color for low risk
         }
       } else {
         // MODE 2: DEFAULT TTC SCHEME (Use pre-calculated category from JSON)
         switch (lastLog.ttcCategory) {
-            case 3: trajectoryColor = p.color(localTtcColors.critical); break;
-            case 2: trajectoryColor = p.color(localTtcColors.high); break;
-            case 1: trajectoryColor = p.color(localTtcColors.medium); break;
-            case 0: trajectoryColor = p.color(localTtcColors.low); break;
-            case -1: trajectoryColor = p.color(localTtcColors.away); break;
-            default: trajectoryColor = p.color(localTtcColors.default); break;
+          case 3:
+            trajectoryColor = p.color(localTtcColors.critical);
+            break;
+          case 2:
+            trajectoryColor = p.color(localTtcColors.high);
+            break;
+          case 1:
+            trajectoryColor = p.color(localTtcColors.medium);
+            break;
+          case 0:
+            trajectoryColor = p.color(localTtcColors.low);
+            break;
+          case -1:
+            trajectoryColor = p.color(localTtcColors.away);
+            break;
+          default:
+            trajectoryColor = p.color(localTtcColors.default);
+            break;
         }
       }
-      
+
       p.strokeWeight(1.5);
       p.drawingContext.setLineDash([]);
 
@@ -341,17 +359,19 @@ export function drawTrajectories(p, plotScales) {
         const alpha = p.map(i, 0, trajPts.length, 50, 255);
         trajectoryColor.setAlpha(alpha);
         p.stroke(trajectoryColor);
-        
+
         const prevPt = trajPts[i - 1];
         const currPt = trajPts[i];
         p.line(
-            prevPt[0] * plotScales.plotScaleX, prevPt[1] * plotScales.plotScaleY,
-            currPt[0] * plotScales.plotScaleX, currPt[1] * plotScales.plotScaleY
+          prevPt[0] * plotScales.plotScaleX,
+          prevPt[1] * plotScales.plotScaleY,
+          currPt[0] * plotScales.plotScaleX,
+          currPt[1] * plotScales.plotScaleY
         );
       }
       // --- END: New Dynamic Coloring Logic ---
     }
-    
+
     p.drawingContext.setLineDash([]);
     p.pop();
   }
@@ -628,4 +648,33 @@ export function drawCovarianceEllipse(
     minorAxis * 2 * plotScales.plotScaleY
   );
   p.pop();
+}
+
+// In src/drawUtils.js
+
+/**
+ * Draws a simple representation of the ego vehicle at the origin (0,0).
+ * @param {p5.Graphics} b - The p5.Graphics buffer to draw on.
+ */
+function drawEgoVehicle(p, b) {
+  // Determine car color based on the current theme for better visibility.
+  const isDark = document.documentElement.classList.contains("dark");
+  const carColor = isDark ? p.color(200, 200, 220) : p.color(100, 100, 110);
+  
+  b.push(); // Start a new drawing state
+
+  // Set drawing properties for the car body
+  b.fill(carColor);
+  b.noStroke();
+  b.rectMode(p.CENTER); // Draw rectangles from their center point
+
+  // The car's dimensions in meters (width x length)
+  const carWidthMeters = 2;
+  const carLengthMeters = 4.5;
+  
+  // These dimensions are in "radar space", not pixels.
+  // The buffer's existing scaling will handle the conversion automatically.
+  b.rect(0, 0, carWidthMeters, carLengthMeters, 0.5); // Main body with rounded corners
+
+  b.pop(); // Restore original drawing state
 }
