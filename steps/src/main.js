@@ -199,64 +199,68 @@ clearCacheBtn.addEventListener("click", async () => {
   }
 });
 // Event listener for saving the session
-saveSessionBtn.addEventListener('click', () => {
-    // We can only save a session if at least one data file has been loaded.
-    if (!appState.jsonFilename && !appState.videoFilename) {
-        showModal("Nothing to save. Please load data files first.");
-        return;
-    }
+saveSessionBtn.addEventListener("click", () => {
+  // We can only save a session if at least one data file has been loaded.
+  if (!appState.jsonFilename && !appState.videoFilename) {
+    showModal("Nothing to save. Please load data files first.");
+    return;
+  }
 
-    // Collect all relevant state into a single object.
-    const sessionState = {
-        version: 1,
-        jsonFilename: appState.jsonFilename,
-        videoFilename: appState.videoFilename,
-        offset: offsetInput.value,
-        playbackSpeed: speedSlider.value,
-        snrMin: snrMinInput.value,
-        snrMax: snrMaxInput.value,
-        toggles: {
-            snrColor: toggleSnrColor.checked,
-            clusterColor: toggleClusterColor.checked,
-            inlierColor: toggleInlierColor.checked,
-            stationaryColor: toggleStationaryColor.checked,
-            velocity: toggleVelocity.checked,
-            tracks: toggleTracks.checked,
-            egoSpeed: toggleEgoSpeed.checked,
-            frameNorm: toggleFrameNorm.checked,
-            debugOverlay: toggleDebugOverlay.checked,
-            debug2Overlay: toggleDebug2Overlay.checked,
-            closeUp: toggleCloseUp.checked,
-            predictedPos: togglePredictedPos.checked,
-            covariance: toggleCovariance.checked,
-        }
-    };
+  // Collect all relevant state into a single object.
+  const sessionState = {
+    version: 1,
+    jsonFilename: appState.jsonFilename,
+    videoFilename: appState.videoFilename,
+    offset: offsetInput.value,
+    playbackSpeed: speedSlider.value,
+    snrMin: snrMinInput.value,
+    snrMax: snrMaxInput.value,
+    toggles: {
+      snrColor: toggleSnrColor.checked,
+      clusterColor: toggleClusterColor.checked,
+      inlierColor: toggleInlierColor.checked,
+      stationaryColor: toggleStationaryColor.checked,
+      velocity: toggleVelocity.checked,
+      tracks: toggleTracks.checked,
+      egoSpeed: toggleEgoSpeed.checked,
+      frameNorm: toggleFrameNorm.checked,
+      debugOverlay: toggleDebugOverlay.checked,
+      debug2Overlay: toggleDebug2Overlay.checked,
+      closeUp: toggleCloseUp.checked,
+      predictedPos: togglePredictedPos.checked,
+      covariance: toggleCovariance.checked,
+    },
+  };
 
-    const sessionString = JSON.stringify(sessionState, null, 2);
-    const blob = new Blob([sessionString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+  const sessionString = JSON.stringify(sessionState, null, 2);
+  const blob = new Blob([sessionString], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
 
-    // --- Dynamic Filename Logic ---
-    const now = new Date();
-    const pad = (num) => String(num).padStart(2, '0');
-    const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-    const time = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-    const timestamp = `${date}_${time}`;
-    const defaultFilename = `visualizer-session_${timestamp}.json`;
+  // --- Dynamic Filename Logic ---
+  const now = new Date();
+  const pad = (num) => String(num).padStart(2, "0");
+  const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
+    now.getDate()
+  )}`;
+  const time = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(
+    now.getSeconds()
+  )}`;
+  const timestamp = `${date}_${time}`;
+  const defaultFilename = `visualizer-session_${timestamp}.json`;
 
-    // --- Trigger "Save As" Dialog ---
-    const a = document.createElement('a');
-    a.href = url;
-    
-    // This is the key instruction for the browser. It suggests a filename
-    // and signals that this should open a "Save As" dialog.
-    a.download = defaultFilename; 
-    
-    document.body.appendChild(a);
-    a.click(); // Programmatically clicking the link triggers the download/save dialog.
-    
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  // --- Trigger "Save As" Dialog ---
+  const a = document.createElement("a");
+  a.href = url;
+
+  // This is the key instruction for the browser. It suggests a filename
+  // and signals that this should open a "Save As" dialog.
+  a.download = defaultFilename;
+
+  document.body.appendChild(a);
+  a.click(); // Programmatically clicking the link triggers the download/save dialog.
+
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 });
 
 // When "Load Session" is clicked, it triggers the hidden file input.
@@ -266,64 +270,75 @@ loadSessionBtn.addEventListener("click", () => {
 
 // This listener handles the selected session file.
 
-sessionFileInput.addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+sessionFileInput.addEventListener("change", (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async (e) => { // Make the function async to use 'await'
-        try {
-            const sessionState = JSON.parse(e.target.result);
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    // Make the function async to use 'await'
+    try {
+      const sessionState = JSON.parse(e.target.result);
 
-            // Basic validation to ensure it's a valid session file.
-            if (sessionState.version !== 1 || !sessionState.jsonFilename) {
-                showModal("Error: Invalid or corrupted session file.");
-                return;
-            }
+      // Basic validation to ensure it's a valid session file.
+      if (sessionState.version !== 1 || !sessionState.jsonFilename) {
+        showModal("Error: Invalid or corrupted session file.");
+        return;
+      }
 
-            // --- START: New Robust Session Check ---
+      // --- START: New Robust Session Check ---
 
-            // 1. Before doing anything else, check if the required files exist in the cache.
-            // We use the same 'loadFreshFileFromDB' function that the startup process uses.
-            const videoBlob = await loadFreshFileFromDB("video", sessionState.videoFilename);
-            const jsonBlob = await loadFreshFileFromDB("json", sessionState.jsonFilename);
+      // 1. Before doing anything else, check if the required files exist in the cache.
+      // We use the same 'loadFreshFileFromDB' function that the startup process uses.
+      const videoBlob = await loadFreshFileFromDB(
+        "video",
+        sessionState.videoFilename
+      );
+      const jsonBlob = await loadFreshFileFromDB(
+        "json",
+        sessionState.jsonFilename
+      );
 
-            // 2. If either file is missing from the cache, show an informative error and stop.
-            if (!jsonBlob || !videoBlob) {
-                showModal(`Session load failed: The required data files are not in the application's cache. 
+      // 2. If either file is missing from the cache, show an informative error and stop.
+      if (!jsonBlob || !videoBlob) {
+        showModal(`Session load failed: The required data files are not in the application's cache. 
                 
                 Please manually load '${sessionState.jsonFilename}' and '${sessionState.videoFilename}' before loading this session.`);
-                
-                event.target.value = ''; // Reset file input
-                return;
-            }
 
-            // 3. If we get here, it means the files ARE in the cache and match the session!
-            // It is now safe to set localStorage and reload the page.
-            
-            localStorage.setItem('jsonFilename', sessionState.jsonFilename || '');
-            localStorage.setItem('videoFilename', sessionState.videoFilename || '');
-            localStorage.setItem('visualizerOffset', sessionState.offset || '0');
-            localStorage.setItem('playbackSpeed', sessionState.playbackSpeed || '1');
-            localStorage.setItem('snrMin', sessionState.snrMin || '');
-            localStorage.setItem('snrMax', sessionState.snrMax || '');
-            if (sessionState.toggles) {
-                localStorage.setItem('togglesState', JSON.stringify(sessionState.toggles));
-            }
+        event.target.value = ""; // Reset file input
+        return;
+      }
 
-            // Inform the user and then reload the page to apply the session.
-            showModal("Session files found in cache. The application will now reload.").then(() => {
-                window.location.reload();
-            });
-            // --- END: New Robust Session Check ---
+      // 3. If we get here, it means the files ARE in the cache and match the session!
+      // It is now safe to set localStorage and reload the page.
 
-        } catch (error) {
-            showModal("Error: Could not parse the session file. It may be invalid.");
-            console.error("Session load error:", error);
-        }
-    };
-    reader.readAsText(file);
-    event.target.value = ''; // Clear the input for future loads.
+      localStorage.setItem("jsonFilename", sessionState.jsonFilename || "");
+      localStorage.setItem("videoFilename", sessionState.videoFilename || "");
+      localStorage.setItem("visualizerOffset", sessionState.offset || "0");
+      localStorage.setItem("playbackSpeed", sessionState.playbackSpeed || "1");
+      localStorage.setItem("snrMin", sessionState.snrMin || "");
+      localStorage.setItem("snrMax", sessionState.snrMax || "");
+      if (sessionState.toggles) {
+        localStorage.setItem(
+          "togglesState",
+          JSON.stringify(sessionState.toggles)
+        );
+      }
+
+      // Inform the user and then reload the page to apply the session.
+      showModal(
+        "Session files found in cache. The application will now reload."
+      ).then(() => {
+        window.location.reload();
+      });
+      // --- END: New Robust Session Check ---
+    } catch (error) {
+      showModal("Error: Could not parse the session file. It may be invalid.");
+      console.error("Session load error:", error);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ""; // Clear the input for future loads.
 });
 
 // --- END: Add Session Management Logic ---
@@ -685,29 +700,83 @@ videoPlayer.addEventListener("ended", () => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (
-    !appState.vizData ||
-    ["ArrowRight", "ArrowLeft"].indexOf(event.key) === -1
-  )
+  // --- FIX APPLIED HERE ---
+  // We only want to block shortcuts if the user is actively typing in a text or number input.
+  // This allows shortcuts to work even when other elements, like the timeline slider, are focused.
+  const isTextInputFocused = event.target.tagName === 'INPUT' && (event.target.type === 'text' || event.target.type === 'number');
+  if (isTextInputFocused) {
     return;
-  event.preventDefault();
-  if (appState.isPlaying) {
-    appState.isPlaying = false;
-    playPauseBtn.textContent = "Play";
-    videoPlayer.pause();
   }
-  let newFrame = appState.currentFrame;
-  if (event.key === "ArrowRight")
-    newFrame = Math.min(
-      appState.vizData.radarFrames.length - 1,
-      appState.currentFrame + 1
-    );
-  else if (event.key === "ArrowLeft")
-    newFrame = Math.max(0, appState.currentFrame - 1);
-  if (newFrame !== appState.currentFrame) {
-    updateFrame(newFrame, true);
-    appState.mediaTimeStart = videoPlayer.currentTime;
-    appState.masterClockStart = performance.now();
+  // --- END OF FIX ---
+
+  const key = event.key;
+  // We can add any new shortcut keys to this array.
+  const recognizedKeys = ["ArrowRight", "ArrowLeft", " ", "1", "2", "3", "4", "t", "d", "c", "r", "p", "a", "s"];
+
+  if (!appState.vizData || !recognizedKeys.includes(key)) {
+    return;
+  }
+
+  event.preventDefault();
+
+  // --- Spacebar for Play/Pause ---
+  if (key === " ") {
+    playPauseBtn.click();
+  }
+
+  // --- Arrow keys for frame-by-frame seeking ---
+  if (key === "ArrowRight" || key === "ArrowLeft") {
+    if (appState.isPlaying) {
+      playPauseBtn.click();
+    }
+    let newFrame = appState.currentFrame;
+    if (key === "ArrowRight") {
+      newFrame = Math.min(
+        appState.vizData.radarFrames.length - 1,
+        appState.currentFrame + 1
+      );
+    } else if (key === "ArrowLeft") {
+      newFrame = Math.max(0, appState.currentFrame - 1);
+    }
+    if (newFrame !== appState.currentFrame) {
+      updateFrame(newFrame, true);
+    }
+  }
+
+  // --- Number keys for color modes ---
+  if (key >= '1' && key <= '4') {
+    const colorToggles = [
+      toggleSnrColor,
+      toggleClusterColor,
+      toggleInlierColor,
+      toggleStationaryColor,
+    ];
+    const toggleIndex = parseInt(key) - 1;
+    if (colorToggles[toggleIndex]) {
+      colorToggles[toggleIndex].click();
+    }
+  }
+  if (key === "t") {
+    toggleTracks.click();
+  }
+  if (key === "d") {
+    toggleVelocity.click();
+  }
+  if (key === "c") {
+    toggleCloseUp.click();
+  }
+  if (key === "r") {
+    resetVisualization();
+  }
+  if (key === "p") {
+    togglePredictedPos.click();
+  }
+  if (key === "s") {
+    toggleSnrColor.click();
+  }
+  if (key === "a") {
+    toggleDebugOverlay.click();
+    toggleDebug2Overlay.click();
   }
 });
 
