@@ -94,12 +94,10 @@ export const toggleMenuBtn = document.getElementById("toggle-menu-btn");
 export const fullscreenBtn = document.getElementById("fullscreen-btn");
 export const mainContent = document.querySelector("main");
 export const closeMenuBtn = document.getElementById("close-menu-btn");
-export const fullscreenEnterIcon = document.getElementById(
-  "fullscreen-enter-icon"
-);
-export const fullscreenExitIcon = document.getElementById(
-  "fullscreen-exit-icon"
-);
+export const fullscreenEnterIcon = document.getElementById("fullscreen-enter-icon");
+export const fullscreenExitIcon = document.getElementById("fullscreen-exit-icon");
+export const menuScrim = document.getElementById("menu-scrim");
+
 
 //----------------------UPDATE FRAME Function----------------------//
 // Updates the UI to reflect the current radar frame and synchronizes video playback.
@@ -281,6 +279,15 @@ export function updateDebugOverlay(currentMediaTime) {
   debugOverlay.innerHTML = content.join("<br>"); // Update debug overlay content.
 }
 
+// This function checks the state of the color toggles and returns the active mode.
+function getCurrentColorMode() {
+  if (toggleSnrColor.checked) return "Color by SNR (1)";
+  if (toggleClusterColor.checked) return "Color by Cluster (2)";
+  if (toggleInlierColor.checked) return "Color by Inlier (3)";
+  if (toggleStationaryColor.checked) return "Color by Stationary (4)";
+  return "Default"; // The default mode when no specific color toggle is checked
+}
+
 export function updatePersistentOverlays(currentMediaTime) {
   // If we don't have the necessary data, hide the overlays and exit.
   const isDebug1Visible = toggleDebugOverlay.checked;
@@ -303,18 +310,18 @@ export function updatePersistentOverlays(currentMediaTime) {
   // --- Update Radar Overlay ---
   const currentRadarFrame = appState.vizData.radarFrames[appState.currentFrame];
   if (currentRadarFrame) {
-    const absRadarTime = new Date(
-      appState.videoStartDate.getTime() + currentRadarFrame.timestampMs
-    );
+    const absRadarTime = new Date(appState.videoStartDate.getTime() + currentRadarFrame.timestampMs);
     const targetRadarTimeMs = currentRadarFrame.timestampMs;
     const offsetMs = parseFloat(offsetInput.value) || 0;
     const driftMs = currentMediaTime * 1000 + offsetMs - targetRadarTimeMs;
     const driftColor = Math.abs(driftMs) > 50 ? "#FF6347" : "#98FB98"; // Tomato red or Pale green
+    const colorMode = getCurrentColorMode();
 
     radarInfoOverlay.innerHTML = `
             Frame: ${appState.currentFrame + 1}
             Abs Time: ${formatUTCTime(absRadarTime)}
             Drift: <b style="color: ${driftColor};">${driftMs.toFixed(0)}ms</b>
+            Mode: <b>${colorMode}</b>
         `;
   }
 

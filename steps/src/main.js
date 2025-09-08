@@ -91,6 +91,7 @@ import {
   closeMenuBtn,
   fullscreenEnterIcon,
   fullscreenExitIcon,
+  menuScrim,
 } from "./dom.js";
 
 import { initializeTheme } from "./theme.js";
@@ -350,22 +351,26 @@ sessionFileInput.addEventListener("change", (event) => {
 
 // --- END: Add Session Management Logic ---
 
-// --- Collapsible Menu Logic ---
+// --- Collapsible Menu Logic (Overlay Version) ---
 function toggleMenu(show) {
   if (show) {
     collapsibleMenu.classList.remove("-translate-x-full");
-    mainContent.classList.add("lg:ml-96");
+    menuScrim.classList.remove("hidden"); // Show the scrim
+    // The line that pushed the content has been REMOVED.
   } else {
     collapsibleMenu.classList.add("-translate-x-full");
-    mainContent.classList.remove("lg:ml-96");
+    menuScrim.classList.add("hidden"); // Hide the scrim
   }
 }
 
 // Open the menu
 toggleMenuBtn.addEventListener("click", () => toggleMenu(true));
 
-// Close the menu
+// Close the menu with the 'X' button
 closeMenuBtn.addEventListener("click", () => toggleMenu(false));
+
+// NEW: Close the menu by clicking on the scrim
+menuScrim.addEventListener("click", () => toggleMenu(false));
 
 // --- Fullscreen Logic ---
 fullscreenBtn.addEventListener("click", () => {
@@ -614,7 +619,7 @@ timelineSlider.addEventListener("wheel", (event) => {
   // 4. Calculate the new frame index
   const direction = Math.sign(event.deltaY); // +1 for down/right, -1 for up/left
   const currentFrame = parseInt(timelineSlider.value, 10);
-  let newFrame = currentFrame + seekAmount * direction;
+  let newFrame = currentFrame - seekAmount * direction;
 
   // Clamp the new frame to the valid range
   const totalFrames = appState.vizData.radarFrames.length - 1;
@@ -698,6 +703,8 @@ colorToggles.forEach((t) => {
       });
     }
     if (appState.p5_instance) appState.p5_instance.redraw();
+    updatePersistentOverlays(videoPlayer.currentTime);
+
   });
 });
 
