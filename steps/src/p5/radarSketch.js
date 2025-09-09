@@ -12,7 +12,7 @@ import {
   toggleTracks,
   togglePredictedPos,
   toggleCovariance,
-  toggleVelocity
+  toggleVelocity,
 } from "../dom.js";
 import {
   drawStaticRegionsToBuffer,
@@ -90,13 +90,36 @@ export const radarSketch = function (p) {
     calculatePlotScales();
     // Draw coordinate axes
     drawAxes(p, plotScales);
-    drawEgoVehicle(p, plotScales)
+    drawEgoVehicle(p, plotScales);
     // Get current frame data
     const frameData = appState.vizData.radarFrames[appState.currentFrame];
     if (frameData) {
       // Draw object trajectories and markers if enabled
-      if (toggleVelocity.checked){
-        drawTrackMarkers(p, plotScales)
+      if (toggleVelocity.checked) {
+        drawTrackMarkers(p, plotScales);
+      }
+      if (togglePredictedPos.checked) {
+        for (const track of appState.vizData.tracks) {
+          const log = track.historyLog.find(
+            (log) => log.frameIdx === appState.currentFrame + 1
+          );
+          if (
+            log &&
+            log.predictedPosition &&
+            log.predictedPosition[0] !== null
+          ) {
+            const pos = log.predictedPosition;
+            const x = pos[0] * plotScales.plotScaleX;
+            const y = pos[1] * plotScales.plotScaleY;
+
+            p.push();
+            p.stroke(255, 0, 0); // Red for predicted
+            p.strokeWeight(2);
+            p.line(x - 4, y - 4, x + 4, y + 4);
+            p.line(x + 4, y - 4, x - 4, y + 4);
+            p.pop();
+          }
+        }
       }
       if (toggleTracks.checked) {
         drawTrajectories(p, plotScales);
@@ -116,30 +139,6 @@ export const radarSketch = function (p) {
                   log.isStationary
                 );
               }
-            }
-          }
-        }
-
-        if (togglePredictedPos.checked) {
-          for (const track of appState.vizData.tracks) {
-            const log = track.historyLog.find(
-              (log) => log.frameIdx === appState.currentFrame + 1
-            );
-            if (
-              log &&
-              log.predictedPosition &&
-              log.predictedPosition[0] !== null
-            ) {
-              const pos = log.predictedPosition;
-              const x = pos[0] * plotScales.plotScaleX;
-              const y = pos[1] * plotScales.plotScaleY;
-
-              p.push();
-              p.stroke(255, 0, 0); // Red for predicted
-              p.strokeWeight(2);
-              p.line(x - 4, y - 4, x + 4, y + 4);
-              p.line(x + 4, y - 4, x - 4, y + 4);
-              p.pop();
             }
           }
         }

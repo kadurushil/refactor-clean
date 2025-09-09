@@ -38,6 +38,7 @@ import {
 } from "./utils.js";
 import { appState } from "./state.js";
 import {
+  themeToggleBtn,
   canvasContainer,
   canvasPlaceholder,
   videoPlayer,
@@ -559,7 +560,8 @@ stopBtn.addEventListener("click", () => {
 
 timelineSlider.addEventListener("input", (event) => {
   if (!appState.vizData) return;
-
+  updateDebugOverlay(videoPlayer.currentTime);
+  updatePersistentOverlays(videoPlayer.currentTime);
   // --- 1. Live Seeking (Throttled for performance) ---
   // This part gives you the immediate visual feedback as you drag the slider.
   // We use a simple timestamp check to prevent it from running too often.
@@ -599,7 +601,6 @@ timelineSlider.addEventListener("input", (event) => {
 
 timelineSlider.addEventListener("wheel", (event) => {
   if (!appState.vizData) return;
-
   // 1. Prevent the page from scrolling up and down
   event.preventDefault();
 
@@ -637,6 +638,7 @@ timelineSlider.addEventListener("wheel", (event) => {
     console.log("Scrolling stopped. Performing final, debounced resync.");
     updateFrame(newFrame, true);
     updatePersistentOverlays(videoPlayer.currentTime);
+    updateDebugOverlay(videoPlayer.currentTime);
   }, 300); // Wait 300ms after the last scroll event
 });
 
@@ -726,6 +728,8 @@ colorToggles.forEach((t) => {
     }
     if (t === toggleDebugOverlay || t === toggleDebug2Overlay) {
       updateDebugOverlay(videoPlayer.currentTime);
+      updatePersistentOverlays(videoPlayer.currentTime);
+
     }
   });
 });
@@ -780,6 +784,7 @@ document.addEventListener("keydown", (event) => {
     "a",
     "s",
     "m",
+    "q",
   ];
 
   if (!appState.vizData || !recognizedKeys.includes(key)) {
@@ -825,6 +830,9 @@ document.addEventListener("keydown", (event) => {
       colorToggles[toggleIndex].click();
     }
   }
+  if (key === "q") {
+    themeToggleBtn.click();
+  }
   if (key === "t") {
     toggleTracks.click();
   }
@@ -839,6 +847,7 @@ document.addEventListener("keydown", (event) => {
   }
   if (key === "p") {
     togglePredictedPos.click();
+    appState.p5_instance.redraw();
   }
   if (key === "s") {
     toggleSnrColor.click();
@@ -846,6 +855,14 @@ document.addEventListener("keydown", (event) => {
   if (key === "a") {
     toggleDebugOverlay.click();
     toggleDebug2Overlay.click();
+    if (isDebug1Visible && isDebug2Visible) {
+        radarInfoOverlay.classList.add("hidden");
+        videoInfoOverlay.classList.add("hidden");
+        return;
+      }
+      // Otherwise, make sure they are visible.
+      radarInfoOverlay.classList.remove("hidden");
+      videoInfoOverlay.classList.remove("hidden");
   }
   if (key === "m") {
     if (collapsibleMenu.classList.contains("-translate-x-full")) {
