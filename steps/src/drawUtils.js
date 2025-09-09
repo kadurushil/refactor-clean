@@ -121,7 +121,12 @@ export function drawAxes(p, plotScales) {
       y * plotScales.plotScaleY
     );
   // Draw vertical grid lines.
-  for (let x = -15; x <= 15; x += 5) {
+  const xGridStep = 5;
+  for (
+    let x = Math.ceil(RADAR_X_MIN / xGridStep) * xGridStep;
+    x <= RADAR_X_MAX;
+    x += xGridStep
+  ) {
     if (x === 0) continue;
     p.line(
       x * plotScales.plotScaleX,
@@ -156,7 +161,11 @@ export function drawAxes(p, plotScales) {
     p.pop();
   }
   // Draw X-axis labels.
-  for (let x = -15; x <= 15; x += 5) {
+  for (
+    let x = Math.ceil(RADAR_X_MIN / xGridStep) * xGridStep;
+    x <= RADAR_X_MAX;
+    x += xGridStep
+  ) {
     if (x === 0) continue;
     p.push();
     p.translate(x * plotScales.plotScaleX, -10);
