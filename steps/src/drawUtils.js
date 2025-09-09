@@ -278,11 +278,11 @@ export function drawTrajectories(p, plotScales) {
   const localTtcColors = ttcColors(p);
 
   for (const track of appState.vizData.tracks) {
-    // if (toggleConfirmedOnly.checked && track.isConfirmed === false) {
-    //   continue;
-    // }
+    if (toggleConfirmedOnly.checked && track.isConfirmed === false) {
+      continue;
+    }
     if (!track || !track.historyLog || !Array.isArray(track.historyLog)) {
-      const trackId = track ? track.id : 'Unknown ID';
+      const trackId = track ? track.id : "Unknown ID";
       console.warn(
         `Skipping malformed track in frame ${appState.currentFrame}. Track ID: ${trackId}`,
         track // We also log the entire track object for detailed inspection.
@@ -413,9 +413,9 @@ export function drawTrackMarkers(p, plotScales) {
   for (const track of appState.vizData.tracks) {
     // --- START: Add the Same Safeguard Here ---
     // This robust check ensures the track and its historyLog are valid before use.
-    // if (toggleConfirmedOnly.checked && track.isConfirmed === false) {
-    //       continue;
-    //     }
+    if (toggleConfirmedOnly.checked && track.isConfirmed === false) {
+      continue;
+    }
     if (!track || !track.historyLog || !Array.isArray(track.historyLog)) {
       // We don't need to log a warning here again, as drawTrajectories already did.
       // We can just safely skip this malformed track.
