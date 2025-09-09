@@ -656,25 +656,21 @@ export function drawCovarianceEllipse(
  * Draws a simple representation of the ego vehicle at the origin (0,0).
  * @param {p5.Graphics} b - The p5.Graphics buffer to draw on.
  */
-function drawEgoVehicle(p, b) {
-  // Determine car color based on the current theme for better visibility.
+export function drawEgoVehicle(p, plotScales) {
   const isDark = document.documentElement.classList.contains("dark");
-  const carColor = isDark ? p.color(200, 200, 220) : p.color(100, 100, 110);
+  const carColor = isDark ? p.color(150, 150, 220) : p.color(150, 150, 220);
   
-  b.push(); // Start a new drawing state
+  p.push();
+  p.fill(carColor);
+  p.noStroke();
+  p.rectMode(p.CENTER);
 
-  // Set drawing properties for the car body
-  b.fill(carColor);
-  b.noStroke();
-  b.rectMode(p.CENTER); // Draw rectangles from their center point
-
-  // The car's dimensions in meters (width x length)
-  const carWidthMeters = 2;
-  const carLengthMeters = 4.5;
+  const carWidthMeters = 1.5;
+  const carLengthMeters = 3.5;
   
-  // These dimensions are in "radar space", not pixels.
-  // The buffer's existing scaling will handle the conversion automatically.
-  b.rect(0, 0, carWidthMeters, carLengthMeters, 0.5); // Main body with rounded corners
+  const carWidthPixels = carWidthMeters * plotScales.plotScaleX;
+  const carLengthPixels = carLengthMeters * plotScales.plotScaleY;
 
-  b.pop(); // Restore original drawing state
+  p.rect(0, -10, carWidthPixels, carLengthPixels, 5);
+  p.pop();
 }
