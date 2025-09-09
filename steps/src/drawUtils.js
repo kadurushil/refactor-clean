@@ -667,7 +667,7 @@ export function drawCovarianceEllipse(
  */
 export function drawEgoVehicle(p, plotScales) {
   const isDark = document.documentElement.classList.contains("dark");
-  const carColor = isDark ? p.color(150, 150, 220) : p.color(150, 150, 220);
+  const carColor = isDark ? p.color(150, 151, 220) : p.color(150, 150, 220);
   
   p.push();
   p.fill(carColor);
