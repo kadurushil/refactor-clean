@@ -779,6 +779,7 @@ document.addEventListener("keydown", (event) => {
     "p",
     "a",
     "s",
+    "m",
   ];
 
   if (!appState.vizData || !recognizedKeys.includes(key)) {
@@ -847,7 +848,13 @@ document.addEventListener("keydown", (event) => {
     toggleDebug2Overlay.click();
   }
   if (key === "m") {
-    toggleMenuBtn.click();
+    if (collapsibleMenu.classList.contains("-translate-x-full")) {
+      // If the menu is hidden (closed), trigger a click on the OPEN button.
+      toggleMenuBtn.click();
+    } else {
+      // If the menu is not hidden (it's open), trigger a click on the CLOSE button.
+      closeMenuBtn.click();
+    }
   }
 });
 

@@ -12,6 +12,7 @@ import {
   toggleTracks,
   togglePredictedPos,
   toggleCovariance,
+  toggleVelocity
 } from "../dom.js";
 import {
   drawStaticRegionsToBuffer,
@@ -94,10 +95,11 @@ export const radarSketch = function (p) {
     const frameData = appState.vizData.radarFrames[appState.currentFrame];
     if (frameData) {
       // Draw object trajectories and markers if enabled
+      if (toggleVelocity.checked){
+        drawTrackMarkers(p, plotScales)
+      }
       if (toggleTracks.checked) {
         drawTrajectories(p, plotScales);
-        drawTrackMarkers(p, plotScales);
-
         if (toggleCovariance.checked) {
           for (const track of appState.vizData.tracks) {
             const log = track.historyLog.find(
