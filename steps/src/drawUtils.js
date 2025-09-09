@@ -13,6 +13,7 @@ import {
   toggleFrameNorm,
   toggleVelocity,
   toggleStationaryColor,
+  toggleConfirmedOnly,
 } from "./dom.js";
 
 // Defines a set of SNR (Signal-to-Noise Ratio) colors.
@@ -277,8 +278,15 @@ export function drawTrajectories(p, plotScales) {
   const localTtcColors = ttcColors(p);
 
   for (const track of appState.vizData.tracks) {
+    // if (toggleConfirmedOnly.checked && track.isConfirmed === false) {
+    //   continue;
+    // }
     if (!track || !track.historyLog || !Array.isArray(track.historyLog)) {
-      // Safeguard for malformed data
+      const trackId = track ? track.id : 'Unknown ID';
+      console.warn(
+        `Skipping malformed track in frame ${appState.currentFrame}. Track ID: ${trackId}`,
+        track // We also log the entire track object for detailed inspection.
+      ); // Safeguard for malformed data
       continue;
     }
 
@@ -405,6 +413,9 @@ export function drawTrackMarkers(p, plotScales) {
   for (const track of appState.vizData.tracks) {
     // --- START: Add the Same Safeguard Here ---
     // This robust check ensures the track and its historyLog are valid before use.
+    // if (toggleConfirmedOnly.checked && track.isConfirmed === false) {
+    //       continue;
+    //     }
     if (!track || !track.historyLog || !Array.isArray(track.historyLog)) {
       // We don't need to log a warning here again, as drawTrajectories already did.
       // We can just safely skip this malformed track.
@@ -668,7 +679,7 @@ export function drawCovarianceEllipse(
 export function drawEgoVehicle(p, plotScales) {
   const isDark = document.documentElement.classList.contains("dark");
   const carColor = isDark ? p.color(150, 150, 220) : p.color(151, 151, 220);
-  
+
   p.push();
   p.fill(carColor);
   p.noStroke();
@@ -676,7 +687,7 @@ export function drawEgoVehicle(p, plotScales) {
 
   const carWidthMeters = 1.5;
   const carLengthMeters = 3.5;
-  
+
   const carWidthPixels = carWidthMeters * plotScales.plotScaleX;
   const carLengthPixels = carLengthMeters * plotScales.plotScaleY;
 

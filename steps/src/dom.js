@@ -80,6 +80,8 @@ export const closeMenuBtn = document.getElementById("close-menu-btn");
 export const fullscreenEnterIcon = document.getElementById("fullscreen-enter-icon");
 export const fullscreenExitIcon = document.getElementById("fullscreen-exit-icon");
 export const menuScrim = document.getElementById("menu-scrim");
+export const toggleConfirmedOnly = document.getElementById("toggle-confirmed-only");
+
 
 //----------------------UPDATE FRAME Function----------------------//
 // Updates the UI to reflect the current radar frame and synchronizes video playback.

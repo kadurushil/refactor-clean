@@ -93,6 +93,7 @@ import {
   fullscreenEnterIcon,
   fullscreenExitIcon,
   menuScrim,
+  toggleConfirmedOnly
 } from "./dom.js";
 
 import { initializeTheme } from "./theme.js";
@@ -363,6 +364,12 @@ function toggleMenu(show) {
     menuScrim.classList.add("hidden"); // Hide the scrim
   }
 }
+
+toggleConfirmedOnly.addEventListener("change", () => {
+  if (appState.p5_instance) {
+    appState.p5_instance.redraw();
+  }
+});
 
 // Open the menu
 toggleMenuBtn.addEventListener("click", () => toggleMenu(true));
