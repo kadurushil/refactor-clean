@@ -1,6 +1,5 @@
 import { appState } from "./state.js";
-import { videoPlayer } from "./dom.js";
-const themeToggleBtn = document.getElementById("theme-toggle");
+import { videoPlayer, themeToggleBtn} from "./dom.js";
 const darkIcon = document.getElementById("theme-toggle-dark-icon");
 const lightIcon = document.getElementById("theme-toggle-light-icon");
 
