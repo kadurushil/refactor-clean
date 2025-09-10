@@ -18,13 +18,13 @@ import {
   drawStaticRegionsToBuffer,
   drawAxes,
   drawPointCloud,
-  // Import drawing utility functions
   drawTrajectories,
   drawEgoVehicle,
   drawTrackMarkers,
   snrColors,
   handleCloseUpDisplay,
   drawCovarianceEllipse,
+  ttcColors,
 } from "../drawUtils.js";
 
 export const radarSketch = function (p) {
@@ -34,7 +34,7 @@ export const radarSketch = function (p) {
     plotScaleY: 1,
   };
   // p5.Graphics buffers for static elements to optimize drawing
-  let staticBackgroundBuffer, snrLegendBuffer;
+  let staticBackgroundBuffer, snrLegendBuffer, trackLegendBuffer;
 
   // Function to calculate scaling factors for radar coordinates to canvas pixels
   function calculatePlotScales() {
@@ -60,9 +60,12 @@ export const radarSketch = function (p) {
     // Initialize graphics buffers
     staticBackgroundBuffer = p.createGraphics(p.width, p.height);
     snrLegendBuffer = p.createGraphics(100, 450);
+    trackLegendBuffer = p.createGraphics(160, 450); // create track legend
 
     calculatePlotScales();
     p.drawSnrLegendToBuffer(appState.globalMinSnr, appState.globalMaxSnr);
+    p.drawTrackLegendToBuffer(); // Call the new function to draw the legend
+
     drawStaticRegionsToBuffer(p, staticBackgroundBuffer, plotScales);
     p.noLoop();
     // Disable continuous looping, redraw will be called manually
@@ -121,12 +124,19 @@ export const radarSketch = function (p) {
           }
         }
       }
+
       if (toggleTracks.checked) {
         drawTrajectories(p, plotScales);
         if (toggleCovariance.checked) {
           for (const track of appState.vizData.tracks) {
-            const log = track.historyLog.find((log) => log.frameIdx === appState.currentFrame + 1);
-            if (log && log.ellipseRadii && typeof log.ellipseAngle !== 'undefined') {
+            const log = track.historyLog.find(
+              (log) => log.frameIdx === appState.currentFrame + 1
+            );
+            if (
+              log &&
+              log.ellipseRadii &&
+              typeof log.ellipseAngle !== "undefined"
+            ) {
               const pos = log.predictedPosition;
               if (pos && pos[0] !== null) {
                 drawCovarianceEllipse(
@@ -147,6 +157,16 @@ export const radarSketch = function (p) {
     }
     p.pop();
 
+    // 4. Draw the new legend buffer onto the main canvas
+    // This is placed at the bottom-right corner.
+    if (toggleTracks.checked) {
+      p.image(
+        trackLegendBuffer,
+        p.width - trackLegendBuffer.width - 10,
+        p.height - trackLegendBuffer.height - 10
+      );
+    }
+
     // BUG FIX 1: Call the close-up handler if the mode is active
     if (appState.isCloseUpMode) {
       handleCloseUpDisplay(p, plotScales);
@@ -157,6 +177,79 @@ export const radarSketch = function (p) {
       p.image(snrLegendBuffer, 10, p.height - snrLegendBuffer.height - 10);
     }
   };
+
+  // 5. Create the new function to draw the track legend's content
+  p.drawTrackLegendToBuffer = function () {
+    const b = trackLegendBuffer;
+    const localTtcColors = ttcColors(p);
+    const isDark = document.documentElement.classList.contains("dark");
+
+    b.clear();
+    b.push();
+
+    // Set styles based on theme
+    const textColor = isDark ? 255 : 0;
+    const bgColor = isDark
+      ? p.color(55, 65, 81, 200)
+      : p.color(255, 255, 255, 200);
+
+    // Draw semi-transparent background for the legend
+    b.fill(bgColor);
+    b.noStroke();
+    b.rect(0, 0, b.width, b.height, 8); // Rounded corners
+
+    b.fill(textColor);
+    b.textSize(12);
+    b.textStyle(b.BOLD);
+    b.text("Track Legend", 10, 20);
+
+    b.textSize(10);
+    b.textStyle(b.NORMAL);
+    b.strokeWeight(3);
+    let yPos = 40;
+
+    // Legend items
+    const legendItems = [
+      { label: "Critical Risk", color: localTtcColors.critical },
+      { label: "High Risk", color: localTtcColors.high },
+      { label: "Medium Risk", color: localTtcColors.medium },
+      { label: "Low Risk", color: localTtcColors.low },
+      { label: "Moving Away", color: localTtcColors.away },
+      { label: "Stationary", color: p.color(34, 139, 34), dashed: true },
+    ];
+    for (const item of legendItems) {
+      b.stroke(item.color);
+      if (item.dashed) {
+        b.drawingContext.setLineDash([3, 3]);
+      }
+      b.line(15, yPos, 45, yPos);
+      b.drawingContext.setLineDash([]); // Reset dash for next items
+      b.noStroke();
+      b.text(item.label, 55, yPos + 4);
+      yPos += 18;
+    }
+
+    b.pop();
+  };
+
+
+  // Handle window resizing event
+  p.windowResized = function () {
+    p.resizeCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight);
+    // BUG FIX 2: Re-create the buffer instead of resizing it
+    staticBackgroundBuffer = p.createGraphics(p.width, p.height);
+    
+    // 6. Re-create and re-draw the track legend buffer on resize
+    trackLegendBuffer = p.createGraphics(160, 140);
+    p.drawTrackLegendToBuffer();
+    
+    calculatePlotScales();
+    drawStaticRegionsToBuffer(p, staticBackgroundBuffer, plotScales);
+    if (appState.vizData) {p.redraw()
+
+    };
+  };
+
 
   // Function to draw the SNR legend to its buffer
   p.drawSnrLegendToBuffer = function (minV, maxV) {

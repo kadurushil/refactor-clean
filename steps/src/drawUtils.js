@@ -346,7 +346,12 @@ export function drawTrajectories(p, plotScales) {
         }
       } else {
         // MODE 2: DEFAULT TTC SCHEME (Use pre-calculated category from JSON)
-        switch (lastLog.ttcCategory) {
+        
+        // FIND the TTC category from the new timeline
+        const ttcEntry = track.ttcCategoryTimeline.find((entry) => entry.frameIdx === lastLog.frameIdx);
+        const ttcCategory = ttcEntry ? ttcEntry.ttcCategory : null; // Get the category if found
+
+        switch (ttcCategory) {
           case 3:
             trajectoryColor = p.color(localTtcColors.critical);
             break;
@@ -612,7 +617,7 @@ export function drawCovarianceEllipse(
 ) {
   // Only draw the ellipse for tracks that are not stationary.
   if (isStationary) return;
-  const [radiusA, radiusB] = radii;  
+  const [radiusA, radiusB] = radii;
   const angledegrees = 90 + angle;
   p.push();
   p.noFill();
@@ -623,7 +628,9 @@ export function drawCovarianceEllipse(
     position[1] * plotScales.plotScaleY
   );
   p.rotate(p.radians(angledegrees));
-  p.ellipse(0,0,
+  p.ellipse(
+    0,
+    0,
     radiusA * 2 * plotScales.plotScaleX, // multiplied by 2 because ellipse function
     radiusB * 2 * plotScales.plotScaleY //  in p5 library expect
   );

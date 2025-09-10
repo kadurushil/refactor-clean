@@ -17,7 +17,13 @@ function setTheme(theme) {
   }
 
   // Redraw the main radar plot to apply theme changes
-  if (appState.p5_instance) appState.p5_instance.redraw();
+  if (appState.p5_instance) {
+    if (appState.p5_instance.drawTrackLegendToBuffer) {
+      appState.p5_instance.drawTrackLegendToBuffer();
+    }
+    appState.p5_instance.redraw()
+
+  };
 
   // Redraw the speed graph to apply theme changes
   if (appState.speedGraphInstance) {
