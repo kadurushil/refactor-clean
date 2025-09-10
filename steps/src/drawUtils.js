@@ -613,6 +613,7 @@ export function drawCovarianceEllipse(
   // Only draw the ellipse for tracks that are not stationary.
   if (isStationary) return;
   const [radiusA, radiusB] = radii;  
+  const angledegrees = 90 + angle;
   p.push();
   p.noFill();
   p.stroke(255, 0, 0, 150);
@@ -621,7 +622,7 @@ export function drawCovarianceEllipse(
     position[0] * plotScales.plotScaleX,
     position[1] * plotScales.plotScaleY
   );
-  p.rotate(angle);
+  p.rotate(p.radians(angledegrees));
   p.ellipse(0,0,
     radiusA * 2 * plotScales.plotScaleX, // multiplied by 2 because ellipse function
     radiusB * 2 * plotScales.plotScaleY //  in p5 library expect
