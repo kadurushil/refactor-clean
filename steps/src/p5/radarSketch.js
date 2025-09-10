@@ -125,16 +125,15 @@ export const radarSketch = function (p) {
         drawTrajectories(p, plotScales);
         if (toggleCovariance.checked) {
           for (const track of appState.vizData.tracks) {
-            const log = track.historyLog.find(
-              (log) => log.frameIdx === appState.currentFrame + 1
-            );
-            if (log && log.covarianceP) {
+            const log = track.historyLog.find((log) => log.frameIdx === appState.currentFrame + 1);
+            if (log && log.ellipseRadii && typeof log.ellipseAngle !== 'undefined') {
               const pos = log.predictedPosition;
               if (pos && pos[0] !== null) {
                 drawCovarianceEllipse(
                   p,
                   pos,
-                  log.covarianceP,
+                  log.ellipseRadii,
+                  log.ellipseAngle,
                   plotScales,
                   log.isStationary
                 );
