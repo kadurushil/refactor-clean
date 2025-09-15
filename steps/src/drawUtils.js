@@ -4,6 +4,14 @@ import {
   RADAR_Y_MAX,
   RADAR_Y_MIN,
   MAX_TRAJECTORY_LENGTH,
+  ROI_TRACKS_X_MIN,
+  ROI_TRACKS_X_MAX,
+  ROI_TRACKS_Y_MIN,
+  ROI_TRACKS_Y_MAX,
+  ROI_CLOSE_X_MIN,
+  ROI_CLOSE_X_MAX,
+  ROI_CLOSE_Y_MIN,
+  ROI_CLOSE_Y_MAX,
 } from "./constants.js";
 import { appState } from "./state.js";
 import {
@@ -61,7 +69,7 @@ export const movingColor = (p) => p.color(255, 0, 255); // Magenta
  */
 export function drawStaticRegionsToBuffer(p, b, plotScales) {
   b.clear();
-  b.push();
+  drawRegionsOfInterest(p, b, plotScales);  b.push();
   // Translate to the bottom center of the buffer.
   b.translate(b.width / 2, b.height * 0.95);
   // Flip the Y-axis to match radar coordinates (Y increases upwards).
@@ -702,4 +710,46 @@ export function drawEgoVehicle(p, plotScales) {
 
   p.rect(0, -10, carWidthPixels, carLengthPixels, 5);
   p.pop();
+}
+
+/**
+ * Draws the defined regions of interest (ROI) onto the canvas buffer.
+ * @param {p5} p - The p5 instance.
+ * @param {p5.Graphics} b - The p5.Graphics buffer to draw on.
+ * @param {object} plotScales - The calculated scales for plotting.
+ */
+export function drawRegionsOfInterest(p, b, plotScales) {
+  const isDark = document.documentElement.classList.contains("dark");
+  // Define semi-transparent colors for the regions
+  const tracksRegionColor = isDark ? p.color(137, 207, 240, 20) : p.color(173, 216, 230, 50); // Light blue
+  const closeRegionColor = isDark ? p.color(255, 182, 193, 25) : p.color(255, 182, 193, 60); // Light pink
+
+  b.push();
+  b.translate(b.width / 2, b.height * 0.95);   // Translate to the bottom center of the buffer, same as other static elements
+  b.scale(1, -1); // Flip Y-axis
+
+  b.noStroke();
+  b.strokeWeight(1);
+  b.noFill(); // No outlines for the shaded regions
+  b.rectMode(p.CORNERS); // Draw rectangles by specifying two opposite corners
+
+  // --- Draw Tracks Region ---
+  b.fill(tracksRegionColor);
+  b.rect(
+    ROI_TRACKS_X_MIN * plotScales.plotScaleX,
+    ROI_TRACKS_Y_MIN * plotScales.plotScaleY,
+    ROI_TRACKS_X_MAX * plotScales.plotScaleX,
+    ROI_TRACKS_Y_MAX * plotScales.plotScaleY
+  );
+
+  // --- Draw Close Region ---
+  b.fill(closeRegionColor);
+  b.rect(
+    ROI_CLOSE_X_MIN * plotScales.plotScaleX,
+    ROI_CLOSE_Y_MIN * plotScales.plotScaleY,
+    ROI_CLOSE_X_MAX * plotScales.plotScaleX,
+    ROI_CLOSE_Y_MAX * plotScales.plotScaleY
+  );
+
+  b.pop();
 }

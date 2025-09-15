@@ -25,6 +25,7 @@ import {
   handleCloseUpDisplay,
   drawCovarianceEllipse,
   ttcColors,
+  drawRegionsOfInterest
 } from "../drawUtils.js";
 
 export const radarSketch = function (p) {
@@ -162,8 +163,8 @@ export const radarSketch = function (p) {
     if (toggleTracks.checked) {
       p.image(
         trackLegendBuffer,
-        p.width - trackLegendBuffer.width - 10,
-        p.height - trackLegendBuffer.height - 10
+        p.width - trackLegendBuffer.width - 0,
+        p.height - trackLegendBuffer.height - 20
       );
     }
 
@@ -195,7 +196,8 @@ export const radarSketch = function (p) {
 
     // Draw semi-transparent background for the legend
     b.fill(bgColor);
-    b.noStroke();
+    b.stroke(1);
+    b.strokeWeight(0.25);
     b.rect(0, 0, b.width, b.height, 8); // Rounded corners
 
     b.fill(textColor);

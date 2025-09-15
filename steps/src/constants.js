@@ -10,3 +10,15 @@ export const RADAR_X_MAX = 25;
 export const RADAR_Y_MIN = 0;
 // Maximum Y-coordinate for the radar plot in meters.
 export const RADAR_Y_MAX = 80;
+
+// Region of Interest 1 (Tracks Region)
+export const ROI_TRACKS_X_MIN = -10;
+export const ROI_TRACKS_X_MAX = 10;
+export const ROI_TRACKS_Y_MIN = 0;
+export const ROI_TRACKS_Y_MAX = 80;
+
+// Region of Interest 2 (Close Region)
+export const ROI_CLOSE_X_MIN = -10;
+export const ROI_CLOSE_X_MAX = 10;
+export const ROI_CLOSE_Y_MIN = 0;
+export const ROI_CLOSE_Y_MAX = 20;
