@@ -60,7 +60,7 @@ export const radarSketch = function (p) {
     // Initialize graphics buffers
     staticBackgroundBuffer = p.createGraphics(p.width, p.height);
     snrLegendBuffer = p.createGraphics(100, 450);
-    trackLegendBuffer = p.createGraphics(160, 450); // create track legend
+    trackLegendBuffer = p.createGraphics(120, 120); // create track legend
 
     calculatePlotScales();
     p.drawSnrLegendToBuffer(appState.globalMinSnr, appState.globalMaxSnr);
@@ -190,8 +190,8 @@ export const radarSketch = function (p) {
     // Set styles based on theme
     const textColor = isDark ? 255 : 0;
     const bgColor = isDark
-      ? p.color(55, 65, 81, 200)
-      : p.color(255, 255, 255, 200);
+      ? p.color(55, 65, 81, 100)
+      : p.color(255, 255, 255, 100);
 
     // Draw semi-transparent background for the legend
     b.fill(bgColor);
@@ -240,7 +240,7 @@ export const radarSketch = function (p) {
     staticBackgroundBuffer = p.createGraphics(p.width, p.height);
     
     // 6. Re-create and re-draw the track legend buffer on resize
-    trackLegendBuffer = p.createGraphics(160, 140);
+    trackLegendBuffer = p.createGraphics(100, 100);
     p.drawTrackLegendToBuffer();
     
     calculatePlotScales();
