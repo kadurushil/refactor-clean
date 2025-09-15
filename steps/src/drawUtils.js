@@ -712,6 +712,132 @@ export function drawEgoVehicle(p, plotScales) {
   p.pop();
 }
 
+// /**
+//  * Draws a hatched pattern inside a rectangle defined by corner points.
+//  * This is a new helper function.
+//  * @param {p5.Graphics} b The p5.Graphics buffer to draw on.
+//  * @param {number} x1 The x-coordinate of the first corner.
+//  * @param {number} y1 The y-coordinate of the first corner.
+//  * @param {number} x2 The x-coordinate of the second corner.
+//  * @param {number} y2 The y-coordinate of the second corner.
+//  * @param {p5.Color} hatchColor The color of the hatches.
+//  * @param {number} spacing The distance between hatch lines.
+//  */
+// function drawHatchedRect(b, x1, y1, x2, y2, hatchColor, spacing) {
+//   const minX = Math.min(x1, x2);
+//   const maxX = Math.max(x1, x2);
+//   const minY = Math.min(y1, y2);
+//   const maxY = Math.max(y1, y2);
+
+//   b.push();
+//   b.stroke(hatchColor);
+//   b.strokeWeight(2);
+//   b.noFill();
+//   // To draw lines like '/', we use the equation y = x + c (positive slope).
+//   // The constant 'c' is equal to y - x.
+//   // We iterate 'c' through its possible range for the given rectangle.
+//   // The minimum value for c is minY - maxX, and the maximum is maxY - minX.
+//   for (let c = minY - maxX; c < maxY - minX; c += spacing) {
+//     let points = [];
+
+//     // For a line y = x + c:
+
+//     // Intersection with top edge (y = maxY) -> x = maxY - c
+//     let ix_top = maxY - c;
+//     if (ix_top >= minX && ix_top <= maxX) points.push({ x: ix_top, y: maxY });
+
+//     // Intersection with bottom edge (y = minY) -> x = minY - c
+//     let ix_bottom = minY - c;
+//     if (ix_bottom >= minX && ix_bottom <= maxX) {
+//       points.push({ x: ix_bottom, y: minY });
+//     }
+
+//     // Intersection with left edge (x = minX) -> y = minX + c
+//     let iy_left = minX + c;
+//     if (iy_left >= minY && iy_left <= maxY) {
+//       points.push({ x: minX, y: iy_left });
+//     }
+
+//     // Intersection with right edge (x = maxX) -> y = maxX + c
+//     let iy_right = maxX + c;
+//     if (iy_right >= minY && iy_right <= maxY) {
+//       points.push({ x: maxX, y: iy_right });
+//     }
+//     // A line can only intersect a convex shape (like a rectangle) at two points.
+//     // If it passes through a corner, we might get duplicates.
+//     if (points.length >= 2) {
+//       // Remove duplicate points
+//       const uniquePoints = [];
+//       const seen = new Set();
+//       for (const p of points) {
+//         const key = `${p.x},${p.y}`;
+//         if (!seen.has(key)) {
+//           uniquePoints.push(p);
+//           seen.add(key);
+//         }
+//       }
+
+//       if (uniquePoints.length >= 2) {
+//         b.line(
+//           uniquePoints[0].x,
+//           uniquePoints[0].y,
+//           uniquePoints[1].x,
+//           uniquePoints[1].y
+//         );
+//       }
+//     }
+//   }
+//   b.pop();
+// }
+
+// /**
+//  * Draws the defined regions of interest (ROI) onto the canvas buffer.
+//  * @param {p5} p - The p5 instance.
+//  * @param {p5.Graphics} b - The p5.Graphics buffer to draw on.
+//  * @param {object} plotScales - The calculated scales for plotting.
+//  */
+// export function drawRegionsOfInterest(p, b, plotScales) {
+//   const isDark = document.documentElement.classList.contains("dark");
+//   // Define semi-transparent colors for the hatching. Opacity is higher for lines.
+//   const tracksRegionColor = isDark
+//     ? p.color(137, 207, 240, 50)
+//     : p.color(173, 216, 230, 100); // Light blue
+//   const closeRegionColor = isDark
+//     ? p.color(255, 182, 193, 60)
+//     : p.color(255, 182, 193, 120); // Light pink
+
+//   b.push();
+//   b.translate(b.width / 2, b.height * 0.95); // Translate to the bottom center of the buffer, same as other static elements
+//   b.scale(1, -1); // Flip Y-axis
+
+//   // --- Draw Tracks Region ---
+//   drawHatchedRect(
+//     b,
+//     ROI_TRACKS_X_MIN * plotScales.plotScaleX,
+//     ROI_TRACKS_Y_MIN * plotScales.plotScaleY,
+//     ROI_TRACKS_X_MAX * plotScales.plotScaleX,
+//     ROI_TRACKS_Y_MAX * plotScales.plotScaleY,
+//     tracksRegionColor,
+//     15 // Spacing for the hatch lines
+//   );
+
+//   // --- Draw Close Region ---
+//   drawHatchedRect(
+//     b,
+//     ROI_CLOSE_X_MIN * plotScales.plotScaleX,
+//     ROI_CLOSE_Y_MIN * plotScales.plotScaleY,
+//     ROI_CLOSE_X_MAX * plotScales.plotScaleX,
+//     ROI_CLOSE_Y_MAX * plotScales.plotScaleY,
+//     closeRegionColor,
+//     15 // Spacing for the hatch lines
+//   );
+
+//   b.pop();
+// }
+
+
+//OLD_Solid Fill Logic
+
 /**
  * Draws the defined regions of interest (ROI) onto the canvas buffer.
  * @param {p5} p - The p5 instance.
@@ -753,3 +879,4 @@ export function drawRegionsOfInterest(p, b, plotScales) {
 
   b.pop();
 }
+//OLD_Solid Fill Logic
