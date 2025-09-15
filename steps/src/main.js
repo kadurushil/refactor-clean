@@ -273,6 +273,23 @@ saveSessionBtn.addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
+
+/**
+ * A callback that runs for every new video frame presented to the screen.
+ * It calculates the time since the last frame to measure video performance.
+ */
+function videoFrameCallback(now, metadata) {
+  // 'now' is a high-resolution timestamp provided by the browser
+  if (appState.lastVideoFrameTime > 0) {
+    const delta = now - appState.lastVideoFrameTime;
+    appState.videoFrameRenderTime = delta;
+  }
+  appState.lastVideoFrameTime = now;
+
+  // Re-register the callback for the next frame to create a loop
+  videoPlayer.requestVideoFrameCallback(videoFrameCallback);
+}
+
 // When "Load Session" is clicked, it triggers the hidden file input.
 loadSessionBtn.addEventListener("click", () => {
   sessionFileInput.click();
@@ -503,6 +520,8 @@ videoFileInput.addEventListener("change", (event) => {
 
   calculateAndSetOffset();
   loadVideoWithProgress(file);
+  // Start the performance monitoring loop as soon as a video is attached.
+  videoPlayer.requestVideoFrameCallback(videoFrameCallback);
 });
 
 // Event listener for offset input change.

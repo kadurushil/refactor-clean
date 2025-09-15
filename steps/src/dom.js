@@ -86,6 +86,7 @@ export const toggleConfirmedOnly = document.getElementById("toggle-confirmed-onl
 //----------------------UPDATE FRAME Function----------------------//
 // Updates the UI to reflect the current radar frame and synchronizes video playback.
 export function updateFrame(frame, forceVideoSeek) {
+  const startTime = performance.now(); //start emasuring timer of performance.
   if (
     !appState.vizData ||
     frame < 0 ||
@@ -155,7 +156,10 @@ export function updateFrame(frame, forceVideoSeek) {
   if (appState.p5_instance) appState.p5_instance.redraw(); // Redraw radar sketch
   if (appState.speedGraphInstance && !appState.isPlaying)
     // Redraw speed graph if not playing.
-    appState.speedGraphInstance.redraw();
+  appState.speedGraphInstance.redraw();
+  const endTime = performance.now();
+  appState.lastFrameRenderTime = endTime - startTime; // <-- End timer and update state
+
 }
 
 //----------------------RESET VISUALIZATION Function----------------------//
@@ -245,16 +249,18 @@ export function updateDebugOverlay(currentMediaTime) {
 
       content.push(`Video Time (s): ${currentMediaTime.toFixed(3)}`); // Display current video time
       content.push(`Target Radar Time (ms): ${targetRadarTimeMs.toFixed(0)}`);
-      content.push(
-        `Drift (ms): <b style="color: ${driftColor};">${driftMs.toFixed(0)}</b>`
-      );
-      content.push(
-        `Video Start Time: ${appState.videoStartDate.toISOString()}`
-      );
-      content.push(
-        `Radar Start Time: ${new Date(appState.radarStartTimeMs).toISOString()}`
-      );
+      content.push(`Drift (ms): <b style="color: ${driftColor};">${driftMs.toFixed(0)}</b>`);
+      content.push(`Video Start Time: ${appState.videoStartDate.toISOString()}`);
+      content.push(`Radar Start Time: ${new Date(appState.radarStartTimeMs).toISOString()}`);
       content.push(`Calculated Offset (ms): ${offsetInput.value}`); // Display calculated offset.
+      const renderTime = appState.lastFrameRenderTime;
+      // Color is green if render time is under 33ms (~30fps budget), otherwise red
+      const renderTimeColor = renderTime > 33 ? "#FF6347" : "#98FB98";
+      content.push(`Frame Render Time: <b style="color: ${renderTimeColor};">${renderTime.toFixed(1)}ms</b>`);
+      const videoRenderTime = appState.videoFrameRenderTime;
+      // Color is green if render time is under 34ms (~30fps), otherwise red
+      const videoRenderTimeColor = videoRenderTime > 34 ? "#FF6347" : "#98FB98";
+      content.push(`Video Frame Time: <b style="color: ${videoRenderTimeColor};">${videoRenderTime.toFixed(1)}ms</b>`);
     } else {
       content.push("Load video and radar data to see sync info."); // Prompt to load data.
     }

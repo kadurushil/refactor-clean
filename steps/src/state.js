@@ -29,6 +29,9 @@ export const appState = {
   mediaTimeStart: 0,
   // Timestamp (from performance.now()) of the last synchronization check
   lastSyncTime: 0,
+  lastFrameRenderTime: 0,
+  lastVideoFrameTime: 0,
+  videoFrameRenderTime: 0,
   useCustomTtcScheme: false, // Flag to switch between default and custom
   customTtcScheme: {
     // Default values match the UI
