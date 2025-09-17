@@ -98,6 +98,7 @@ export const radarSketch = function (p) {
     // Get current frame data
     const frameData = appState.vizData.radarFrames[appState.currentFrame];
     if (frameData) {
+      drawRegionsOfInterest(p, frameData, plotScales);
       // Draw object trajectories and markers if enabled
       if (toggleVelocity.checked) {
         drawTrackMarkers(p, plotScales);

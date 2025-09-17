@@ -4,12 +4,8 @@ import {
   RADAR_Y_MAX,
   RADAR_Y_MIN,
   MAX_TRAJECTORY_LENGTH,
-  ROI_TRACKS_X_MIN,
-  ROI_TRACKS_X_MAX,
   ROI_TRACKS_Y_MIN,
   ROI_TRACKS_Y_MAX,
-  ROI_CLOSE_X_MIN,
-  ROI_CLOSE_X_MAX,
   ROI_CLOSE_Y_MIN,
   ROI_CLOSE_Y_MAX,
 } from "./constants.js";
@@ -69,7 +65,7 @@ export const movingColor = (p) => p.color(255, 0, 255); // Magenta
  */
 export function drawStaticRegionsToBuffer(p, b, plotScales) {
   b.clear();
-  drawRegionsOfInterest(p, b, plotScales);  b.push();
+  b.push();
   // Translate to the bottom center of the buffer.
   b.translate(b.width / 2, b.height * 0.95);
   // Flip the Y-axis to match radar coordinates (Y increases upwards).
@@ -354,9 +350,11 @@ export function drawTrajectories(p, plotScales) {
         }
       } else {
         // MODE 2: DEFAULT TTC SCHEME (Use pre-calculated category from JSON)
-        
+
         // FIND the TTC category from the new timeline
-        const ttcEntry = track.ttcCategoryTimeline.find((entry) => entry.frameIdx === lastLog.frameIdx);
+        const ttcEntry = track.ttcCategoryTimeline.find(
+          (entry) => entry.frameIdx === lastLog.frameIdx
+        );
         const ttcCategory = ttcEntry ? ttcEntry.ttcCategory : null; // Get the category if found
 
         switch (ttcCategory) {
@@ -835,48 +833,61 @@ export function drawEgoVehicle(p, plotScales) {
 //   b.pop();
 // }
 
-
 //OLD_Solid Fill Logic
 
 /**
- * Draws the defined regions of interest (ROI) onto the canvas buffer.
- * @param {p5} p - The p5 instance.
- * @param {p5.Graphics} b - The p5.Graphics buffer to draw on.
+ * Draws the defined regions of interest (ROI) based on dynamic data from the current frame.
+ * @param {p5} p - The p5 instance to draw on.
+ * @param {object} frameData - The data for the current radar frame.
  * @param {object} plotScales - The calculated scales for plotting.
  */
-export function drawRegionsOfInterest(p, b, plotScales) {
+/**
+
+ */
+export function drawRegionsOfInterest(p, frameData, plotScales) {
+  // --- THIS CHECK IS ESSENTIAL AND MUST NOT BE REMOVED ---
+  // It gracefully handles frames that do not have the barrier data.
+  if (!frameData || !frameData.filtered_barrier_x) {
+     console.warn(`Skipping bcoz no filtered barrier track in frame ${appState.currentFrame}. `, frameData);
+    return; // Exit the function if the data is missing for this frame.
+  }
+//check here once 
   const isDark = document.documentElement.classList.contains("dark");
-  // Define semi-transparent colors for the regions
-  const tracksRegionColor = isDark ? p.color(137, 207, 240, 20) : p.color(173, 216, 230, 50); // Light blue
-  const closeRegionColor = isDark ? p.color(255, 182, 193, 25) : p.color(255, 182, 193, 60); // Light pink
+  // Using brighter, more visible colors with transparency
+  const tracksRegionColor = isDark
+    ? p.color(137, 207, 240, 50)
+    : p.color(173, 216, 230, 80);
+  const closeRegionColor = isDark
+    ? p.color(255, 182, 193, 60)
+    : p.color(255, 182, 193, 90);
 
-  b.push();
-  b.translate(b.width / 2, b.height * 0.95);   // Translate to the bottom center of the buffer, same as other static elements
-  b.scale(1, -1); // Flip Y-axis
+  const [left, right] = frameData.filtered_barrier_x;
 
-  b.noStroke();
-  b.strokeWeight(1);
-  b.noFill(); // No outlines for the shaded regions
-  b.rectMode(p.CORNERS); // Draw rectangles by specifying two opposite corners
+  p.push();
+  p.stroke(1);
+  p.strokeWeight(1);
+  p.noFill();
+  p.rectMode(p.CORNERS);
+  console.warn(`Skipping bcoz no filtered barrier track in frame ${appState.currentFrame}. `, frameData);
 
   // --- Draw Tracks Region ---
-  b.fill(tracksRegionColor);
-  b.rect(
-    ROI_TRACKS_X_MIN * plotScales.plotScaleX,
+  p.fill(tracksRegionColor);
+  p.rect(
+    left * plotScales.plotScaleX,
     ROI_TRACKS_Y_MIN * plotScales.plotScaleY,
-    ROI_TRACKS_X_MAX * plotScales.plotScaleX,
+    right * plotScales.plotScaleX,
     ROI_TRACKS_Y_MAX * plotScales.plotScaleY
   );
 
   // --- Draw Close Region ---
-  b.fill(closeRegionColor);
-  b.rect(
-    ROI_CLOSE_X_MIN * plotScales.plotScaleX,
+  p.fill(closeRegionColor);
+  p.rect(
+    left * plotScales.plotScaleX,
     ROI_CLOSE_Y_MIN * plotScales.plotScaleY,
-    ROI_CLOSE_X_MAX * plotScales.plotScaleX,
+    right * plotScales.plotScaleX,
     ROI_CLOSE_Y_MAX * plotScales.plotScaleY
   );
 
-  b.pop();
+  p.pop();
 }
 //OLD_Solid Fill Logic
