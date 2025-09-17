@@ -101,10 +101,12 @@ export const radarSketch = function (p) {
     const frameData = appState.vizData.radarFrames[appState.currentFrame];
     if (frameData) {
       drawRegionsOfInterest(p, frameData, plotScales);
+      drawTrackMarkers(p, plotScales);
+
       // Draw object trajectories and markers if enabled
-      if (toggleVelocity.checked) {
-        drawTrackMarkers(p, plotScales);
-      }
+      // if (toggleVelocity.checked) {
+      //   drawTrackMarkers(p, plotScales);
+      // }
       if (togglePredictedPos.checked) {
         for (const track of appState.vizData.tracks) {
           const log = track.historyLog.find(
