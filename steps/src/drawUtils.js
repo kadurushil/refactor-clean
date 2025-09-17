@@ -868,7 +868,7 @@ export function drawRegionsOfInterest(p, frameData, plotScales) {
   p.strokeWeight(1);
   p.noFill();
   p.rectMode(p.CORNERS);
-  console.warn(`Skipping bcoz no filtered barrier track in frame ${appState.currentFrame}. `, frameData);
+//  console.warn(`Skipping bcoz no filtered barrier track in frame ${appState.currentFrame}. `, frameData);
 
   // --- Draw Tracks Region ---
   p.fill(tracksRegionColor);
