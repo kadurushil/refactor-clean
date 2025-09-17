@@ -40,19 +40,32 @@ export const ttcColors = (p) => ({
   default: p.color(128, 128, 128), // Gray for unknown/default
 });
 
-// Defines a palette of colors for different clusters.
+// Defines a palette of 20 colors for different clusters.
 export const clusterColors = (p) => [
-  p.color(230, 25, 75), // Red
-  p.color(60, 180, 75), // Green
-  p.color(0, 130, 200), // Blue
-  p.color(245, 130, 48), // Orange
-  p.color(145, 30, 180), // Purple
-  p.color(70, 240, 240), // Cyan
-  p.color(240, 50, 230), // Magenta
-  p.color(210, 245, 60), // Lime Green
-  p.color(128, 0, 0), // Maroon
-  p.color(0, 128, 128), // Teal
+  // Primary & Secondary Colors
+  p.color(230, 25, 75),   // 1. Red
+  p.color(60, 180, 75),   // 2. Green
+  p.color(0, 130, 200),   // 3. Blue
+  p.color(245, 130, 48),  // 4. Orange
+  p.color(145, 30, 180),  // 5. Purple
+  p.color(70, 240, 240),  // 6. Cyan
+  // Tertiary & Bright Colors
+  p.color(240, 50, 230),  // 7. Magenta
+  p.color(210, 245, 60),  // 8. Lime
+  p.color(250, 190, 212), // 9. Pink
+  p.color(0, 128, 128),   // 10. Teal
+  p.color(220, 190, 255), // 11. Lavender
+  p.color(170, 110, 40),  // 12. Brown
+  p.color(255, 250, 200), // 13. Beige
+  p.color(128, 0, 0),     // 14. Maroon
+  p.color(170, 255, 195), // 15. Mint
+  p.color(128, 128, 0),   // 16. Olive
+  p.color(255, 215, 180), // 17. Apricot
+  p.color(0, 0, 128),     // 18. Navy
+  p.color(70, 130, 180),  // 19. Steel Blue (Replaced Gray as grey is for unclustered. )
+  p.color(255, 255, 25),  // 20. Yellow
 ];
+
 
 // Defines colors for stationary and moving objects.
 export const stationaryColor = (p) => p.color(218, 165, 32); // Goldenrod
@@ -899,3 +912,56 @@ export function drawRegionsOfInterest(p, frameData, plotScales) {
   p.pop();
 }
 //OLD_Solid Fill Logic
+
+
+/**
+ * Draws the cluster centroids on the radar canvas as an asterisk.
+ * Handles cases where a single cluster is an object instead of an array.
+ * @param {p5} p - The p5 instance.
+ * @param {Array|object} clustersInput - The cluster data for the current frame.
+ * @param {object} plotScales - The calculated scales for plotting.
+ */
+export function drawClusterCentroids(p, clustersInput, plotScales) {
+  if (!clustersInput) {
+    return; // Do nothing if there's no cluster data
+  }
+
+  // --- START: Robustness Fix ---
+  // This check handles the data inconsistency. If clustersInput is not an array,
+  // we wrap the single cluster object in an array so the loop works consistently.
+  const clusters = Array.isArray(clustersInput) ? clustersInput : [clustersInput];
+  // --- END: Robustness Fix ---
+  
+  if (clusters.length === 0) {
+    return; // Exit if the resulting array is empty
+  }
+
+  const localClusterColors = clusterColors(p);
+
+  for (const cluster of clusters) {
+    if (cluster && typeof cluster.x === 'number' && typeof cluster.y === 'number') {
+      
+      const x = cluster.x * plotScales.plotScaleX;
+      const y = cluster.y * plotScales.plotScaleY;
+
+      const color = cluster.id > 0 
+        ? localClusterColors[(cluster.id - 1) % localClusterColors.length] 
+        : p.color(128);
+
+      p.push();
+      p.stroke(color);
+      p.strokeWeight(1.5);
+
+      const armLength = 5;
+
+      p.line(x, y - armLength, x, y + armLength);
+      p.line(x - armLength, y, x + armLength, y);
+      p.line(x - armLength * 0.7, y - armLength * 0.7, x + armLength * 0.7, y + armLength * 0.7);
+      p.line(x + armLength * 0.7, y - armLength * 0.7, x - armLength * 0.7, y + armLength * 0.7);
+      
+      p.pop();
+    }
+  }
+}
+
+//--- drawClusterCentroids function---//

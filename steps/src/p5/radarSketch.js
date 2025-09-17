@@ -13,6 +13,7 @@ import {
   togglePredictedPos,
   toggleCovariance,
   toggleVelocity,
+  toggleClusterColor,
 } from "../dom.js";
 import {
   drawStaticRegionsToBuffer,
@@ -25,7 +26,8 @@ import {
   handleCloseUpDisplay,
   drawCovarianceEllipse,
   ttcColors,
-  drawRegionsOfInterest
+  drawRegionsOfInterest,
+  drawClusterCentroids
 } from "../drawUtils.js";
 
 export const radarSketch = function (p) {
@@ -156,6 +158,11 @@ export const radarSketch = function (p) {
       }
       // Draw the point cloud for the current frame
       drawPointCloud(p, frameData.pointCloud, plotScales);
+      // Draw cluster centroids if enabled
+      if(toggleClusterColor.checked){
+
+      drawClusterCentroids(p, frameData.clusters, plotScales);
+      }
     }
     p.pop();
 
