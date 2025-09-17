@@ -508,17 +508,20 @@ export function drawTrackMarkers(p, plotScales) {
  * @param {p5} p - The p5 instance.
  * @param {object} plotScales - The calculated scales for plotting.
  */
+// Function to handle the display of detailed information for points under the mouse cursor in close-up mode.
 export function handleCloseUpDisplay(p, plotScales) {
   // Get current frame data.
   const frameData = appState.vizData.radarFrames[appState.currentFrame];
   if (!frameData || !frameData.pointCloud) return;
 
   const hoveredPoints = [];
-  const radius = 10;
+  const radius = 15; // hover radius
 
   // Iterate through point cloud to find hovered points.
   for (const pt of frameData.pointCloud) {
+    // Skip if point coordinates are null.
     if (pt.x === null || pt.y === null) continue;
+    // Calculate screen coordinates for the point.
     // Convert radar coordinates to screen coordinates.
     const screenX = pt.x * plotScales.plotScaleX + p.width / 2;
     const screenY = p.height * 0.95 - pt.y * plotScales.plotScaleY; // Y-axis is inverted for drawing.
@@ -539,25 +542,28 @@ export function handleCloseUpDisplay(p, plotScales) {
 
     p.push();
     p.textSize(12);
-    const lineHeight = 15; // Line height for text in the info box.
+    // Line height for text in the info box.
+    const lineHeight = 15;
     const boxPadding = 8;
     let boxWidth = 0;
     const infoStrings = [];
 
+    // Generate info strings for each hovered point and determine max box width.
     for (const hovered of hoveredPoints) {
       const pt = hovered.point;
       const vel = pt.velocity !== null ? pt.velocity.toFixed(2) : "N/A";
       const snr = pt.snr !== null ? pt.snr.toFixed(1) : "N/A";
-      const infoText = `X:${pt.x.toFixed(2)}, Y:${pt.y.toFixed(
-        2
-      )} | V:${vel}, SNR:${snr}`;
+      const clusterNumber = pt.clusterNumber !== null ? pt.clusterNumber : "N/A";
+      const infoText = `X:${pt.x.toFixed(2)}, Y:${pt.y.toFixed(2)} | V:${vel}, SNR:${snr} | Clstr:${clusterNumber}`;
       infoStrings.push(infoText);
       boxWidth = Math.max(boxWidth, p.textWidth(infoText));
     } // Calculate box dimensions.
+    // Calculate total height and width for the info box.
     const boxHeight = infoStrings.length * lineHeight + boxPadding * 2;
     boxWidth += boxPadding * 2;
 
     // Position the info box relative to the mouse.
+    // Offset from mouse cursor.
     const xOffset = 20;
     let boxX = p.mouseX + xOffset;
     let boxY = p.mouseY - boxHeight / 2;
@@ -571,6 +577,7 @@ export function handleCloseUpDisplay(p, plotScales) {
     // Highlight hovered points and draw connecting lines to the info box.
     const highlightColor = p.color(46, 204, 113);
 
+    // Draw highlight circles around hovered points and lines connecting them to the info box.
     for (let i = 0; i < hoveredPoints.length; i++) {
       const hovered = hoveredPoints[i];
       p.noFill();
@@ -593,6 +600,7 @@ export function handleCloseUpDisplay(p, plotScales) {
     p.fill(bgColor);
     p.stroke(highlightColor);
     p.strokeWeight(1);
+    // Draw rounded rectangle for the info box.
     p.rect(boxX, boxY, boxWidth, boxHeight, 4);
     // Draw the text content inside the info box.
     const textColor = document.documentElement.classList.contains("dark")
@@ -600,6 +608,7 @@ export function handleCloseUpDisplay(p, plotScales) {
       : p.color(20);
     p.fill(textColor);
     p.noStroke();
+    // Set text alignment.
     p.textAlign(p.LEFT, p.TOP);
     for (let i = 0; i < infoStrings.length; i++) {
       p.text(
@@ -867,8 +876,7 @@ export function drawRegionsOfInterest(p, frameData, plotScales) {
   p.stroke(1);
   p.strokeWeight(1);
   p.noFill();
-  p.rectMode(p.CORNERS);
-//  console.warn(`Skipping bcoz no filtered barrier track in frame ${appState.currentFrame}. `, frameData);
+  p.rectMode(p.CORNERS);//  console.warn(`Skipping bcoz no filtered barrier track in frame ${appState.currentFrame}. `, frameData);
 
   // --- Draw Tracks Region ---
   p.fill(tracksRegionColor);
