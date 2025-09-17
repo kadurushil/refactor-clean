@@ -18,6 +18,7 @@ import {
   toggleVelocity,
   toggleStationaryColor,
   toggleConfirmedOnly,
+  togglePredictedPos
 } from "./dom.js";
 
 // Defines a set of SNR (Signal-to-Noise Ratio) colors.
@@ -516,123 +517,170 @@ export function drawTrackMarkers(p, plotScales) {
   }
 }
 
+// In src/drawUtils.js
+
+// (Make sure the necessary imports are at the top)
+
 /**
- * Handles the display of detailed info for points under the mouse cursor.
+ * Handles the display of a comprehensive info tooltip for all elements under the mouse.
  * @param {p5} p - The p5 instance.
  * @param {object} plotScales - The calculated scales for plotting.
  */
-// Function to handle the display of detailed information for points under the mouse cursor in close-up mode.
 export function handleCloseUpDisplay(p, plotScales) {
-  // Get current frame data.
   const frameData = appState.vizData.radarFrames[appState.currentFrame];
-  if (!frameData || !frameData.pointCloud) return;
+  if (!frameData) return;
 
-  const hoveredPoints = [];
-  const radius = 15; // hover radius
+  const hoveredItems = [];
+  const radius = 10;
+  const localClusterColors = clusterColors(p); // <-- Get the color palette once
 
-  // Iterate through point cloud to find hovered points.
-  for (const pt of frameData.pointCloud) {
-    // Skip if point coordinates are null.
-    if (pt.x === null || pt.y === null) continue;
-    // Calculate screen coordinates for the point.
-    // Convert radar coordinates to screen coordinates.
-    const screenX = pt.x * plotScales.plotScaleX + p.width / 2;
-    const screenY = p.height * 0.95 - pt.y * plotScales.plotScaleY; // Y-axis is inverted for drawing.
-    const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
-    if (d < radius) {
-      hoveredPoints.push({
-        point: pt,
-        screenX: screenX,
-        screenY: screenY,
-      });
+  // ... (Step 1a: Find hovered points - no changes here) ...
+  if (frameData.pointCloud) {
+    for (const pt of frameData.pointCloud) {
+      if (pt.x === null || pt.y === null) continue;
+      const screenX = pt.x * plotScales.plotScaleX + p.width / 2;
+      const screenY = p.height * 0.95 - (pt.y * plotScales.plotScaleY);
+      const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
+      if (d < radius) {
+        hoveredItems.push({ type: 'point', data: pt, screenX, screenY });
+      }
     }
   }
 
-  // If points are hovered, display detailed info.
-  if (hoveredPoints.length > 0) {
-    // Sort points by Y-coordinate for consistent display.
-    hoveredPoints.sort((a, b) => a.screenY - b.screenY);
-
-    p.push();
-    p.textSize(12);
-    // Line height for text in the info box.
-    const lineHeight = 15;
-    const boxPadding = 8;
-    let boxWidth = 0;
-    const infoStrings = [];
-
-    // Generate info strings for each hovered point and determine max box width.
-    for (const hovered of hoveredPoints) {
-      const pt = hovered.point;
-      const vel = pt.velocity !== null ? pt.velocity.toFixed(2) : "N/A";
-      const snr = pt.snr !== null ? pt.snr.toFixed(1) : "N/A";
-      const clusterNumber = pt.clusterNumber !== null ? pt.clusterNumber : "N/A";
-      const infoText = `X:${pt.x.toFixed(2)}, Y:${pt.y.toFixed(2)} | V:${vel}, SNR:${snr} | Clstr:${clusterNumber}`;
-      infoStrings.push(infoText);
-      boxWidth = Math.max(boxWidth, p.textWidth(infoText));
-    } // Calculate box dimensions.
-    // Calculate total height and width for the info box.
-    const boxHeight = infoStrings.length * lineHeight + boxPadding * 2;
-    boxWidth += boxPadding * 2;
-
-    // Position the info box relative to the mouse.
-    // Offset from mouse cursor.
-    const xOffset = 20;
-    let boxX = p.mouseX + xOffset;
-    let boxY = p.mouseY - boxHeight / 2;
-
-    // Adjust box position to stay within canvas bounds.
-    if (boxX + boxWidth > p.width) {
-      boxX = p.mouseX - boxWidth - xOffset;
+  if (toggleClusterColor.checked && frameData.clusters) {
+    const clusters = Array.isArray(frameData.clusters) ? frameData.clusters : [frameData.clusters];
+    for (const cluster of clusters) {
+      if (cluster.x === null || cluster.y === null) continue;
+      const screenX = cluster.x * plotScales.plotScaleX + p.width / 2;
+      const screenY = p.height * 0.95 - (cluster.y * plotScales.plotScaleY);
+      const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
+      if (d < radius) {
+        // ======================= CHANGE START =======================
+        // Get the cluster's color and pass it in the hovered item object
+        const color = cluster.id > 0
+          ? localClusterColors[(cluster.id - 1) % localClusterColors.length]
+          : p.color(128);
+        hoveredItems.push({ type: 'cluster', data: cluster, screenX, screenY, color: color });
+        // ======================== CHANGE END ========================
+      }
     }
-    boxY = p.constrain(boxY, 0, p.height - boxHeight);
+  }
 
-    // Highlight hovered points and draw connecting lines to the info box.
-    const highlightColor = p.color(46, 204, 113);
-
-    // Draw highlight circles around hovered points and lines connecting them to the info box.
-    for (let i = 0; i < hoveredPoints.length; i++) {
-      const hovered = hoveredPoints[i];
-      p.noFill();
-      p.stroke(highlightColor);
-      p.strokeWeight(2);
-      p.ellipse(hovered.screenX, hovered.screenY, 15, 15);
-      p.strokeWeight(1);
-      p.line(
-        boxX + boxPadding,
-        boxY + boxPadding + i * lineHeight + lineHeight / 2,
-        hovered.screenX,
-        hovered.screenY
-      );
+  // ... (Step 1c: Find hovered tracks - no changes here) ...
+  if (appState.vizData.tracks) {
+    for (const track of appState.vizData.tracks) {
+      const log = track.historyLog.find(log => log.frameIdx === appState.currentFrame + 1);
+      if (log) {
+        if (log.correctedPosition && log.correctedPosition[0] !== null) {
+          const pos = log.correctedPosition;
+          const screenX = pos[0] * plotScales.plotScaleX + p.width / 2;
+          const screenY = p.height * 0.95 - (pos[1] * plotScales.plotScaleY);
+          const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
+          if (d < radius) {
+            hoveredItems.push({ type: 'track', data: log, trackId: track.id, screenX, screenY });
+          }
+        }
+        if (togglePredictedPos.checked && log.predictedPosition && log.predictedPosition[0] !== null) {
+          const pos = log.predictedPosition;
+          const screenX = pos[0] * plotScales.plotScaleX + p.width / 2;
+          const screenY = p.height * 0.95 - (pos[1] * plotScales.plotScaleY);
+          const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
+          if (d < radius) {
+            hoveredItems.push({ type: 'prediction', data: log, trackId: track.id, screenX, screenY });
+          }
+        }
+      }
     }
+  }
 
-    // Draw the info box background and border.
-    const bgColor = document.documentElement.classList.contains("dark")
-      ? p.color(20, 20, 30, 255)
-      : p.color(245, 245, 245, 255);
-    p.fill(bgColor);
+  if (hoveredItems.length === 0) return;
+
+  // Generate display text (no changes needed in this part)
+  const infoStrings = [];
+  // ... (The text generation logic remains the same) ...
+  for (const item of hoveredItems) {
+    let infoText = '';
+    const data = item.data;
+    switch (item.type) {
+      case 'point':
+        const vel = data.velocity !== null ? data.velocity.toFixed(2) : 'N/A';
+        const snr = data.snr !== null ? data.snr.toFixed(1) : 'N/A';
+        infoText = `Point | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(2)} | V:${vel}, SNR:${snr}`;
+        break;
+      case 'cluster':
+        const rs = data.radialSpeed !== null ? data.radialSpeed.toFixed(2) : 'N/A';
+        const vx = data.vx !== null ? data.vx.toFixed(2) : 'N/A';
+        const vy = data.vy !== null ? data.vy.toFixed(2) : 'N/A';
+        infoText = `Cluster ${data.id} | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(2)} | rSpeed:${rs}, vX:${vx}, vY:${vy}`;
+        break;
+      case 'track':
+        infoText = `Track ${item.trackId} | X:${data.correctedPosition[0].toFixed(2)}, Y:${data.correctedPosition[1].toFixed(2)}`;
+        break;
+      case 'prediction':
+        const p_vx = data.predictedVelocity[0] !== null ? data.predictedVelocity[0].toFixed(2) : 'N/A';
+        const p_vy = data.predictedVelocity[1] !== null ? data.predictedVelocity[1].toFixed(2) : 'N/A';
+        infoText = `Pred. for ${item.trackId} | X:${data.predictedPosition[0].toFixed(2)}, Y:${data.predictedPosition[1].toFixed(2)} | vX:${p_vx}, vY:${p_vy}`;
+        break;
+    }
+    if (infoText) {
+      infoStrings.push({text: infoText, color: item.color || null});
+    }
+  }
+
+  // Render the unified tooltip
+  p.push();
+  p.textSize(12);
+  const lineHeight = 15;
+  const boxPadding = 8;
+  let boxWidth = 0;
+
+  for (const strInfo of infoStrings) {
+    boxWidth = Math.max(boxWidth, p.textWidth(strInfo.text));
+  }
+  const boxHeight = (infoStrings.length * lineHeight) + (boxPadding * 2);
+  boxWidth += (boxPadding * 2);
+
+  const xOffset = 20;
+  let boxX = p.mouseX + xOffset;
+  let boxY = p.mouseY - (boxHeight / 2);
+
+  if (boxX + boxWidth > p.width) {
+    boxX = p.mouseX - boxWidth - xOffset;
+  }
+  boxY = p.constrain(boxY, 0, p.height - boxHeight);
+
+  // ... (Highlighting logic remains the same) ...
+  const highlightColor = p.color(46, 204, 113);
+  for (let i = 0; i < hoveredItems.length; i++) {
+    const item = hoveredItems[i];
+    p.noFill();
     p.stroke(highlightColor);
+    p.strokeWeight(2);
+    p.ellipse(item.screenX, item.screenY, 15, 15);
     p.strokeWeight(1);
-    // Draw rounded rectangle for the info box.
-    p.rect(boxX, boxY, boxWidth, boxHeight, 4);
-    // Draw the text content inside the info box.
-    const textColor = document.documentElement.classList.contains("dark")
-      ? p.color(230)
-      : p.color(20);
-    p.fill(textColor);
-    p.noStroke();
-    // Set text alignment.
-    p.textAlign(p.LEFT, p.TOP);
-    for (let i = 0; i < infoStrings.length; i++) {
-      p.text(
-        infoStrings[i],
-        boxX + boxPadding,
-        boxY + boxPadding + i * lineHeight
-      );
-    }
-
-    p.pop();
+    p.line(boxX + boxPadding, boxY + boxPadding + (i * lineHeight) + (lineHeight / 2), item.screenX, item.screenY);
   }
+
+  const bgColor = document.documentElement.classList.contains('dark') ? p.color(20, 20, 30, 220) : p.color(245, 245, 245, 220);
+  p.fill(bgColor);
+  p.stroke(highlightColor);
+  p.strokeWeight(1);
+  p.rect(boxX, boxY, boxWidth, boxHeight, 4);
+
+  // ======================= CHANGE START =======================
+  // Draw the text inside the box, applying colors where needed
+  const defaultTextColor = document.documentElement.classList.contains('dark') ? p.color(230) : p.color(20);
+  p.noStroke();
+  p.textAlign(p.LEFT, p.TOP);
+  for (let i = 0; i < infoStrings.length; i++) {
+    const info = infoStrings[i];
+    // If a color is specified for this line, use it. Otherwise, use the default.
+    p.fill(info.color || defaultTextColor);
+    p.text(info.text, boxX + boxPadding, boxY + boxPadding + (i * lineHeight));
+  }
+  // ======================== CHANGE END ========================
+
+  p.pop();
 }
 
 export function drawCovarianceEllipse(
