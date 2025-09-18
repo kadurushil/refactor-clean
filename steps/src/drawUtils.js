@@ -633,7 +633,7 @@ export function handleCloseUpDisplay(p, plotScales) {
         const snr = data.snr !== null ? data.snr.toFixed(1) : "N/A";
         infoText = `Point | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(
           2
-        )} | V:${vel}, SNR:${snr}`;
+        )} | V:${vel}, SNR:${snr}, Cluster: ${data.clusterNumber}`;
         break;
       case "cluster":
         const rs =
