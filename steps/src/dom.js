@@ -303,6 +303,8 @@ export function updatePersistentOverlays(currentMediaTime) {
 
   // --- Update Radar Overlay ---
   const currentRadarFrame = appState.vizData.radarFrames[appState.currentFrame];
+  const frameData = appState.vizData.radarFrames[appState.currentFrame];
+  const motionState = frameData.motionState;
   if (currentRadarFrame) {
     const absRadarTime = new Date(
       appState.videoStartDate.getTime() + currentRadarFrame.timestampMs
@@ -311,10 +313,11 @@ export function updatePersistentOverlays(currentMediaTime) {
     const offsetMs = parseFloat(offsetInput.value) || 0;
     const driftMs = currentMediaTime * 1000 + offsetMs - targetRadarTimeMs;
     const driftColor = Math.abs(driftMs) > 50 ? "#FF6347" : "#98FB98"; // Tomato red or Pale green
-    const colorMode = getCurrentColorMode();
+    const colorMode = getCurrentColorMode();     
 
     radarInfoOverlay.innerHTML = `
             Frame: ${appState.currentFrame + 1}
+            Motion State: ${motionState}
             | Abs Time: ${formatUTCTime(absRadarTime)}
             | Color Mode: <b>${colorMode}</b>
             | Drift: <b style="color: ${driftColor};">${driftMs.toFixed(
@@ -328,6 +331,7 @@ export function updatePersistentOverlays(currentMediaTime) {
     appState.videoStartDate.getTime() + currentMediaTime * 1000
   );
   const videoFrame = Math.floor(currentMediaTime * VIDEO_FPS);
+  console.warn('Could not load radarframes ', appState.vizData.radarFrames)
 
   videoInfoOverlay.innerHTML = `
         Frame: ${videoFrame}

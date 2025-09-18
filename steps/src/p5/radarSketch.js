@@ -27,7 +27,7 @@ import {
   drawCovarianceEllipse,
   ttcColors,
   drawRegionsOfInterest,
-  drawClusterCentroids
+  drawClusterCentroids,
 } from "../drawUtils.js";
 
 export const radarSketch = function (p) {
@@ -39,6 +39,10 @@ export const radarSketch = function (p) {
   // p5.Graphics buffers for static elements to optimize drawing
   let staticBackgroundBuffer, snrLegendBuffer, trackLegendBuffer;
 
+  // Helper function to allow other sketches to access the static background
+  p.getStaticBackground = function () {
+    return staticBackgroundBuffer;
+  };
   // Function to calculate scaling factors for radar coordinates to canvas pixels
   function calculatePlotScales() {
     // Padding and offset values for the plot area
@@ -60,6 +64,41 @@ export const radarSketch = function (p) {
       canvasContainer.offsetHeight
     );
     canvas.parent("canvas-container");
+    // --- START: ADD MOUSE WHEEL LISTENER HERE ---
+    canvas.mouseWheel((event) => {
+      // Only run this logic if the close-up mode is active
+      if (appState.isCloseUpMode) {
+        event.preventDefault(); // Prevent the page from scrolling
+
+        const zoomSpeed = 0.5;
+        const direction = Math.sign(event.deltaY);
+        let newZoomFactor = appState.zoomFactor - direction * zoomSpeed;
+
+        // Clamp the zoom factor to a reasonable range
+        newZoomFactor = p.constrain(newZoomFactor, 1.5, 30);
+        appState.zoomFactor = newZoomFactor;
+
+        // IMPORTANT: We must manually trigger a redraw of the zoom sketch
+        // so it immediately updates with the new zoom factor.
+        if (
+          appState.zoomSketchInstance &&
+          appState.zoomSketchInstance.updateAndDraw
+        ) {
+          // We just need to trigger an update; the zoom sketch will read the new
+          // appState.zoomFactor when it redraws.
+          // We find the current hovered items again to pass them.
+          const hoveredItems = handleCloseUpDisplay(p, plotScales);
+          appState.zoomSketchInstance.updateAndDraw(
+            p.mouseX,
+            p.mouseY,
+            hoveredItems,
+            plotScales
+          );
+        }
+      }
+    });
+    // --- END: ADD MOUSE WHEEL LISTENER HERE ---
+
     // Initialize graphics buffers
     staticBackgroundBuffer = p.createGraphics(p.width, p.height);
     snrLegendBuffer = p.createGraphics(100, 450);
@@ -161,9 +200,8 @@ export const radarSketch = function (p) {
       // Draw the point cloud for the current frame
       drawPointCloud(p, frameData.pointCloud, plotScales);
       // Draw cluster centroids if enabled
-      if(toggleClusterColor.checked){
-
-      drawClusterCentroids(p, frameData.clusters, plotScales);
+      if (toggleClusterColor.checked) {
+        drawClusterCentroids(p, frameData.clusters, plotScales);
       }
     }
     p.pop();
@@ -173,16 +211,37 @@ export const radarSketch = function (p) {
     if (toggleTracks.checked) {
       p.image(
         trackLegendBuffer,
-        p.width - trackLegendBuffer.width - 0,
+        p.width - trackLegendBuffer.width - 10,
         p.height - trackLegendBuffer.height - 20
       );
     }
+    // End main radar transformations
 
     // BUG FIX 1: Call the close-up handler if the mode is active
+    // --- Zoom and Tooltip Logic ---
+    const zoomPanel = document.getElementById("zoom-panel");
     if (appState.isCloseUpMode) {
-      handleCloseUpDisplay(p, plotScales);
+      const hoveredItems = handleCloseUpDisplay(p, plotScales);
+      if (hoveredItems.length > 0) {
+        zoomPanel.style.display = "block"; // show the panel
+        if (
+          appState.zoomSketchInstance &&
+          appState.zoomSketchInstance.updateAndDraw
+        ) {
+          appState.zoomSketchInstance.updateAndDraw(
+            p.mouseX,
+            p.mouseY,
+            hoveredItems,
+            plotScales
+          );
+        }
+      } else {
+        zoomPanel.style.display = "none";
+      }
+    } else {
+      zoomPanel.style.display = "none";
     }
-
+    // --- Legend Drawing ---
     // Draw the SNR legend if enabled
     if (toggleSnrColor.checked) {
       p.image(snrLegendBuffer, 10, p.height - snrLegendBuffer.height - 10);
@@ -244,24 +303,22 @@ export const radarSketch = function (p) {
     b.pop();
   };
 
-
   // Handle window resizing event
   p.windowResized = function () {
     p.resizeCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight);
     // BUG FIX 2: Re-create the buffer instead of resizing it
     staticBackgroundBuffer = p.createGraphics(p.width, p.height);
-    
+
     // 6. Re-create and re-draw the track legend buffer on resize
     trackLegendBuffer = p.createGraphics(100, 100);
     p.drawTrackLegendToBuffer();
-    
+
     calculatePlotScales();
     drawStaticRegionsToBuffer(p, staticBackgroundBuffer, plotScales);
-    if (appState.vizData) {p.redraw()
-
-    };
+    if (appState.vizData) {
+      p.redraw();
+    }
   };
-
 
   // Function to draw the SNR legend to its buffer
   p.drawSnrLegendToBuffer = function (minV, maxV) {
@@ -319,6 +376,8 @@ export const radarSketch = function (p) {
     p.resizeCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight);
     // BUG FIX 2: Re-create the buffer instead of resizing it
     staticBackgroundBuffer = p.createGraphics(p.width, p.height);
+    trackLegendBuffer = p.createGraphics(120, 120);
+    p.drawTrackLegendToBuffer();
     calculatePlotScales();
     // Re-draw the static content to the new buffer
     drawStaticRegionsToBuffer(p, staticBackgroundBuffer, plotScales);

@@ -1,6 +1,7 @@
 export const appState = {
   // Stores the parsed visualization data (radar frames, tracks, etc.)
   vizData: null,
+  zoomSketchInstance: null, // Add this line
   // Stores the processed CAN bus data (speed, time)
   videoStartDate: null,
   // The timestamp (in milliseconds) of the first radar frame, extracted from the JSON filename

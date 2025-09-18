@@ -16,6 +16,7 @@
 // - main.js:           The main application entry point that wires everything
 // ===========================================================================================================
 
+import { zoomSketch } from "./p5/zoomSketch.js";
 import { showModal, updateModalProgress } from "./modal.js"; // Modify this import
 import { animationLoop } from "./sync.js";
 import { radarSketch } from "./p5/radarSketch.js";
@@ -93,7 +94,7 @@ import {
   fullscreenEnterIcon,
   fullscreenExitIcon,
   menuScrim,
-  toggleConfirmedOnly
+  toggleConfirmedOnly,
 } from "./dom.js";
 
 import { initializeTheme } from "./theme.js";
@@ -272,7 +273,6 @@ saveSessionBtn.addEventListener("click", () => {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 });
-
 
 /**
  * A callback that runs for every new video frame presented to the screen.
@@ -755,7 +755,6 @@ colorToggles.forEach((t) => {
     if (t === toggleDebugOverlay || t === toggleDebug2Overlay) {
       updateDebugOverlay(videoPlayer.currentTime);
       updatePersistentOverlays(videoPlayer.currentTime);
-
     }
   });
 });
@@ -804,7 +803,7 @@ document.addEventListener("keydown", (event) => {
     "4",
     "t",
     "d",
-    "c",
+    "g",
     "r",
     "p",
     "a",
@@ -865,7 +864,7 @@ document.addEventListener("keydown", (event) => {
   if (key === "d") {
     toggleVelocity.click();
   }
-  if (key === "c") {
+  if (key === "g") {
     toggleCloseUp.click();
   }
   if (key === "r") {
@@ -882,13 +881,13 @@ document.addEventListener("keydown", (event) => {
     toggleDebugOverlay.click();
     toggleDebug2Overlay.click();
     if (isDebug1Visible && isDebug2Visible) {
-        radarInfoOverlay.classList.add("hidden");
-        videoInfoOverlay.classList.add("hidden");
-        return;
-      }
-      // Otherwise, make sure they are visible.
-      radarInfoOverlay.classList.remove("hidden");
-      videoInfoOverlay.classList.remove("hidden");
+      radarInfoOverlay.classList.add("hidden");
+      videoInfoOverlay.classList.add("hidden");
+      return;
+    }
+    // Otherwise, make sure they are visible.
+    radarInfoOverlay.classList.remove("hidden");
+    videoInfoOverlay.classList.remove("hidden");
   }
   if (key === "m") {
     if (collapsibleMenu.classList.contains("-translate-x-full")) {
@@ -1041,7 +1040,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!appState.p5_instance) {
           appState.p5_instance = new p5(radarSketch);
         }
+        if (!appState.zoomSketchInstance) {
+          appState.zoomSketchInstance = new p5(zoomSketch, 'zoom-canvas-container');
+        }
       }
+      //document.getElementById("zoom-panel").style.display = "none";
     };
 
     if (jsonBlob) {

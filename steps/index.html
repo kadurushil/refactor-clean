@@ -147,14 +147,15 @@
               id="toggle-debug2-overlay" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" /> Show
             Advanced Debug (A)</label>
           <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-close-up"
-              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" /> CLOSE-UP (C)</label>
+              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" /> GOD MODE </label>
           <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-predicted-pos"
-              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" checked/> Show Predicted Position
+              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" checked /> Show Predicted Position
             (P)</label>
           <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-covariance"
               class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" /> Show Covariance</label>
-          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-confirmed-only"
-              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" checked />
+          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
+              id="toggle-confirmed-only" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+              checked />
             Confirmed Tracks
           </label>
         </div>
@@ -208,6 +209,10 @@
     </div>
   </aside>
 
+  <div id="zoom-panel"
+    class="hidden fixed bottom-11 right-5 h-[50%] w-1/2 bg-white dark:bg-gray-800 z-20 shadow-2xl border-l-2 border-t-2 border-gray-300 dark:border-gray-600">
+    <div id="zoom-canvas-container" class="w-full h-full"></div>
+  </div>
   <!-- Open Menu Button -->
   <button id="toggle-menu-btn"
     class="fixed top-20 left-3 z-20 bg-white dark:bg-gray-700 p-2 rounded-md shadow-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all">

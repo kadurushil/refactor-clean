@@ -18,7 +18,8 @@ import {
   toggleVelocity,
   toggleStationaryColor,
   toggleConfirmedOnly,
-  togglePredictedPos
+  togglePredictedPos,
+  toggleTracks,
 } from "./dom.js";
 
 // Defines a set of SNR (Signal-to-Noise Ratio) colors.
@@ -44,29 +45,28 @@ export const ttcColors = (p) => ({
 // Defines a palette of 20 colors for different clusters.
 export const clusterColors = (p) => [
   // Primary & Secondary Colors
-  p.color(230, 25, 75),   // 1. Red
-  p.color(60, 180, 75),   // 2. Green
-  p.color(0, 130, 200),   // 3. Blue
-  p.color(245, 130, 48),  // 4. Orange
-  p.color(145, 30, 180),  // 5. Purple
-  p.color(70, 240, 240),  // 6. Cyan
+  p.color(230, 25, 75), // 1. Red
+  p.color(60, 180, 75), // 2. Green
+  p.color(0, 130, 200), // 3. Blue
+  p.color(245, 130, 48), // 4. Orange
+  p.color(145, 30, 180), // 5. Purple
+  p.color(70, 240, 240), // 6. Cyan
   // Tertiary & Bright Colors
-  p.color(240, 50, 230),  // 7. Magenta
-  p.color(210, 245, 60),  // 8. Lime
+  p.color(240, 50, 230), // 7. Magenta
+  p.color(210, 245, 60), // 8. Lime
   p.color(250, 190, 212), // 9. Pink
-  p.color(0, 128, 128),   // 10. Teal
+  p.color(0, 128, 128), // 10. Teal
   p.color(220, 190, 255), // 11. Lavender
-  p.color(170, 110, 40),  // 12. Brown
+  p.color(170, 110, 40), // 12. Brown
   p.color(255, 250, 200), // 13. Beige
-  p.color(128, 0, 0),     // 14. Maroon
+  p.color(128, 0, 0), // 14. Maroon
   p.color(170, 255, 195), // 15. Mint
-  p.color(128, 128, 0),   // 16. Olive
+  p.color(128, 128, 0), // 16. Olive
   p.color(255, 215, 180), // 17. Apricot
-  p.color(0, 0, 128),     // 18. Navy
-  p.color(70, 130, 180),  // 19. Steel Blue (Replaced Gray as grey is for unclustered. )
-  p.color(255, 255, 25),  // 20. Yellow
+  p.color(0, 0, 128), // 18. Navy
+  p.color(70, 130, 180), // 19. Steel Blue (Replaced Gray as grey is for unclustered. )
+  p.color(255, 255, 25), // 20. Yellow
 ];
-
 
 // Defines colors for stationary and moving objects.
 export const stationaryColor = (p) => p.color(218, 165, 32); // Goldenrod
@@ -517,19 +517,15 @@ export function drawTrackMarkers(p, plotScales) {
   }
 }
 
-// In src/drawUtils.js
-
-// (Make sure the necessary imports are at the top)
-
 /**
  * Handles the display of a comprehensive info tooltip for all elements under the mouse.
  * @param {p5} p - The p5 instance.
  * @param {object} plotScales - The calculated scales for plotting.
  */
 export function handleCloseUpDisplay(p, plotScales) {
+  // --- Step 1: Gather Hovered Items ---
   const frameData = appState.vizData.radarFrames[appState.currentFrame];
-  if (!frameData) return;
-
+  if (!frameData) return []; // Return empty array if no data
   const hoveredItems = [];
   const radius = 10;
   const localClusterColors = clusterColors(p); // <-- Get the color palette once
@@ -539,95 +535,143 @@ export function handleCloseUpDisplay(p, plotScales) {
     for (const pt of frameData.pointCloud) {
       if (pt.x === null || pt.y === null) continue;
       const screenX = pt.x * plotScales.plotScaleX + p.width / 2;
-      const screenY = p.height * 0.95 - (pt.y * plotScales.plotScaleY);
+      const screenY = p.height * 0.95 - pt.y * plotScales.plotScaleY;
       const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
       if (d < radius) {
-        hoveredItems.push({ type: 'point', data: pt, screenX, screenY });
+        hoveredItems.push({ type: "point", data: pt, screenX, screenY });
       }
     }
   }
 
+  // Find hovered cluster centroids
   if (toggleClusterColor.checked && frameData.clusters) {
-    const clusters = Array.isArray(frameData.clusters) ? frameData.clusters : [frameData.clusters];
+    const clusters = Array.isArray(frameData.clusters)
+      ? frameData.clusters
+      : [frameData.clusters];
     for (const cluster of clusters) {
       if (cluster.x === null || cluster.y === null) continue;
       const screenX = cluster.x * plotScales.plotScaleX + p.width / 2;
-      const screenY = p.height * 0.95 - (cluster.y * plotScales.plotScaleY);
+      const screenY = p.height * 0.95 - cluster.y * plotScales.plotScaleY;
       const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
       if (d < radius) {
-        // ======================= CHANGE START =======================
-        // Get the cluster's color and pass it in the hovered item object
-        const color = cluster.id > 0
-          ? localClusterColors[(cluster.id - 1) % localClusterColors.length]
-          : p.color(128);
-        hoveredItems.push({ type: 'cluster', data: cluster, screenX, screenY, color: color });
-        // ======================== CHANGE END ========================
+        const color =
+          cluster.id > 0
+            ? localClusterColors[(cluster.id - 1) % localClusterColors.length]
+            : p.color(128);
+        hoveredItems.push({
+          type: "cluster",
+          data: cluster,
+          screenX,
+          screenY,
+          color: color,
+        });
       }
     }
   }
 
-  // ... (Step 1c: Find hovered tracks - no changes here) ...
+  // Find hovered track markers and predicted positions
   if (appState.vizData.tracks) {
     for (const track of appState.vizData.tracks) {
-      const log = track.historyLog.find(log => log.frameIdx === appState.currentFrame + 1);
+      const log = track.historyLog.find(
+        (log) => log.frameIdx === appState.currentFrame + 1
+      );
       if (log) {
         if (log.correctedPosition && log.correctedPosition[0] !== null) {
           const pos = log.correctedPosition;
           const screenX = pos[0] * plotScales.plotScaleX + p.width / 2;
-          const screenY = p.height * 0.95 - (pos[1] * plotScales.plotScaleY);
+          const screenY = p.height * 0.95 - pos[1] * plotScales.plotScaleY;
           const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
           if (d < radius) {
-            hoveredItems.push({ type: 'track', data: log, trackId: track.id, screenX, screenY });
+            hoveredItems.push({
+              type: "track",
+              data: log,
+              trackId: track.id,
+              screenX,
+              screenY,
+            });
           }
         }
-        if (togglePredictedPos.checked && log.predictedPosition && log.predictedPosition[0] !== null) {
+        if (
+          togglePredictedPos.checked &&
+          log.predictedPosition &&
+          log.predictedPosition[0] !== null
+        ) {
           const pos = log.predictedPosition;
           const screenX = pos[0] * plotScales.plotScaleX + p.width / 2;
-          const screenY = p.height * 0.95 - (pos[1] * plotScales.plotScaleY);
+          const screenY = p.height * 0.95 - pos[1] * plotScales.plotScaleY;
           const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
           if (d < radius) {
-            hoveredItems.push({ type: 'prediction', data: log, trackId: track.id, screenX, screenY });
+            hoveredItems.push({
+              type: "prediction",
+              data: log,
+              trackId: track.id,
+              screenX,
+              screenY,
+            });
           }
         }
       }
     }
   }
 
-  if (hoveredItems.length === 0) return;
+  // Sort items by their vertical screen position to prevent crossed lines.
+  hoveredItems.sort((a, b) => a.screenY - b.screenY);
 
-  // Generate display text (no changes needed in this part)
+  // If we aren't hovering over anything, draw nothing.
+  if (hoveredItems.length === 0) {
+    return hoveredItems; // Return the empty array
+  }
+
+  // --- Step 2 & 3: Generate Text and Render Tooltip ---
   const infoStrings = [];
-  // ... (The text generation logic remains the same) ...
   for (const item of hoveredItems) {
-    let infoText = '';
+    let infoText = "";
     const data = item.data;
     switch (item.type) {
-      case 'point':
-        const vel = data.velocity !== null ? data.velocity.toFixed(2) : 'N/A';
-        const snr = data.snr !== null ? data.snr.toFixed(1) : 'N/A';
-        infoText = `Point | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(2)} | V:${vel}, SNR:${snr}`;
+      case "point":
+        const vel = data.velocity !== null ? data.velocity.toFixed(2) : "N/A";
+        const snr = data.snr !== null ? data.snr.toFixed(1) : "N/A";
+        infoText = `Point | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(
+          2
+        )} | V:${vel}, SNR:${snr}`;
         break;
-      case 'cluster':
-        const rs = data.radialSpeed !== null ? data.radialSpeed.toFixed(2) : 'N/A';
-        const vx = data.vx !== null ? data.vx.toFixed(2) : 'N/A';
-        const vy = data.vy !== null ? data.vy.toFixed(2) : 'N/A';
-        infoText = `Cluster ${data.id} | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(2)} | rSpeed:${rs}, vX:${vx}, vY:${vy}`;
+      case "cluster":
+        const rs =
+          data.radialSpeed !== null ? data.radialSpeed.toFixed(2) : "N/A";
+        const vx = data.vx !== null ? data.vx.toFixed(2) : "N/A";
+        const vy = data.vy !== null ? data.vy.toFixed(2) : "N/A";
+        infoText = `Cluster ${data.id} | X:${data.x.toFixed(
+          2
+        )}, Y:${data.y.toFixed(2)} | rSpeed:${rs}, vX:${vx}, vY:${vy}`;
         break;
-      case 'track':
-        infoText = `Track ${item.trackId} | X:${data.correctedPosition[0].toFixed(2)}, Y:${data.correctedPosition[1].toFixed(2)}`;
+      case "track":
+        infoText = `Track ${
+          item.trackId
+        } | X:${data.correctedPosition[0].toFixed(
+          2
+        )}, Y:${data.correctedPosition[1].toFixed(2)}`;
         break;
-      case 'prediction':
-        const p_vx = data.predictedVelocity[0] !== null ? data.predictedVelocity[0].toFixed(2) : 'N/A';
-        const p_vy = data.predictedVelocity[1] !== null ? data.predictedVelocity[1].toFixed(2) : 'N/A';
-        infoText = `Pred. for ${item.trackId} | X:${data.predictedPosition[0].toFixed(2)}, Y:${data.predictedPosition[1].toFixed(2)} | vX:${p_vx}, vY:${p_vy}`;
+      case "prediction":
+        const p_vx =
+          data.predictedVelocity[0] !== null
+            ? data.predictedVelocity[0].toFixed(2)
+            : "N/A";
+        const p_vy =
+          data.predictedVelocity[1] !== null
+            ? data.predictedVelocity[1].toFixed(2)
+            : "N/A";
+        infoText = `Pred. for ${
+          item.trackId
+        } | X:${data.predictedPosition[0].toFixed(
+          2
+        )}, Y:${data.predictedPosition[1].toFixed(2)} | vX:${p_vx}, vY:${p_vy}`;
         break;
     }
     if (infoText) {
-      infoStrings.push({text: infoText, color: item.color || null});
+      infoStrings.push({ text: infoText, color: item.color || null });
     }
   }
 
-  // Render the unified tooltip
   p.push();
   p.textSize(12);
   const lineHeight = 15;
@@ -637,50 +681,69 @@ export function handleCloseUpDisplay(p, plotScales) {
   for (const strInfo of infoStrings) {
     boxWidth = Math.max(boxWidth, p.textWidth(strInfo.text));
   }
-  const boxHeight = (infoStrings.length * lineHeight) + (boxPadding * 2);
-  boxWidth += (boxPadding * 2);
+  const boxHeight = infoStrings.length * lineHeight + boxPadding * 2;
+  boxWidth += boxPadding * 2;
 
   const xOffset = 20;
-  let boxX = p.mouseX + xOffset;
-  let boxY = p.mouseY - (boxHeight / 2);
-
-  if (boxX + boxWidth > p.width) {
+  let boxX, lineAnchorX;
+  if (p.mouseX + xOffset + boxWidth > p.width) {
     boxX = p.mouseX - boxWidth - xOffset;
+    lineAnchorX = boxX + boxWidth;
+  } else {
+    boxX = p.mouseX + xOffset;
+    lineAnchorX = boxX;
   }
+  let boxY = p.mouseY - boxHeight / 2;
   boxY = p.constrain(boxY, 0, p.height - boxHeight);
 
-  // ... (Highlighting logic remains the same) ...
   const highlightColor = p.color(46, 204, 113);
-  for (let i = 0; i < hoveredItems.length; i++) {
-    const item = hoveredItems[i];
+  for (const item of hoveredItems) {
     p.noFill();
     p.stroke(highlightColor);
     p.strokeWeight(2);
     p.ellipse(item.screenX, item.screenY, 15, 15);
-    p.strokeWeight(1);
-    p.line(boxX + boxPadding, boxY + boxPadding + (i * lineHeight) + (lineHeight / 2), item.screenX, item.screenY);
   }
 
-  const bgColor = document.documentElement.classList.contains('dark') ? p.color(20, 20, 30, 220) : p.color(245, 245, 245, 220);
+  const bgColor = document.documentElement.classList.contains("dark")
+    ? p.color(20, 20, 30, 220)
+    : p.color(245, 245, 245, 220);
   p.fill(bgColor);
   p.stroke(highlightColor);
   p.strokeWeight(1);
   p.rect(boxX, boxY, boxWidth, boxHeight, 4);
 
-  // ======================= CHANGE START =======================
-  // Draw the text inside the box, applying colors where needed
-  const defaultTextColor = document.documentElement.classList.contains('dark') ? p.color(230) : p.color(20);
-  p.noStroke();
-  p.textAlign(p.LEFT, p.TOP);
+  const defaultTextColor = document.documentElement.classList.contains("dark")
+    ? p.color(230)
+    : p.color(20);
+  const dividerColor = document.documentElement.classList.contains("dark")
+    ? p.color(80)
+    : p.color(200);
+
   for (let i = 0; i < infoStrings.length; i++) {
     const info = infoStrings[i];
-    // If a color is specified for this line, use it. Otherwise, use the default.
-    p.fill(info.color || defaultTextColor);
-    p.text(info.text, boxX + boxPadding, boxY + boxPadding + (i * lineHeight));
-  }
-  // ======================== CHANGE END ========================
+    const lineY = boxY + boxPadding + i * lineHeight;
 
+    if (i > 0) {
+      p.stroke(dividerColor);
+      p.strokeWeight(0.5);
+      p.line(boxX + 1, lineY, boxX + boxWidth - 1, lineY);
+    }
+
+    p.noStroke();
+    p.textAlign(p.LEFT, p.TOP);
+    p.fill(info.color || defaultTextColor);
+    p.text(info.text, boxX + boxPadding, lineY);
+
+    const item = hoveredItems[i];
+    const lineAnchorY = lineY + lineHeight / 2;
+    p.stroke(highlightColor);
+    p.strokeWeight(1);
+    p.line(lineAnchorX, lineAnchorY, item.screenX, item.screenY);
+  }
   p.pop();
+
+  // Return the list of hovered items for other functions (like the zoom window) to use.
+  return hoveredItems;
 }
 
 export function drawCovarianceEllipse(
@@ -780,6 +843,390 @@ export function drawEgoVehicle(p, plotScales) {
   p.pop();
 }
 
+
+
+//OLD_Solid Fill Logic
+
+/**
+ * Draws the defined regions of interest (ROI) based on dynamic data from the current frame.
+ * @param {p5} p - The p5 instance to draw on.
+ * @param {object} frameData - The data for the current radar frame.
+ * @param {object} plotScales - The calculated scales for plotting.
+ */
+/**
+
+ */
+export function drawRegionsOfInterest(p, frameData, plotScales) {
+  // --- THIS CHECK IS ESSENTIAL AND MUST NOT BE REMOVED ---
+  // It gracefully handles frames that do not have the barrier data.
+  if (!frameData || !frameData.filtered_barrier_x) {
+    console.warn(
+      `Skipping bcoz no filtered barrier track in frame ${appState.currentFrame}. `,
+      frameData
+    );
+    return; // Exit the function if the data is missing for this frame.
+  }
+  //check here once
+  const isDark = document.documentElement.classList.contains("dark");
+  // Using brighter, more visible colors with transparency
+  const tracksRegionColor = isDark
+    ? p.color(137, 207, 240, 50)
+    : p.color(173, 216, 230, 80);
+  const closeRegionColor = isDark
+    ? p.color(255, 182, 193, 60)
+    : p.color(255, 182, 193, 90);
+
+  const [left, right] = frameData.filtered_barrier_x;
+
+  p.push();
+  p.stroke(1);
+  p.strokeWeight(1);
+  p.noFill();
+  p.rectMode(p.CORNERS); //  console.warn(`Skipping bcoz no filtered barrier track in frame ${appState.currentFrame}. `, frameData);
+
+  // --- Draw Tracks Region ---
+  p.fill(tracksRegionColor);
+  p.rect(
+    left * plotScales.plotScaleX,
+    ROI_TRACKS_Y_MIN * plotScales.plotScaleY,
+    right * plotScales.plotScaleX,
+    ROI_TRACKS_Y_MAX * plotScales.plotScaleY
+  );
+
+  // --- Draw Close Region ---
+  p.fill(closeRegionColor);
+  p.rect(
+    left * plotScales.plotScaleX,
+    ROI_CLOSE_Y_MIN * plotScales.plotScaleY,
+    right * plotScales.plotScaleX,
+    ROI_CLOSE_Y_MAX * plotScales.plotScaleY
+  );
+
+  p.pop();
+}
+//OLD_Solid Fill Logic
+
+/**
+ * Draws the cluster centroids on the radar canvas as an asterisk.
+ * Handles cases where a single cluster is an object instead of an array.
+ * @param {p5} p - The p5 instance.
+ * @param {Array|object} clustersInput - The cluster data for the current frame.
+ * @param {object} plotScales - The calculated scales for plotting.
+ */
+export function drawClusterCentroids(p, clustersInput, plotScales) {
+  if (!clustersInput) {
+    return; // Do nothing if there's no cluster data
+  }
+
+  // --- START: Robustness Fix ---
+  // This check handles the data inconsistency. If clustersInput is not an array,
+  // we wrap the single cluster object in an array so the loop works consistently.
+  const clusters = Array.isArray(clustersInput)
+    ? clustersInput
+    : [clustersInput];
+  // --- END: Robustness Fix ---
+
+  if (clusters.length === 0) {
+    return; // Exit if the resulting array is empty
+  }
+
+  const localClusterColors = clusterColors(p);
+
+  for (const cluster of clusters) {
+    if (
+      cluster &&
+      typeof cluster.x === "number" &&
+      typeof cluster.y === "number"
+    ) {
+      const x = cluster.x * plotScales.plotScaleX;
+      const y = cluster.y * plotScales.plotScaleY;
+
+      const color =
+        cluster.id > 0
+          ? localClusterColors[(cluster.id - 1) % localClusterColors.length]
+          : p.color(128);
+
+      p.push();
+      p.stroke(color);
+      p.strokeWeight(1.5);
+
+      const armLength = 5;
+
+      p.line(x, y - armLength, x, y + armLength);
+      p.line(x - armLength, y, x + armLength, y);
+      p.line(
+        x - armLength * 0.7,
+        y - armLength * 0.7,
+        x + armLength * 0.7,
+        y + armLength * 0.7
+      );
+      p.line(
+        x + armLength * 0.7,
+        y - armLength * 0.7,
+        x - armLength * 0.7,
+        y + armLength * 0.7
+      );
+
+      p.pop();
+    }
+  }
+}
+
+//--- drawClusterCentroids function---//
+// old trial functions to replace the close up display.
+
+// In src/drawUtils.js
+
+// Replace the ENTIRE 'handleCloseUpDisplay' function with these TWO new functions:
+
+// /**
+//  * Finds all radar elements (points, tracks, etc.) under the mouse cursor.
+//  * @param {p5} p - The p5 instance (for mouse coordinates and distance checks).
+//  * @param {object} plotScales - The calculated scales for plotting.
+//  * @returns {Array} An array of hovered item objects.
+//  */
+// export function findHoveredItems(p, plotScales) {
+//   const frameData = appState.vizData.radarFrames[appState.currentFrame];
+//   if (!frameData) return [];
+
+//   const hoveredItems = [];
+//   const radius = 10;
+//   const localClusterColors = clusterColors(p);
+
+//   // Find hovered points
+//   if (frameData.pointCloud) {
+//     for (const pt of frameData.pointCloud) {
+//       if (pt.x === null || pt.y === null) continue;
+//       const screenX = pt.x * plotScales.plotScaleX + p.width / 2;
+//       const screenY = p.height * 0.95 - (pt.y * plotScales.plotScaleY);
+//       if (p.dist(p.mouseX, p.mouseY, screenX, screenY) < radius) {
+//         hoveredItems.push({ type: 'point', data: pt, screenX, screenY });
+//       }
+//     }
+//   }
+
+//   // Find hovered cluster centroids
+//   if (toggleClusterColor.checked && frameData.clusters) {
+//     const clusters = Array.isArray(frameData.clusters) ? frameData.clusters : [frameData.clusters];
+//     for (const cluster of clusters) {
+//       if (cluster.x === null || cluster.y === null) continue;
+//       const screenX = cluster.x * plotScales.plotScaleX + p.width / 2;
+//       const screenY = p.height * 0.95 - (cluster.y * plotScales.plotScaleY);
+//       if (p.dist(p.mouseX, p.mouseY, screenX, screenY) < radius) {
+//         const color = cluster.id > 0 ? localClusterColors[(cluster.id - 1) % localClusterColors.length] : p.color(128);
+//         hoveredItems.push({ type: 'cluster', data: cluster, screenX, screenY, color });
+//       }
+//     }
+//   }
+
+//   // Find hovered tracks and predictions
+//   if (appState.vizData.tracks) {
+//     for (const track of appState.vizData.tracks) {
+//       const log = track.historyLog.find(log => log.frameIdx === appState.currentFrame + 1);
+//       if (log) {
+//         if (log.correctedPosition && log.correctedPosition[0] !== null) {
+//           const pos = log.correctedPosition;
+//           const screenX = pos[0] * plotScales.plotScaleX + p.width / 2;
+//           const screenY = p.height * 0.95 - (pos[1] * plotScales.plotScaleY);
+//           if (p.dist(p.mouseX, p.mouseY, screenX, screenY) < radius) {
+//             hoveredItems.push({ type: 'track', data: log, trackId: track.id, screenX, screenY });
+//           }
+//         }
+//         if (togglePredictedPos.checked && log.predictedPosition && log.predictedPosition[0] !== null) {
+//           const pos = log.predictedPosition;
+//           const screenX = pos[0] * plotScales.plotScaleX + p.width / 2;
+//           const screenY = p.height * 0.95 - (pos[1] * plotScales.plotScaleY);
+//            if (p.dist(p.mouseX, p.mouseY, screenX, screenY) < radius) {
+//             hoveredItems.push({ type: 'prediction', data: log, trackId: track.id, screenX, screenY });
+//           }
+//         }
+//       }
+//     }
+//   }
+
+//   hoveredItems.sort((a, b) => a.screenY - b.screenY);
+//   return hoveredItems;
+// }
+
+// /**
+//  * Draws the visual tooltip and connectors for a given list of hovered items.
+//  * @param {p5} p - The p5 instance to draw with.
+//  * @param {Array} hoveredItems - An array of items from findHoveredItems.
+//  */
+// export function drawTooltip(p, hoveredItems) {
+//     if (hoveredItems.length === 0) return;
+
+//     const infoStrings = [];
+//     // Generate display text
+//     for (const item of hoveredItems) {
+//         let infoText = '';
+//         const data = item.data;
+//         switch (item.type) {
+//             case 'point':
+//                 infoText = `Point | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(2)} | V:${data.velocity?.toFixed(2)}, SNR:${data.snr?.toFixed(1)}`;
+//                 break;
+//             case 'cluster':
+//                 infoText = `Cluster ${data.id} | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(2)} | rSpeed:${data.radialSpeed?.toFixed(2)}`;
+//                 break;
+//             case 'track':
+//                 infoText = `Track ${item.trackId} | X:${data.correctedPosition[0].toFixed(2)}, Y:${data.correctedPosition[1].toFixed(2)}`;
+//                 break;
+//             case 'prediction':
+//                  infoText = `Pred. for ${item.trackId} | X:${data.predictedPosition[0].toFixed(2)}, Y:${data.predictedPosition[1].toFixed(2)}`;
+//                 break;
+//         }
+//         if (infoText) {
+//             infoStrings.push({ text: infoText, color: item.color || null });
+//         }
+//     }
+
+//     p.push();
+//     p.textSize(12);
+//     const lineHeight = 15;
+//     const boxPadding = 8;
+//     let boxWidth = 0;
+
+//     infoStrings.forEach(info => {
+//         boxWidth = Math.max(boxWidth, p.textWidth(info.text));
+//     });
+
+//     const boxHeight = (infoStrings.length * lineHeight) + (boxPadding * 2);
+//     boxWidth += (boxPadding * 2);
+
+//     const xOffset = 20;
+//     let boxX = p.mouseX + xOffset;
+//     if (boxX + boxWidth > p.width) {
+//         boxX = p.mouseX - boxWidth - xOffset;
+//     }
+//     let boxY = p.mouseY - (boxHeight / 2);
+//     boxY = p.constrain(boxY, 0, p.height - boxHeight);
+
+//     // Draw highlights and connectors
+//     const highlightColor = p.color(46, 204, 113);
+//     hoveredItems.forEach((item, i) => {
+//         p.noFill();
+//         p.stroke(highlightColor);
+//         p.strokeWeight(2);
+//         p.ellipse(item.screenX, item.screenY, 15, 15);
+//         p.strokeWeight(1);
+//         const lineAnchorX = boxX < p.mouseX ? boxX + boxWidth : boxX;
+//         p.line(lineAnchorX, boxY + boxPadding + (i * lineHeight) + (lineHeight / 2), item.screenX, item.screenY);
+//     });
+
+//     // Draw the box and text
+//     const bgColor = document.documentElement.classList.contains('dark') ? p.color(20, 20, 30, 220) : p.color(245, 245, 245, 220);
+//     p.fill(bgColor);
+//     p.stroke(highlightColor);
+//     p.strokeWeight(1);
+//     p.rect(boxX, boxY, boxWidth, boxHeight, 4);
+
+//     const defaultTextColor = document.documentElement.classList.contains('dark') ? p.color(230) : p.color(20);
+//     p.noStroke();
+//     p.textAlign(p.LEFT, p.TOP);
+//     infoStrings.forEach((info, i) => {
+//         p.fill(info.color || defaultTextColor);
+//         p.text(info.text, boxX + boxPadding, boxY + boxPadding + (i * lineHeight));
+//     });
+//     p.pop();
+// }
+// // /**
+// //  * Renders a high-fidelity, zoomed-in view of the scene around the mouse cursor.
+// //  * @param {p5} p - The p5 instance.
+// //  * @param {object} plotScales - The calculated scales for plotting.
+// //  * @param {Array} hoveredItems - The array of items currently under the mouse.
+// //  */
+// // export function drawZoomWindow(p, plotScales, hoveredItems) {
+// //   // --- Zoom Window Configuration (easily modifiable) ---
+// //   // The magnification level. 4.0 means 4x zoom.
+// //   const zoomFactor = 4.0;
+// //   // The output size of the zoom window on the screen, in pixels.
+// //   const zoomWindowWidth = 250;
+// //   const zoomWindowHeight = 250;
+
+// //   // Position the zoom window in the bottom-right of the canvas.
+// //   const boxX = p.width - zoomWindowWidth - 20;
+// //   const boxY = p.height - zoomWindowHeight - 20;
+
+// //   p.push(); // Save the current global drawing state.
+
+// //   // --- Create a "Portal" to the Zoomed View ---
+// //   // We use a clipping mask to ensure the zoomed content doesn't spill out.
+// //   p.drawingContext.save();
+// //   p.drawingContext.rect(boxX, boxY, zoomWindowWidth, zoomWindowHeight);
+// //   p.drawingContext.clip();
+
+// //   // We now transform the entire canvas coordinate system for the redraw.
+// //   p.translate(boxX, boxY); // 1. Move origin to the zoom box's corner.
+// //   p.scale(zoomFactor);    // 2. Scale everything up.
+// //   // 3. Translate so the mouse position is in the center of the box.
+// //   p.translate(-p.mouseX + zoomWindowWidth / (2 * zoomFactor), -p.mouseY + zoomWindowHeight / (2 * zoomFactor));
+
+// //   // --- Redraw the Entire Scene in the New Zoomed Coordinate System ---
+// //   // This provides a high-fidelity, not just pixelated, zoom.
+// //   p.background(document.documentElement.classList.contains('dark') ? p.color(55, 65, 81) : 255);
+// //   p.image(p.get(), 0, 0); // A trick to redraw the static background buffer
+
+// //   p.push(); // Nested push for the main radar transformations.
+// //   p.translate(p.width / 2, p.height * 0.95);
+// //   p.scale(1, -1);
+// //   const frameData = appState.vizData.radarFrames[appState.currentFrame];
+// //   drawAxes(p, plotScales);
+// //   drawEgoVehicle(p, plotScales);
+// //   if (frameData) {
+// //       drawRegionsOfInterest(p, frameData, plotScales);
+// //       if (toggleTracks.checked) {
+// //           drawTrajectories(p, plotScales);
+// //           drawTrackMarkers(p, plotScales);
+// //       }
+// //       drawPointCloud(p, frameData.pointCloud, plotScales);
+// //       if (toggleClusterColor.checked) {
+// //           drawClusterCentroids(p, frameData.clusters, plotScales);
+// //       }
+// //       // Redraw predicted positions if toggled
+// //       if (togglePredictedPos.checked) {
+// //           for (const track of appState.vizData.tracks) {
+// //               const log = track.historyLog.find(log => log.frameIdx === appState.currentFrame + 1);
+// //               if (log && log.predictedPosition && log.predictedPosition[0] !== null) {
+// //                   const pos = log.predictedPosition;
+// //                   const x = pos[0] * plotScales.plotScaleX;
+// //                   const y = pos[1] * plotScales.plotScaleY;
+// //                   p.push();
+// //                   p.stroke(255, 0, 0); p.strokeWeight(2);
+// //                   p.line(x - 4, y - 4, x + 4, y + 4);
+// //                   p.line(x + 4, y - 4, x - 4, y + 4);
+// //                   p.pop();
+// //               }
+// //           }
+// //       }
+// //   }
+// //   p.pop(); // End of radar transformations.
+
+// //   // --- Redraw Tooltip and Connectors ---
+// //   // We re-run the original tooltip function, which will now draw inside our zoomed view,
+// //   // making the connector lines perfectly accurate.
+// //   handleCloseUpDisplay(p, plotScales);
+
+// //   // Clean up the clipping mask.
+// //   p.drawingContext.restore();
+
+// //   // --- Draw Border and Crosshairs on Top of Everything ---
+// //   p.noFill();
+// //   p.stroke(46, 204, 113); // Highlight green border.
+// //   p.strokeWeight(2);
+// //   p.rect(boxX, boxY, zoomWindowWidth, zoomWindowHeight);
+
+// //   // Red crosshairs to mark the exact mouse position.
+// //   const crosshairSize = 10;
+// //   p.stroke(255, 0, 0, 150);
+// //   p.strokeWeight(1);
+// //   p.line(boxX + zoomWindowWidth/2 - crosshairSize, boxY + zoomWindowHeight/2, boxX + zoomWindowWidth/2 + crosshairSize, boxY + zoomWindowHeight/2);
+// //   p.line(boxX + zoomWindowWidth/2, boxY + zoomWindowHeight/2 - crosshairSize, boxX + zoomWindowWidth/2, boxY + zoomWindowHeight/2 + crosshairSize);
+
+// //   p.pop(); // Restore the original global drawing state.
+// // }
+
+
+// OLD HATCH FILL logic 
 // /**
 //  * Draws a hatched pattern inside a rectangle defined by corner points.
 //  * This is a new helper function.
@@ -902,114 +1349,3 @@ export function drawEgoVehicle(p, plotScales) {
 
 //   b.pop();
 // }
-
-//OLD_Solid Fill Logic
-
-/**
- * Draws the defined regions of interest (ROI) based on dynamic data from the current frame.
- * @param {p5} p - The p5 instance to draw on.
- * @param {object} frameData - The data for the current radar frame.
- * @param {object} plotScales - The calculated scales for plotting.
- */
-/**
-
- */
-export function drawRegionsOfInterest(p, frameData, plotScales) {
-  // --- THIS CHECK IS ESSENTIAL AND MUST NOT BE REMOVED ---
-  // It gracefully handles frames that do not have the barrier data.
-  if (!frameData || !frameData.filtered_barrier_x) {
-     console.warn(`Skipping bcoz no filtered barrier track in frame ${appState.currentFrame}. `, frameData);
-    return; // Exit the function if the data is missing for this frame.
-  }
-//check here once 
-  const isDark = document.documentElement.classList.contains("dark");
-  // Using brighter, more visible colors with transparency
-  const tracksRegionColor = isDark
-    ? p.color(137, 207, 240, 50)
-    : p.color(173, 216, 230, 80);
-  const closeRegionColor = isDark
-    ? p.color(255, 182, 193, 60)
-    : p.color(255, 182, 193, 90);
-
-  const [left, right] = frameData.filtered_barrier_x;
-
-  p.push();
-  p.stroke(1);
-  p.strokeWeight(1);
-  p.noFill();
-  p.rectMode(p.CORNERS);//  console.warn(`Skipping bcoz no filtered barrier track in frame ${appState.currentFrame}. `, frameData);
-
-  // --- Draw Tracks Region ---
-  p.fill(tracksRegionColor);
-  p.rect(
-    left * plotScales.plotScaleX,
-    ROI_TRACKS_Y_MIN * plotScales.plotScaleY,
-    right * plotScales.plotScaleX,
-    ROI_TRACKS_Y_MAX * plotScales.plotScaleY
-  );
-
-  // --- Draw Close Region ---
-  p.fill(closeRegionColor);
-  p.rect(
-    left * plotScales.plotScaleX,
-    ROI_CLOSE_Y_MIN * plotScales.plotScaleY,
-    right * plotScales.plotScaleX,
-    ROI_CLOSE_Y_MAX * plotScales.plotScaleY
-  );
-
-  p.pop();
-}
-//OLD_Solid Fill Logic
-
-
-/**
- * Draws the cluster centroids on the radar canvas as an asterisk.
- * Handles cases where a single cluster is an object instead of an array.
- * @param {p5} p - The p5 instance.
- * @param {Array|object} clustersInput - The cluster data for the current frame.
- * @param {object} plotScales - The calculated scales for plotting.
- */
-export function drawClusterCentroids(p, clustersInput, plotScales) {
-  if (!clustersInput) {
-    return; // Do nothing if there's no cluster data
-  }
-
-  // --- START: Robustness Fix ---
-  // This check handles the data inconsistency. If clustersInput is not an array,
-  // we wrap the single cluster object in an array so the loop works consistently.
-  const clusters = Array.isArray(clustersInput) ? clustersInput : [clustersInput];
-  // --- END: Robustness Fix ---
-  
-  if (clusters.length === 0) {
-    return; // Exit if the resulting array is empty
-  }
-
-  const localClusterColors = clusterColors(p);
-
-  for (const cluster of clusters) {
-    if (cluster && typeof cluster.x === 'number' && typeof cluster.y === 'number') {
-      
-      const x = cluster.x * plotScales.plotScaleX;
-      const y = cluster.y * plotScales.plotScaleY;
-
-      const color = cluster.id > 0 
-        ? localClusterColors[(cluster.id - 1) % localClusterColors.length] 
-        : p.color(128);
-
-      p.push();
-      p.stroke(color);
-      p.strokeWeight(1.5);
-
-      const armLength = 5;
-
-      p.line(x, y - armLength, x, y + armLength);
-      p.line(x - armLength, y, x + armLength, y);
-      p.line(x - armLength * 0.7, y - armLength * 0.7, x + armLength * 0.7, y + armLength * 0.7);
-      p.line(x + armLength * 0.7, y - armLength * 0.7, x - armLength * 0.7, y + armLength * 0.7);
-      
-      p.pop();
-    }
-  }
-}
-
-//--- drawClusterCentroids function---//
