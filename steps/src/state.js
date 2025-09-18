@@ -1,4 +1,6 @@
 export const appState = {
+  isRawOnlyMode: false, // <-- ADD THIS LINE
+
   // Stores the parsed visualization data (radar frames, tracks, etc.)
   vizData: null,
   zoomSketchInstance: null, // Add this line

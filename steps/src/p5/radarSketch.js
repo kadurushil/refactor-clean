@@ -139,7 +139,9 @@ export const radarSketch = function (p) {
     // Get current frame data
     const frameData = appState.vizData.radarFrames[appState.currentFrame];
     if (frameData) {
-      drawRegionsOfInterest(p, frameData, plotScales);
+      drawPointCloud(p, frameData.pointCloud, plotScales);
+      if (!appState.isRawOnlyMode) {
+        drawRegionsOfInterest(p, frameData, plotScales);
       drawTrackMarkers(p, plotScales);
 
       // Draw object trajectories and markers if enabled
@@ -197,18 +199,21 @@ export const radarSketch = function (p) {
           }
         }
       }
-      // Draw the point cloud for the current frame
-      drawPointCloud(p, frameData.pointCloud, plotScales);
+      
       // Draw cluster centroids if enabled
       if (toggleClusterColor.checked) {
         drawClusterCentroids(p, frameData.clusters, plotScales);
       }
+
+
+      }
+      
     }
     p.pop();
 
     // 4. Draw the new legend buffer onto the main canvas
     // This is placed at the bottom-right corner.
-    if (toggleTracks.checked) {
+    if (toggleTracks.checked && !appState.isRawOnlyMode) {
       p.image(
         trackLegendBuffer,
         p.width - trackLegendBuffer.width - 10,

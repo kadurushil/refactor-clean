@@ -811,6 +811,7 @@ document.addEventListener("keydown", (event) => {
     "s",
     "m",
     "q",
+    "c"
   ];
 
   if (!appState.vizData || !recognizedKeys.includes(key)) {
@@ -871,6 +872,13 @@ document.addEventListener("keydown", (event) => {
   if (key === "r") {
     resetVisualization();
   }
+  if (key === "c") {
+    appState.isRawOnlyMode = !appState.isRawOnlyMode;  
+    if(appState.p5_instance) {
+        appState.p5_instance.redraw();
+    }
+  }
+  
   if (key === "p") {
     togglePredictedPos.click();
     appState.p5_instance.redraw();
