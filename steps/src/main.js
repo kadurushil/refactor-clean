@@ -38,6 +38,7 @@ import {
   formatTime,
 } from "./utils.js";
 import { appState } from "./state.js";
+window.appState = appState; // exposing the appState to console
 import {
   themeToggleBtn,
   canvasContainer,

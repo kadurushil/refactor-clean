@@ -331,7 +331,7 @@ export function updatePersistentOverlays(currentMediaTime) {
     appState.videoStartDate.getTime() + currentMediaTime * 1000
   );
   const videoFrame = Math.floor(currentMediaTime * VIDEO_FPS);
-  console.warn('Could not load radarframes ', appState.vizData.radarFrames)
+  //console.warn('Could not load radarframes ', appState.vizData.radarFrames) console warning for reference
 
   videoInfoOverlay.innerHTML = `
         Frame: ${videoFrame}

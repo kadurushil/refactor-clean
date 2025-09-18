@@ -200,8 +200,8 @@ function drawZoomTooltip(p, hoveredItems, mainMouseX) {
   const BASE_LINE_HEIGHT = 15;
   const BASE_PADDING = 8;
   const BASE_HIGHLIGHT_THICKNESS = 2;
-  const BASE_LINE_THICKNESS = 1;
-  const BASE_DISTANCE_OFFSET = 45; // <-- How far the tooltip is from the items
+  const BASE_LINE_THICKNESS = 2;
+  const BASE_DISTANCE_OFFSET = 65; // <-- How far the tooltip is from the items
 
   // COLORS
   const highlightColor = p.color(46, 204, 113); // Green for border and lines
