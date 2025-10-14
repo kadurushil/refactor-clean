@@ -284,6 +284,7 @@ export const zoomSketch = function (p) {
   appState.zoomFactor = 4; // Set a default zoom factor in the global state
 
   p.setup = function () {
+    console.log("zoomSketch: Setup function has been called."); //debug
     p.noLoop();
   };
 
@@ -295,16 +296,29 @@ export const zoomSketch = function (p) {
       if (container && container.offsetWidth > 0) {
         canvas = p.createCanvas(container.offsetWidth, container.offsetHeight);
         canvas.parent(containerId);
+        console.log(`zoomSketch: Canvas CREATED with dimensions ${p.width}x${p.height}`); // debug
       } else {
+        console.warn("zoomSketch: updateAndDraw called, but container is not ready. Aborting draw."); //debug
         return;
       }
     }
+    console.log(`zoomSketch: updateAndDraw is running. Canvas dimensions are ${p.width}x${p.height}. Hovered items: ${hoveredItems.length}`); //debug
     p.redraw();
   };
 
+  p.handleResize = function() {
+    console.log("zoomSketch: handleResize triggered. Destroying old canvas.");
+    if (canvas) {
+      canvas.remove(); // p5.js function to properly remove the canvas from the DOM
+      canvas = null;   // Set the internal reference to null
+    }
+    // The canvas will be recreated automatically the next time updateAndDraw() is called,
+    // at which point the container will have its correct, final dimensions.
+  }
   p.draw = function () {
     if (!appState.vizData || !canvas) return;
-
+    console.log("zoomSketch: Draw function is executing."); //debug
+    
     p.background(
       document.documentElement.classList.contains("dark")
         ? p.color(55, 65, 81)
@@ -385,9 +399,11 @@ export const zoomSketch = function (p) {
     // This code runs *after* the zoom transformations have been popped,
     // so it draws directly onto the canvas as a fixed UI element.
     p.push();
-    const titleLabel = document.getElementById('toggle-close-up').parentElement;
-    const titleText = titleLabel ? titleLabel.textContent.trim() : 'Zoom Mode';
-    const textColor = document.documentElement.classList.contains("dark") ? 220 : 80;
+    const titleLabel = document.getElementById("toggle-close-up").parentElement;
+    const titleText = titleLabel ? titleLabel.textContent.trim() : "Zoom Mode";
+    const textColor = document.documentElement.classList.contains("dark")
+      ? 220
+      : 80;
     p.fill(textColor);
     p.noStroke();
     p.textSize(16);
@@ -397,7 +413,6 @@ export const zoomSketch = function (p) {
     p.pop();
     // --- END: DRAW TITLE OVERLAY ---
 
-
     // --- Draw Crosshairs ---
     p.stroke(255, 0, 0, 150);
     p.strokeWeight(1.5);
@@ -405,12 +420,4 @@ export const zoomSketch = function (p) {
     p.line(p.width / 2, p.height / 2 - 15, p.width / 2, p.height / 2 + 15);
   };
 
-  p.windowResized = function () {
-    if (canvas) {
-      const container = document.getElementById(containerId);
-      if (container) {
-        p.resizeCanvas(container.offsetWidth, container.offsetHeight);
-      }
-    }
-  };
 };

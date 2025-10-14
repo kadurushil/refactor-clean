@@ -142,72 +142,69 @@ export const radarSketch = function (p) {
       drawPointCloud(p, frameData.pointCloud, plotScales);
       if (!appState.isRawOnlyMode) {
         drawRegionsOfInterest(p, frameData, plotScales);
-      drawTrackMarkers(p, plotScales);
+        drawTrackMarkers(p, plotScales);
 
-      // Draw object trajectories and markers if enabled
-      // if (toggleVelocity.checked) {
-      //   drawTrackMarkers(p, plotScales);
-      // }
-      if (togglePredictedPos.checked) {
-        for (const track of appState.vizData.tracks) {
-          const log = track.historyLog.find(
-            (log) => log.frameIdx === appState.currentFrame + 1
-          );
-          if (
-            log &&
-            log.predictedPosition &&
-            log.predictedPosition[0] !== null
-          ) {
-            const pos = log.predictedPosition;
-            const x = pos[0] * plotScales.plotScaleX;
-            const y = pos[1] * plotScales.plotScaleY;
-
-            p.push();
-            p.stroke(255, 0, 0); // Red for predicted
-            p.strokeWeight(2);
-            p.line(x - 4, y - 4, x + 4, y + 4);
-            p.line(x + 4, y - 4, x - 4, y + 4);
-            p.pop();
-          }
-        }
-      }
-
-      if (toggleTracks.checked) {
-        drawTrajectories(p, plotScales);
-        if (toggleCovariance.checked) {
+        // Draw object trajectories and markers if enabled
+        // if (toggleVelocity.checked) {
+        //   drawTrackMarkers(p, plotScales);
+        // }
+        if (togglePredictedPos.checked) {
           for (const track of appState.vizData.tracks) {
             const log = track.historyLog.find(
               (log) => log.frameIdx === appState.currentFrame + 1
             );
             if (
               log &&
-              log.ellipseRadii &&
-              typeof log.ellipseAngle !== "undefined"
+              log.predictedPosition &&
+              log.predictedPosition[0] !== null
             ) {
               const pos = log.predictedPosition;
-              if (pos && pos[0] !== null) {
-                drawCovarianceEllipse(
-                  p,
-                  pos,
-                  log.ellipseRadii,
-                  log.ellipseAngle,
-                  plotScales,
-                  log.isStationary
-                );
+              const x = pos[0] * plotScales.plotScaleX;
+              const y = pos[1] * plotScales.plotScaleY;
+
+              p.push();
+              p.stroke(255, 0, 0); // Red for predicted
+              p.strokeWeight(2);
+              p.line(x - 4, y - 4, x + 4, y + 4);
+              p.line(x + 4, y - 4, x - 4, y + 4);
+              p.pop();
+            }
+          }
+        }
+
+        if (toggleTracks.checked) {
+          drawTrajectories(p, plotScales);
+          if (toggleCovariance.checked) {
+            for (const track of appState.vizData.tracks) {
+              const log = track.historyLog.find(
+                (log) => log.frameIdx === appState.currentFrame + 1
+              );
+              if (
+                log &&
+                log.ellipseRadii &&
+                typeof log.ellipseAngle !== "undefined"
+              ) {
+                const pos = log.predictedPosition;
+                if (pos && pos[0] !== null) {
+                  drawCovarianceEllipse(
+                    p,
+                    pos,
+                    log.ellipseRadii,
+                    log.ellipseAngle,
+                    plotScales,
+                    log.isStationary
+                  );
+                }
               }
             }
           }
         }
-      }
-      
-      // Draw cluster centroids if enabled
-      if (toggleClusterColor.checked) {
-        drawClusterCentroids(p, frameData.clusters, plotScales);
-      }
 
-
+        // Draw cluster centroids if enabled
+        if (toggleClusterColor.checked) {
+          drawClusterCentroids(p, frameData.clusters, plotScales);
+        }
       }
-      
     }
     p.pop();
 
@@ -309,21 +306,47 @@ export const radarSketch = function (p) {
   };
 
   // Handle window resizing event
-  p.windowResized = function () {
+  /* p.windowResized = function () {
     p.resizeCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight);
     // BUG FIX 2: Re-create the buffer instead of resizing it
     staticBackgroundBuffer = p.createGraphics(p.width, p.height);
-
-    // 6. Re-create and re-draw the track legend buffer on resize
     trackLegendBuffer = p.createGraphics(100, 100);
     p.drawTrackLegendToBuffer();
-
     calculatePlotScales();
     drawStaticRegionsToBuffer(p, staticBackgroundBuffer, plotScales);
+    if (appState.zoomSketchInstance) {
+        appState.zoomSketchInstance.handleResize();
+    }
     if (appState.vizData) {
       p.redraw();
     }
-  };
+  }; */
+
+  // In src/p5/radarSketch.js
+
+p.windowResized = function () {
+  console.log("radarSketch: windowResized triggered!");
+
+  // Immediately resize the elements that we know are stable.
+  p.resizeCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight);
+  staticBackgroundBuffer = p.createGraphics(p.width, p.height);
+  trackLegendBuffer = p.createGraphics(120, 120);
+  p.drawTrackLegendToBuffer();
+  calculatePlotScales();
+  drawStaticRegionsToBuffer(p, staticBackgroundBuffer, plotScales);
+
+  // Defer the call to destroy the zoom canvas.
+  if (appState.zoomSketchInstance && appState.isCloseUpMode) {
+    setTimeout(() => {
+      console.log("radarSketch: Executing deferred call to zoomSketch.handleResize().");
+      appState.zoomSketchInstance.handleResize();
+    }, 10); // A 10ms delay is slightly more robust than 0.
+  }
+
+  if (appState.vizData) {
+    p.redraw();
+  }
+};
 
   // Function to draw the SNR legend to its buffer
   p.drawSnrLegendToBuffer = function (minV, maxV) {
@@ -374,18 +397,5 @@ export const radarSketch = function (p) {
     b.text(minV.toFixed(1), lx + lw + 5, ly + lh);
     b.text("SNR", lx, ly - 10);
     b.pop();
-  };
-
-  // Handle window resizing event
-  p.windowResized = function () {
-    p.resizeCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight);
-    // BUG FIX 2: Re-create the buffer instead of resizing it
-    staticBackgroundBuffer = p.createGraphics(p.width, p.height);
-    trackLegendBuffer = p.createGraphics(120, 120);
-    p.drawTrackLegendToBuffer();
-    calculatePlotScales();
-    // Re-draw the static content to the new buffer
-    drawStaticRegionsToBuffer(p, staticBackgroundBuffer, plotScales);
-    if (appState.vizData) p.redraw();
   };
 };
