@@ -35,6 +35,7 @@ function setTheme(theme) {
         appState.vizData,
         videoPlayer.duration
       );
+      appState.speedGraphInstance.redraw();
     }
   }
 }

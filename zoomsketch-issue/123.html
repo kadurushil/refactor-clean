@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Visualizer — Flowchart</title>
+
+  <!-- Tailwind CDN (ok for local/doc use) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- html2canvas for quick export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNa5xQe3q3G1tQ7g7ARb8+1JYkK1lqVq3V4b5wE3xD1c7u6hQ1mJx0nQjS6sC6sKz8X0G5yjvVb5G5n7bQq2w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <style>
+    :root{
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --muted: #6b7280;
+      --accent: #0ea5a4;
+      --accent-2: #2563eb;
+      --danger: #ef4444;
+      --card-radius: 12px;
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    body { background: var(--bg); color: #0f172a; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+    .page { max-width: 1100px; margin: 36px auto; padding: 24px; }
+    .card { background: var(--panel); border-radius: var(--card-radius); box-shadow: 0 6px 18px rgba(2,6,23,0.06); padding: 18px; }
+    .stage-title { font-weight:700; color: #0f172a; }
+    .node { border-radius:10px; padding:10px 14px; border:1px solid rgba(2,6,23,0.06); box-shadow: 0 2px 6px rgba(2,6,23,0.04); }
+    .node.small { padding:8px 10px; font-size:0.92rem; }
+    .node.step { background: #eef2ff; border-left: 4px solid #6366f1; }
+    .node.process { background: #ecfdf5; border-left: 4px solid #10b981; }
+    .node.io { background: #fff7ed; border-left: 4px solid #f59e0b; }
+    .node.terminator { background:#f1f5f9; border-left:4px solid #94a3b8; font-weight:600; }
+    .node.decision { background:#fff7f7; border-left:4px solid var(--danger); transform: skewX(-10deg); }
+    .decision .label { display:inline-block; transform: skewX(10deg); }
+
+    /* grid layout for stages */
+    .stages { display:grid; grid-template-columns: 1fr; gap:18px; margin-top:18px; }
+    @media(min-width:980px){ .stages { grid-template-columns: 1fr 1fr; } }
+
+    /* connectors (svg container) */
+    .connector { display:flex; align-items:center; justify-content:center; margin:12px 0; }
+
+    /* legend */
+    .legend-item { display:flex; gap:8px; align-items:center; }
+    .legend-swatch { width:14px; height:14px; border-radius:4px; }
+
+    /* tooltip */
+    .tooltip { position:relative; }
+    .tooltip [data-tip] { position:relative; cursor:help; }
+    .tooltip [data-tip]:focus { outline: 2px dashed #c7d2fe; outline-offset:4px; }
+    .tooltip [data-tip]::after {
+      content: attr(data-tip);
+      position:absolute;
+      left:50%;
+      transform: translateX(-50%);
+      bottom: calc(100% + 10px);
+      background:#0b1220;
+      color:#fff; font-size:13px; padding:8px 10px;
+      border-radius:8px; white-space:nowrap; display:none; z-index:40;
+    }
+    .tooltip [data-tip]:hover::after, .tooltip [data-tip]:focus::after { display:block; }
+
+    /* subtle nodes grid inside stage */
+    .stage-grid { display:flex; flex-direction:column; gap:12px; }
+    .stage-row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+
+    /* export button */
+    .export-btn { background:linear-gradient(90deg,var(--accent-2),var(--accent)); color:#fff; padding:8px 12px; border-radius:8px; font-weight:600; cursor:pointer; }
+
+    /* print-friendly adjustments */
+    @media print {
+      .export-btn, .controls { display:none !important; }
+      body { background:white; }
+      .page { margin: 0; box-shadow:none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="flex items-start justify-between gap-4 mb-6">
+      <div>
+        <h1 class="text-2xl stage-title">Visualizer — Application Flowchart</h1>
+        <p class="text-sm text-gray-600 mt-1">Clear, staged view of initialization, data loading, and playback sync. Shows the recommended two-stage video loading fix (metadata vs buffering).</p>
+      </div>
+      <div class="controls flex gap-3 items-center">
+        <button id="exportBtn" class="export-btn" title="Export flowchart as PNG">Export PNG</button>
+        <a href="#" id="printBtn" class="text-sm text-gray-600 hover:underline">Print</a>
+      </div>
+    </header>
+
+    <!-- Top summary card -->
+    <section class="card mb-5">
+      <div class="flex items-start justify-between gap-6">
+        <div>
+          <h2 class="text-lg font-semibold">Overview</h2>
+          <p class="text-sm text-gray-600 mt-1">The visualizer loads JSON radar data and a video file, synchronizes timestamps, creates p5 sketches, then runs a high-precision animation loop to keep video and radar frames in sync.</p>
+        </div>
+        <div class="text-sm">
+          <div class="mb-2"><strong>Key events</strong></div>
+          <div class="flex flex-col gap-1 text-gray-700">
+            <div><span class="font-medium">loadedmetadata</span> → duration available (Stage A)</div>
+            <div><span class="font-medium">canplaythrough</span> → buffering sufficient (Stage B)</div>
+            <div><span class="font-medium">requestAnimationFrame</span> / <span class="font-medium">requestVideoFrameCallback</span> → high precision playback</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main flowchart area -->
+    <div id="chartRoot" class="card mt-2 p-6">
+      <div class="stages">
+
+        <!-- Stage: Initialization -->
+        <section aria-labelledby="s1" class="p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 id="s1" class="text-lg font-semibold">Stage 1 — Initialization</h3>
+            <span class="text-sm text-gray-500">App boot & cache check</span>
+          </div>
+
+          <div class="stage-grid">
+            <div class="stage-row">
+              <div class="node terminator">Start application</div>
+              <div class="connector" aria-hidden><svg width="48" height="28" viewBox="0 0 48 28"><path d="M2 14 L46 14" stroke="#cbd5e1" stroke-width="2" fill="none"/><polygon points="40,10 46,14 40,18" fill="#cbd5e1" /></svg></div>
+              <div class="node process">DOMContentLoaded → initTheme() & initDB()</div>
+            </div>
+
+            <div class="stage-row">
+              <div class="node decision tooltip small" tabindex="0" data-tip="Check localStorage for saved filenames & load from IndexedDB if present.">Check localStorage for session?</div>
+            </div>
+
+            <div class="stage-row">
+              <div class="node io">If yes: load json & video blobs from IndexedDB</div>
+              <div class="connector" aria-hidden><svg width="58" height="28" viewBox="0 0 58 28"><path d="M2 14 L56 14" stroke="#cbd5e1" stroke-width="2" fill="none"/><polygon points="50,10 56,14 50,18" fill="#cbd5e1" /></svg></div>
+              <div class="node step">Call handleFiles([...blobs]) → processFilePipeline()</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Stage: Data load -->
+        <section aria-labelledby="s2" class="p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 id="s2" class="text-lg font-semibold">Stage 2 — Data Loading & Finalization</h3>
+            <span class="text-sm text-gray-500">Two-stage video loading (robust)</span>
+          </div>
+
+          <div class="stage-grid">
+            <div class="stage-row">
+              <div class="node step">processFilePipeline() starts</div>
+            </div>
+
+            <div class="stage-row">
+              <div class="node io tooltip" tabindex="0" data-tip="Show a modal with spinner and progress text. Keep it open until Stage B resolves.">Show loading modal + spinner</div>
+
+              <div class="connector" aria-hidden style="margin-left:8px;">
+                <svg width="56" height="28" viewBox="0 0 56 28"><path d="M2 14 L54 14" stroke="#cbd5e1" stroke-width="2" fill="none"/><polygon points="48,10 54,14 48,18" fill="#cbd5e1" /></svg>
+              </div>
+
+              <div class="node decision tooltip small" tabindex="0" data-tip="If JSON present → parse via web worker; update progress; set appState.vizData.">JSON file present?</div>
+            </div>
+
+            <div class="stage-row">
+              <div class="node process">Parse JSON in worker → parseVisualizationJson()</div>
+            </div>
+
+            <div class="stage-row">
+              <div class="node decision tooltip small" tabindex="0" data-tip="If you have a video file, start video loading.">Video file present?</div>
+            </div>
+
+            <div class="stage-row">
+              <div class="node process tooltip" tabindex="0" data-tip="Stage A: attach loadedmetadata listener. Stage B: attach canplaythrough & progress listeners + fallback timer.">Setup video player & attach listeners</div>
+            </div>
+
+            <!-- Emphasize the two critical sub-stages -->
+            <div class="stage-row">
+              <div class="node process" style="flex:1">
+                <strong>Stage A — Metadata (DATA init)</strong>
+                <div class="text-sm text-gray-600 mt-1">Wait for <code>loadedmetadata</code> → video.duration available → call <code>finalizeSetup()</code> (create p5 sketches, draw static graphs).</div>
+              </div>
+            </div>
+
+            <div class="stage-row">
+              <div class="node process" style="flex:1">
+                <strong>Stage B — Buffering (UI finalization)</strong>
+                <div class="text-sm text-gray-600 mt-1">Wait for <code>canplaythrough</code> (or fallback timeout/loadeddata) → stop spinner and <strong>hide modal</strong>.</div>
+              </div>
+            </div>
+
+            <div class="stage-row">
+              <div class="node process text-red-700" style="border-left-color: #ef4444;">
+                Re-sync radar timestamps (CRITICAL) — update each frame.timestampMs relative to videoStartDate & offset
+                <div class="text-xs text-gray-600 mt-1">function: <code>calculateAndSetOffset()</code> + timestamp normalization before finalize</div>
+              </div>
+            </div>
+
+            <div class="stage-row">
+              <div class="node process">Create p5 instances: radarSketch, speedGraphSketch, zoomSketch</div>
+              <div class="connector" aria-hidden>
+                <svg width="64" height="28" viewBox="0 0 64 28"><path d="M2 14 L62 14" stroke="#cbd5e1" stroke-width="2" fill="none"/><polygon points="56,10 62,14 56,18" fill="#cbd5e1" /></svg>
+              </div>
+              <div class="node terminator">Set initial frame → updateFrame(0)</div>
+            </div>
+
+            <div class="stage-row">
+              <div class="node io tooltip" tabindex="0" data-tip="Hiding modal indicates UI is ready — play is safe.">Hide loading modal</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Stage: Playback -->
+        <section aria-labelledby="s3" class="p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 id="s3" class="text-lg font-semibold">Stage 3 — Playback & Synchronization</h3>
+            <span class="text-sm text-gray-500">High-precision sync loop</span>
+          </div>
+
+          <div class="stage-grid">
+            <div class="stage-row">
+              <div class="node step">User clicks Play</div>
+              <div class="connector" aria-hidden>
+                <svg width="50" height="28" viewBox="0 0 50 28"><path d="M2 14 L48 14" stroke="#cbd5e1" stroke-width="2" fill="none"/><polygon points="42,10 48,14 42,18" fill="#cbd5e1" /></svg>
+              </div>
+              <div class="node process">Start animationLoop() (requestAnimationFrame) & video.play()</div>
+            </div>
+
+            <div class="stage-row">
+              <div class="node process">Compute high-precision time & map to radar timestamp</div>
+            </div>
+
+            <div class="stage-row">
+              <div class="node process">Find matching radar frame index (binary search / lookup)</div>
+            </div>
+
+            <div class="stage-row">
+              <div class="node io">Update UI overlays, redraw p5 sketches, update timeline</div>
+            </div>
+
+            <div class="stage-row">
+              <div class="node decision small">Is drift &gt; threshold (e.g. 150 ms)?</div>
+            </div>
+
+            <div class="stage-row">
+              <div class="node process">If yes → resync video player currentTime and reset master timers</div>
+              <div class="node step">Continue loop</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Legend & Troubleshooting -->
+      <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="card p-4">
+          <h4 class="font-semibold mb-2">Legend</h4>
+          <div class="flex flex-col gap-2 text-sm text-gray-700">
+            <div class="legend-item"><span class="legend-swatch" style="background:#eef2ff"></span> <span>Step — UI / user action</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#ecfdf5"></span> <span>Process — internal data processing</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#fff7ed"></span> <span>I/O — modal / loading / network</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:#fff7f7"></span> <span>Decision — branching</span></div>
+          </div>
+        </div>
+
+        <div class="card p-4">
+          <h4 class="font-semibold mb-2">Troubleshooting checklist</h4>
+          <ol class="text-sm text-gray-700 ml-4 list-decimal space-y-2">
+            <li><strong>loadedmetadata</strong> must fire before calling <code>setData(..., videoPlayer.duration)</code>. If graphs are blank, confirm timeline shows duration &gt; 0.</li>
+            <li>If modal never hides, verify <code>canplaythrough</code> or fallback timer resolves. Some codecs/browsers don't reliably emit canplaythrough — use a timeout fallback.</li>
+            <li>On cached reload (IndexedDB) the ordering may differ — ensure both paths run the same Stage A → Stage B sequence.</li>
+            <li>Guard <code>finalizeSetup()</code> with a flag so it only runs once (prevents double initialization).</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- small notes -->
+      <div class="mt-6 text-xs text-gray-500">
+        <strong>Notes:</strong> This diagram reflects the robust two-stage loading approach: Stage A for data initialization (metadata) and Stage B for UI/buffering. Use the export button to paste into reports or attach to bug tickets.
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Export functionality: capture the chartRoot area and download PNG
+    document.getElementById('exportBtn').addEventListener('click', async () => {
+      const root = document.getElementById('chartRoot');
+      try {
+        const canvas = await html2canvas(root, { scale: 2, useCORS: true, backgroundColor: null });
+        const url = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'visualizer-flowchart.png';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } catch (err) {
+        alert('Export failed: ' + err.message);
+      }
+    });
+
+    // Print button
+    document.getElementById('printBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.print();
+    });
+
+    // Add simple keyboard focus support for tooltips (accessibility)
+    document.querySelectorAll('.tooltip [data-tip]').forEach(el => {
+      el.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          // toggle a hover-like state by focusing then blurring quickly to show ::after
+          el.focus();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Visualizer — Interactive Mermaid Flowchart</title>
+
+  <!-- Tailwind for quick layout (fine for dev) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- html2canvas for export (no integrity attr) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+
+  <style>
+    :root {
+      --bg: #f8fafb;
+      --card: #ffffff;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --accent2: #0ea5a4;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    body { background: var(--bg); color: #0f172a; -webkit-font-smoothing: antialiased; }
+    .page { max-width: 1200px; margin: 36px auto; padding: 20px; }
+    .card { background: var(--card); border-radius: 12px; box-shadow: 0 6px 18px rgba(2,6,23,0.06); padding: 18px; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="flex items-start justify-between gap-4 mb-6">
+      <div>
+        <h1 class="text-2xl font-semibold">Visualizer — Interactive Flowchart (Mermaid)</h1>
+        <p class="text-sm text-gray-600 mt-1">Paste Mermaid source → instantly render a flowchart beside it.</p>
+      </div>
+
+      <div class="controls flex items-center gap-3 export-area">
+        <button id="exportPngBtn">Export PNG</button>
+        <button id="copyBtn" class="small-btn">Copy Source</button>
+        <button id="rerenderBtn" class="small-btn">Re-render</button>
+        <select id="themeSelect" class="small-btn">
+          <option value="neutral" selected>Neutral</option>
+          <option value="default">Default</option>
+          <option value="forest">Forest</option>
+          <option value="dark">Dark</option>
+          <option value="solarized">Solarized</option>
+        </select>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Diagram -->
+      <section class="card">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-lg font-medium">Flowchart</h2>
+          <div class="legend">
+            <span class="font-semibold">Legend:</span> Stage A = metadata • Stage B = buffering
+          </div>
+        </div>
+        <div id="mermaidContainer" class="bg-white rounded-lg p-4 min-h-[200px]">
+          <div id="mermaidRender" class="mermaid"></div>
+        </div>
+      </section>
+
+      <!-- Source -->
+      <aside class="card">
+        <h3 class="font-semibold mb-2">Mermaid Source (editable)</h3>
+        <pre id="mermaidSource" class="mermaid-source" contenteditable="true" spellcheck="false"></pre>
+        <p class="note mt-2">Press <kbd>Ctrl</kbd>+<kbd>Enter</kbd> or click “Re-render”.</p>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Mermaid v11 as ES module -->
+  <script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+  // ✅ initial diagram (starts with 'flowchart TB')
+  const initialText = `flowchart TB
+    A[Start] --> B[Load resources]
+    B --> C{Ready?}
+    C -->|Yes| D[Initialize app]
+    C -->|No| E([Wait])
+    D --> F([Done])`;
+
+  const src = document.getElementById("mermaidSource");
+  const renderArea = document.getElementById("mermaidRender");
+
+  // set source text content
+  src.textContent = initialText;
+
+  async function initMermaid(theme = "neutral") {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme,
+      securityLevel: "loose",
+      flowchart: { curve: "linear" }
+    });
+    await mermaid.run(); // ensures theme & config loaded
+  }
+
+  async function renderMermaid(text) {
+    const code = (text || "").trim();
+    if (!code.startsWith("flowchart") && !code.startsWith("graph")) {
+      renderArea.innerHTML = `<pre style="color:#ef4444;">❌ No valid diagram type detected. Make sure your text begins with 'flowchart TB' or 'graph LR'.</pre>`;
+      return;
+    }
+    try {
+      const { svg } = await mermaid.render("mmdDiagram", code);
+      renderArea.innerHTML = svg;
+    } catch (err) {
+      renderArea.innerHTML = `<pre style="color:#ef4444;">Error: ${err.message}</pre>`;
+      console.error(err);
+    }
+  }
+
+  // ✅ initialize Mermaid first
+  await initMermaid();
+  // ✅ render initial diagram
+  await renderMermaid(initialText);
+
+  // Re-render button
+  document.getElementById("rerenderBtn").addEventListener("click", () => {
+    const text = src.innerText.trim();
+    renderMermaid(text);
+  });
+
+  // Theme selector
+  document.getElementById("themeSelect").addEventListener("change", async e => {
+    await initMermaid(e.target.value);
+    await renderMermaid(src.innerText.trim());
+  });
+
+  // Copy source
+  document.getElementById("copyBtn").addEventListener("click", async () => {
+    await navigator.clipboard.writeText(src.innerText.trim());
+    alert("Copied Mermaid source!");
+  });
+
+  // Export PNG
+  document.getElementById("exportPngBtn").addEventListener("click", async () => {
+    const node = document.getElementById("mermaidContainer");
+    const canvas = await html2canvas(node, { scale: 2, backgroundColor: null });
+    const a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
+    a.download = "flowchart.png";
+    a.click();
+  });
+
+  // Ctrl+Enter shortcut
+  document.addEventListener("keydown", e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      renderMermaid(src.innerText.trim());
+    }
+  });
+</script>
+
+</body>
+</html>

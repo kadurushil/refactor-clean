@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mermaid Live Editor</title>
+
+  <!-- Tailwind CSS CDN (ok for local use / demo) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    /* Minimal extra styling */
+    html,body { height:100%; }
+    body { background: #f8fafc; }
+    /* ensure the preview container expands and scrolls for large diagrams */
+    #preview {
+      width: 100%;
+      height: 100%;
+      min-height: 400px;
+      overflow: auto;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 1rem;
+      background: white;
+      border-radius: 0.5rem;
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    /* make the rendered svg responsive */
+    #preview svg {
+      max-width: 100%;
+      height: auto;
+    }
+    /* small monospace editor */
+    textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace; }
+    .error { color: #b91c1c; }
+  </style>
+</head>
+<body class="p-6">
+
+  <div class="max-w-7xl mx-auto">
+    <header class="mb-4">
+      <h1 class="text-2xl font-semibold">Mermaid Live Editor</h1>
+      <p class="text-sm text-gray-600">Paste Mermaid code on the left, render on the right. Uses Mermaid v11+ (ESM) and html2canvas for PNG export.</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <!-- Editor Column -->
+      <section class="space-y-3">
+        <div class="flex items-center gap-2">
+          <label class="text-sm font-medium">Theme</label>
+          <select id="themeSelect" class="px-2 py-1 border rounded">
+            <option value="neutral">neutral (default)</option>
+            <option value="default">default</option>
+            <option value="dark">dark</option>
+            <option value="forest">forest</option>
+          </select>
+
+          <label class="flex items-center gap-1 ml-4 text-sm">
+            <input id="autoRender" type="checkbox" class="border" />
+            <span>Auto-render</span>
+          </label>
+
+          <button id="renderBtn" class="ml-auto px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700">Render</button>
+          <button id="exportBtn" class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">Export PNG</button>
+        </div>
+
+        <div class="flex gap-2">
+          <button id="sampleBtn" class="px-2 py-1 bg-gray-200 rounded">Load sample</button>
+          <button id="clearBtn" class="px-2 py-1 bg-gray-200 rounded">Clear</button>
+          <button id="zoomIn" class="px-2 py-1 bg-gray-200 rounded">Zoom +</button>
+          <button id="zoomOut" class="px-2 py-1 bg-gray-200 rounded">Zoom −</button>
+          <span id="zoomPct" class="text-sm text-gray-600 ml-2">100%</span>
+        </div>
+
+        <label class="text-xs text-gray-600">Mermaid source</label>
+        <textarea id="editor" rows="18" class="w-full border rounded p-3 text-sm" spellcheck="false"></textarea>
+
+        <div id="errorBox" class="p-2 text-sm hidden rounded border border-red-200 bg-red-50 error"></div>
+      </section>
+
+      <!-- Preview Column -->
+      <section>
+        <label class="text-xs text-gray-600">Preview</label>
+        <div id="preview" class="mt-2">
+          <div id="renderContainer" style="transform-origin: top left;">
+            <!-- rendered SVG will be injected here -->
+            <div id="placeholder" class="text-gray-400 p-6">Rendered diagram will appear here.</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="mt-4 text-xs text-gray-500">
+      <div>Mermaid initialized with <code>startOnLoad: false</code> and <code>theme: "neutral"</code>.</div>
+      <div class="mt-1">If you see an error, the editor will show a clear message. Large diagrams are allowed — use zoom and scroll.</div>
+    </footer>
+  </div>
+
+  <!-- html2canvas for PNG export -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <!-- Mermaid ESM import and main logic -->
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+    // Initialize as requested
+    mermaid.initialize({ startOnLoad: false, theme: "neutral" });
+
+    const editor = document.getElementById('editor');
+    const renderBtn = document.getElementById('renderBtn');
+    const preview = document.getElementById('preview');
+    const renderContainer = document.getElementById('renderContainer');
+    const errorBox = document.getElementById('errorBox');
+    const themeSelect = document.getElementById('themeSelect');
+    const autoRender = document.getElementById('autoRender');
+    const exportBtn = document.getElementById('exportBtn');
+    const sampleBtn = document.getElementById('sampleBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const zoomIn = document.getElementById('zoomIn');
+    const zoomOut = document.getElementById('zoomOut');
+    const zoomPct = document.getElementById('zoomPct');
+    let zoom = 1;
+
+    // sample mermaid content
+    const sample = `flowchart TD
+  A[Start] --> B{Is it working?}
+  B -- Yes --> C[Celebrate]
+  B -- No --> D[Debug]
+  D --> B
+  C --> E[Deploy]
+`;
+
+    // Helper: set error message or hide
+    function showError(msg) {
+      if (!msg) {
+        errorBox.classList.add('hidden');
+        errorBox.textContent = '';
+      } else {
+        errorBox.classList.remove('hidden');
+        errorBox.textContent = msg;
+      }
+    }
+
+    // Render function (robust to different mermaid.render return shapes)
+    async function renderMermaid() {
+      const code = editor.value.trim();
+      if (!code) {
+        showError("Editor is empty — paste some Mermaid code and click Render.");
+        clearPreview();
+        return;
+      }
+      showError(null);
+
+      // Create unique id for this render
+      const id = "mermaid-" + Math.random().toString(36).slice(2, 9);
+
+      try {
+        // Try to parse first (mermaid.parse may throw for invalid code)
+        // Not all mermaid builds expose parse; guard it.
+        if (typeof mermaid.parse === 'function') {
+          try {
+            mermaid.parse(code);
+          } catch (parseErr) {
+            // parse() may throw an error object with message
+            throw new Error(parseErr?.message || String(parseErr));
+          }
+        }
+
+        // mermaid.render may return either a string or an object/promise depending on build.
+        const result = await mermaid.render(id, code);
+
+        // result could be a string (svg) or an object like { svg: '...', bindFunctions: ... }
+        let svg;
+        if (!result) {
+          throw new Error("mermaid.render returned empty result.");
+        } else if (typeof result === 'string') {
+          svg = result;
+        } else if (typeof result === 'object' && result.svg) {
+          svg = result.svg;
+        } else {
+          // fallback: try to stringify
+          svg = String(result);
+        }
+
+        // Inject svg into container
+        renderContainer.innerHTML = svg;
+
+        // Remove placeholder if present
+        const placeholder = document.getElementById('placeholder');
+        if (placeholder) placeholder.remove();
+
+        // Reset zoom transform origin and scale
+        renderContainer.style.transform = `scale(${zoom})`;
+
+        showError(null);
+      } catch (err) {
+        // Provide readable error messages
+        const message = (err && err.message) ? err.message : String(err);
+        showError("Mermaid parse/render error: " + message);
+        // Attempt to clear/keep previous preview but indicate error
+        // Do not wipe the container so user can inspect last diagram if any
+      }
+    }
+
+    function clearPreview() {
+      renderContainer.innerHTML = '<div id="placeholder" class="text-gray-400 p-6">Rendered diagram will appear here.</div>';
+      renderContainer.style.transform = `scale(${zoom})`;
+    }
+
+    // Expose UI interactions
+    renderBtn.addEventListener('click', () => {
+      renderMermaid();
+    });
+
+    // Auto-render (debounced)
+    let autosaveTimer = null;
+    editor.addEventListener('input', () => {
+      if (autoRender.checked) {
+        if (autosaveTimer) clearTimeout(autosaveTimer);
+        autosaveTimer = setTimeout(() => {
+          renderMermaid();
+        }, 450); // gentle debounce
+      }
+    });
+
+    // Theme switch
+    themeSelect.addEventListener('change', () => {
+      const theme = themeSelect.value || 'neutral';
+      mermaid.initialize({ startOnLoad: false, theme: theme });
+      // re-render (if code exists)
+      renderMermaid();
+    });
+
+    // Export PNG using html2canvas
+    exportBtn.addEventListener('click', async () => {
+      showError(null);
+      // render first to ensure latest code is shown
+      await renderMermaid();
+
+      // Wait a tick for DOM to update
+      await new Promise(r => setTimeout(r, 50));
+
+      // html2canvas on the renderContainer (which contains the svg)
+      try {
+        // Temporarily set background white for export if theme isn't dark
+        const originalBg = renderContainer.style.backgroundColor;
+        renderContainer.style.backgroundColor = getComputedStyle(preview).backgroundColor || '#ffffff';
+
+        const canvas = await html2canvas(renderContainer, {
+          backgroundColor: null,
+          scale: Math.min(2, window.devicePixelRatio || 1), // better resolution but bounded
+          useCORS: true,
+          logging: false
+        });
+
+        // restore
+        renderContainer.style.backgroundColor = originalBg || '';
+
+        const a = document.createElement('a');
+        a.download = 'mermaid-diagram.png';
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+      } catch (err) {
+        showError('Export failed: ' + (err?.message || String(err)));
+      }
+    });
+
+    // sample / clear
+    sampleBtn.addEventListener('click', () => {
+      editor.value = sample;
+      if (autoRender.checked) renderMermaid();
+    });
+    clearBtn.addEventListener('click', () => {
+      editor.value = '';
+      clearPreview();
+    });
+
+    // zoom controls
+    function setZoom(newZoom) {
+      zoom = Math.max(0.2, Math.min(3, newZoom));
+      renderContainer.style.transform = `scale(${zoom})`;
+      zoomPct.textContent = Math.round(zoom * 100) + '%';
+    }
+    zoomIn.addEventListener('click', () => setZoom(zoom + 0.2));
+    zoomOut.addEventListener('click', () => setZoom(zoom - 0.2));
+
+    // initialize editor with sample
+    editor.value = sample;
+    // initial mermaid theme is neutral as requested
+    themeSelect.value = 'neutral';
+    setZoom(1);
+
+    // optionally auto-render at startup
+    // (we don't start rendering regardless so developer can control)
+    // If you want initial render uncomment next line:
+    // renderMermaid();
+
+    // Accessibility: keyboard shortcut Ctrl/Cmd+Enter to render
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        renderMermaid();
+      }
+    });
+
+    // Resize handling for very large diagrams — keep transform origin consistent
+    new ResizeObserver(() => {
+      renderContainer.style.transformOrigin = 'top left';
+    }).observe(preview);
+
+  </script>
+</body>
+</html>
