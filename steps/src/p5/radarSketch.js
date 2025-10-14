@@ -221,11 +221,16 @@ export const radarSketch = function (p) {
 
     // BUG FIX 1: Call the close-up handler if the mode is active
     // --- Zoom and Tooltip Logic ---
+    const COOLING_PERIOD_MS = 2000;
     const zoomPanel = document.getElementById("zoom-panel");
     if (appState.isCloseUpMode) {
       const hoveredItems = handleCloseUpDisplay(p, plotScales);
       if (hoveredItems.length > 0) {
-        zoomPanel.style.display = "block"; // show the panel
+        clearTimeout(appState.zoomHoverTimeout); // Cancel the timer
+        appState.zoomHoverTimeout = null;
+        if (zoomPanel.style.display !== "block") {
+          zoomPanel.style.display = "block";
+        }
         if (
           appState.zoomSketchInstance &&
           appState.zoomSketchInstance.updateAndDraw
@@ -237,9 +242,30 @@ export const radarSketch = function (p) {
             plotScales
           );
         }
-      } else {
-        zoomPanel.style.display = "none";
-      }
+      } else if (zoomPanel.style.display === "block") {
+    // --- THIS BLOCK IS THE FIX ---
+    // If NOT hovering, but the panel is still visible:
+    
+    // 1. Continue to update the zoom sketch's position to follow the mouse.
+    //    We pass an empty array for hoveredItems, so no tooltip is drawn.
+    if (appState.zoomSketchInstance && appState.zoomSketchInstance.updateAndDraw) {
+        appState.zoomSketchInstance.updateAndDraw(
+            p.mouseX,
+            p.mouseY,
+            [], // Pass empty array
+            plotScales
+        );
+    }
+
+    // 2. If a "hide" timer isn't already running, start one.
+    if (!appState.zoomHoverTimeout) {
+        appState.zoomHoverTimeout = setTimeout(() => {
+            console.log("Cooling period ended. Hiding zoom panel.");
+            zoomPanel.style.display = "none";
+            appState.zoomHoverTimeout = null;
+        }, COOLING_PERIOD_MS);
+    }
+}
     } else {
       zoomPanel.style.display = "none";
     }
@@ -324,29 +350,31 @@ export const radarSketch = function (p) {
 
   // In src/p5/radarSketch.js
 
-p.windowResized = function () {
-  console.log("radarSketch: windowResized triggered!");
+  p.windowResized = function () {
+    console.log("radarSketch: windowResized triggered!");
 
-  // Immediately resize the elements that we know are stable.
-  p.resizeCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight);
-  staticBackgroundBuffer = p.createGraphics(p.width, p.height);
-  trackLegendBuffer = p.createGraphics(120, 120);
-  p.drawTrackLegendToBuffer();
-  calculatePlotScales();
-  drawStaticRegionsToBuffer(p, staticBackgroundBuffer, plotScales);
+    // Immediately resize the elements that we know are stable.
+    p.resizeCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight);
+    staticBackgroundBuffer = p.createGraphics(p.width, p.height);
+    trackLegendBuffer = p.createGraphics(120, 120);
+    p.drawTrackLegendToBuffer();
+    calculatePlotScales();
+    drawStaticRegionsToBuffer(p, staticBackgroundBuffer, plotScales);
 
-  // Defer the call to destroy the zoom canvas.
-  if (appState.zoomSketchInstance && appState.isCloseUpMode) {
-    setTimeout(() => {
-      console.log("radarSketch: Executing deferred call to zoomSketch.handleResize().");
-      appState.zoomSketchInstance.handleResize();
-    }, 10); // A 10ms delay is slightly more robust than 0.
-  }
+    // Defer the call to destroy the zoom canvas.
+    if (appState.zoomSketchInstance && appState.isCloseUpMode) {
+      setTimeout(() => {
+        console.log(
+          "radarSketch: Executing deferred call to zoomSketch.handleResize()."
+        );
+        appState.zoomSketchInstance.handleResize();
+      }, 10); // A 10ms delay is slightly more robust than 0.
+    }
 
-  if (appState.vizData) {
-    p.redraw();
-  }
-};
+    if (appState.vizData) {
+      p.redraw();
+    }
+  };
 
   // Function to draw the SNR legend to its buffer
   p.drawSnrLegendToBuffer = function (minV, maxV) {

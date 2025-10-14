@@ -1,4 +1,5 @@
 export const appState = {
+  zoomHoverTimeout: null, // timeout for hovering over the GOD MODE
   isRawOnlyMode: false, // <-- ADD THIS LINE
 
   // Stores the parsed visualization data (radar frames, tracks, etc.)

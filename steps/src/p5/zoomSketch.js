@@ -17,133 +17,7 @@ import {
   toggleCovariance,
 } from "../dom.js";
 
-/**
- * A dedicated tooltip function for the zoom sketch.
- * It draws the tooltip relative to the hovered items and compensates for the zoom factor.
- */
-/**
- * A dedicated tooltip function for the zoom sketch with full features.
- * It draws the tooltip in the least cluttered quadrant, has dynamic connectors,
- * highlights items, and compensates for the zoom factor.
- */
-/**
- * A dedicated tooltip function for the zoom sketch with smart quadrant positioning.
- */
-/**
- * A dedicated tooltip function for the zoom sketch that "pushes" the tooltip
- * 100 pixels away from the hovered items towards the least cluttered corner.
- */
-// function drawZoomTooltip(p, hoveredItems) {
-//     if (!hoveredItems || hoveredItems.length === 0) return;
 
-//     // 1. Generate text content (this is unchanged)
-//     const infoStrings = [];
-//     for (const item of hoveredItems) {
-//         let infoText = '';
-//         const data = item.data;
-//         switch (item.type) {
-//             case 'point': infoText = `Point | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(2)} | V:${data.velocity?.toFixed(2)}, SNR:${data.snr?.toFixed(1)}`; break;
-//             case 'cluster': infoText = `Cluster ${data.id} | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(2)} | rSpeed:${data.radialSpeed?.toFixed(2)}`; break;
-//             case 'track': infoText = `Track ${item.trackId} | X:${data.correctedPosition[0].toFixed(2)}, Y:${data.correctedPosition[1].toFixed(2)}`; break;
-//             case 'prediction': infoText = `Pred. for ${item.trackId} | X:${data.predictedPosition[0].toFixed(2)}, Y:${data.predictedPosition[1].toFixed(2)}`; break;
-//         }
-//         if (infoText) infoStrings.push({ text: infoText, color: item.color || null });
-//     }
-
-//     // 2. Find the average screen position of hovered items. This is our anchor point.
-//     const avgX = hoveredItems.reduce((acc, item) => acc + item.screenX, 0) / hoveredItems.length;
-//     const avgY = hoveredItems.reduce((acc, item) => acc + item.screenY, 0) / hoveredItems.length;
-
-//     p.push();
-
-//     // 3. Compensate for zoom factor for all drawing operations (unchanged)
-//     const zoomFactor = appState.zoomFactor || 6.0;
-//     p.textSize(12 / zoomFactor);
-//     p.strokeWeight(1 / zoomFactor);
-
-//     const lineHeight = 15 / zoomFactor;
-//     const boxPadding = 8 / zoomFactor;
-
-//     let boxWidth = 0;
-//     infoStrings.forEach(info => {
-//         boxWidth = Math.max(boxWidth, p.textWidth(info.text));
-//     });
-//     const boxHeight = (infoStrings.length * lineHeight) + (boxPadding * 2);
-//     boxWidth += (boxPadding * 2);
-
-//     // --- START: New "Push" Positioning Logic ---
-
-//     // Line 1: Define the push distance. We scale it by the zoomFactor so it's a consistent
-//     //         visual distance on the screen, regardless of zoom level.
-//     const pushDistance = 100 / zoomFactor;
-
-//     // Line 2: Determine the horizontal direction. If the items are on the right, our direction is left (-1).
-//     //         If they are on the left, our direction is right (1).
-//     const dirX = (avgX > appState.p5_instance.width / 2) ? -1 : 1;
-
-//     // Line 3: Determine the vertical direction. If the items are on the bottom, our direction is up (-1).
-//     //         If they are on the top, our direction is down (1).
-//     const dirY = (avgY > appState.p5_instance.height / 2) ? -1 : 1;
-
-//     // Line 4: Create a p5.Vector object. This is like an arrow representing our direction (e.g., up and to the right).
-//     const pushVector = p.createVector(dirX, dirY);
-
-//     // Line 5: Normalize the vector. This makes its length exactly 1, so it only represents a pure direction.
-//     pushVector.normalize();
-
-//     // Line 6: Scale the vector. Now it's an arrow that is exactly `pushDistance` pixels long.
-//     pushVector.mult(pushDistance);
-
-//     // Line 7: Calculate the tooltip's corner position by adding our push vector to the anchor point.
-//     let boxX = avgX + pushVector.x;
-//     let boxY = avgY + pushVector.y;
-
-//     // Line 8: Define where the connector line should attach to the box.
-//     //         If we pushed right, the connector attaches to the left side of the box.
-//     let connectorAnchorX = (dirX > 0) ? boxX : boxX + boxWidth;
-
-//     // Line 9: If we pushed down, the connector attaches to the top side of the box.
-//     let connectorAnchorY = (dirY > 0) ? boxY : boxY + boxHeight;
-
-//     // Line 10: Adjust the box's final position to account for its own size, so the *corner*
-//     //          of the box is at our calculated position, not its top-left.
-//     if (dirX < 0) boxX -= boxWidth;   // If we pushed left, shift the box left by its own width.
-//     if (dirY < 0) boxY -= boxHeight;  // If we pushed up, shift the box up by its own height.
-
-//     // --- END: New "Push" Positioning Logic ---
-
-//     // 4. Draw highlights, box, text, and connectors (this logic is now restored and complete)
-//     const highlightColor = p.color(46, 204, 113);
-//     hoveredItems.forEach(item => {
-//         p.noFill(); p.stroke(highlightColor); p.strokeWeight(2 / zoomFactor);
-//         p.ellipse(item.screenX, item.screenY, 15 / zoomFactor, 15 / zoomFactor);
-//     });
-
-//     const bgColor = document.documentElement.classList.contains('dark') ? p.color(20, 20, 30, 220) : p.color(245, 245, 245, 220);
-//     p.fill(bgColor); p.stroke(highlightColor); p.strokeWeight(1 / zoomFactor);
-//     p.rect(boxX, boxY, boxWidth, boxHeight, 4 / zoomFactor);
-
-//     const defaultTextColor = document.documentElement.classList.contains('dark') ? p.color(230) : p.color(20);
-//     p.noStroke(); p.textAlign(p.LEFT, p.TOP);
-//     infoStrings.forEach((info, i) => {
-//         p.fill(info.color || defaultTextColor);
-//         p.text(info.text, boxX + boxPadding, boxY + boxPadding + (i * lineHeight));
-//     });
-
-//     hoveredItems.forEach((item, i) => {
-//         p.stroke(highlightColor); p.strokeWeight(1 / zoomFactor);
-//         p.line(connectorAnchorX, connectorAnchorY, item.screenX, item.screenY);
-//     });
-
-//     p.pop();
-// }
-/**
- * A dedicated tooltip function for the zoom sketch with smart quadrant positioning,
- * individual dynamic connectors, and item highlighting.
- */
-/**
- * A dedicated tooltip function for the zoom sketch with full features and customizations.
- */
 function drawZoomTooltip(p, hoveredItems, mainMouseX) {
   if (!hoveredItems || hoveredItems.length === 0) return;
 
@@ -154,7 +28,7 @@ function drawZoomTooltip(p, hoveredItems, mainMouseX) {
     const data = item.data;
     switch (item.type) {
       case "point":
-        infoText = `Point | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(
+        infoText = `Point${item.index} | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(
           2
         )} | V:${data.velocity?.toFixed(2)}, SNR:${data.snr?.toFixed(1)}`;
         break;
@@ -295,13 +169,12 @@ export const zoomSketch = function (p) {
       if (container && container.offsetWidth > 0) {
         canvas = p.createCanvas(container.offsetWidth, container.offsetHeight);
         canvas.parent(containerId);
-        console.log(`zoomSketch: Canvas CREATED with dimensions ${p.width}x${p.height}`); // debug
+        //console.log(`zoomSketch: Canvas CREATED with dimensions ${p.width}x${p.height}`); // debug
       } else {
         console.warn("zoomSketch: updateAndDraw called, but container is not ready. Aborting draw."); //debug
         return;
       }
     }
-    console.log(`zoomSketch: updateAndDraw is running. Canvas dimensions are ${p.width}x${p.height}. Hovered items: ${hoveredItems.length}`); //debug
     p.redraw();
   };
 
@@ -316,8 +189,6 @@ export const zoomSketch = function (p) {
   }
   p.draw = function () {
     if (!appState.vizData || !canvas) return;
-    console.log("zoomSketch: Draw function is executing."); //debug
-    
     p.background(
       document.documentElement.classList.contains("dark")
         ? p.color(55, 65, 81)
@@ -406,7 +277,7 @@ export const zoomSketch = function (p) {
     p.fill(textColor);
     p.noStroke();
     p.textSize(16);
-    p.textAlign(p.LEFT, p.TOP);
+    p.textAlign(p.LEFT -2, p.TOP);
     p.textStyle(p.BOLD);
     p.text(titleText, 10, 10);
     p.pop();

@@ -532,13 +532,26 @@ export function handleCloseUpDisplay(p, plotScales) {
 
   // ... (Step 1a: Find hovered points - no changes here) ...
   if (frameData.pointCloud) {
-    for (const pt of frameData.pointCloud) {
-      if (pt.x === null || pt.y === null) continue;
-      const screenX = pt.x * plotScales.plotScaleX + p.width / 2;
-      const screenY = p.height * 0.95 - pt.y * plotScales.plotScaleY;
-      const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
-      if (d < radius) {
-        hoveredItems.push({ type: "point", data: pt, screenX, screenY });
+    // In steps/src/drawUtils.js
+
+    // Find hovered points
+    if (frameData.pointCloud) {
+      for (let i = 0; i < frameData.pointCloud.length; i++) {
+        const pt = frameData.pointCloud[i];
+        if (pt.x === null || pt.y === null) continue;
+        const screenX = pt.x * plotScales.plotScaleX + p.width / 2;
+        const screenY = p.height * 0.95 - pt.y * plotScales.plotScaleY;
+        const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
+        if (d < radius) {
+          // Add the index 'i' to the object we push
+          hoveredItems.push({
+            type: "point",
+            data: pt,
+            screenX,
+            screenY,
+            index: i,
+          });
+        }
       }
     }
   }
@@ -631,7 +644,7 @@ export function handleCloseUpDisplay(p, plotScales) {
       case "point":
         const vel = data.velocity !== null ? data.velocity.toFixed(2) : "N/A";
         const snr = data.snr !== null ? data.snr.toFixed(1) : "N/A";
-        infoText = `Point | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(
+        infoText = `Point ${item.index} | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(
           2
         )} | V:${vel}, SNR:${snr}, Cluster: ${data.clusterNumber}`;
         break;
@@ -842,8 +855,6 @@ export function drawEgoVehicle(p, plotScales) {
   p.rect(0, -10, carWidthPixels, carLengthPixels, 5);
   p.pop();
 }
-
-
 
 //OLD_Solid Fill Logic
 
@@ -1225,8 +1236,7 @@ export function drawClusterCentroids(p, clustersInput, plotScales) {
 // //   p.pop(); // Restore the original global drawing state.
 // // }
 
-
-// OLD HATCH FILL logic 
+// OLD HATCH FILL logic
 // /**
 //  * Draws a hatched pattern inside a rectangle defined by corner points.
 //  * This is a new helper function.
