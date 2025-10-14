@@ -65,8 +65,20 @@ export const speedGraphSketch = function (p) {
         }
         const relTime = frame.timestampMs / 1000;
         if (relTime >= 0 && relTime <= videoDuration) {
-          const x = b.map(relTime, 0, videoDuration, pad.left, b.width - pad.right);
-          const y = b.map(frame.canVehSpeed_kmph, minSpeed, maxSpeed, b.height - pad.bottom, pad.top);
+          const x = b.map(
+            relTime,
+            0,
+            videoDuration,
+            pad.left,
+            b.width - pad.right
+          );
+          const y = b.map(
+            frame.canVehSpeed_kmph,
+            minSpeed,
+            maxSpeed,
+            b.height - pad.bottom,
+            pad.top
+          );
           b.vertex(x, y);
         }
       }
@@ -80,9 +92,21 @@ export const speedGraphSketch = function (p) {
       for (const frame of radarData.radarFrames) {
         const relTime = frame.timestampMs / 1000;
         if (relTime >= 0 && relTime <= videoDuration) {
-          const x = b.map(relTime, 0, videoDuration, pad.left, b.width - pad.right);
+          const x = b.map(
+            relTime,
+            0,
+            videoDuration,
+            pad.left,
+            b.width - pad.right
+          );
           const egoSpeedKmh = frame.egoVelocity[1] * 3.6;
-          const y = b.map(egoSpeedKmh, minSpeed, maxSpeed, b.height - pad.bottom, pad.top);
+          const y = b.map(
+            egoSpeedKmh,
+            minSpeed,
+            maxSpeed,
+            b.height - pad.bottom,
+            pad.top
+          );
           b.vertex(x, y);
         }
       }
@@ -119,8 +143,9 @@ export const speedGraphSketch = function (p) {
   };
 
   p.setData = function (radarData, duration) {
+
     if (!radarData || !radarData.radarFrames) return;
-    videoDuration = duration;
+    videoDuration = duration; // Accept duration, even if it's 0 or NaN initially
 
     let speeds = [];
     if (radarData && radarData.radarFrames) {
@@ -135,25 +160,51 @@ export const speedGraphSketch = function (p) {
       speeds.push(...canSpeeds);
     }
 
-    minSpeed = speeds.length > 0 ? Math.floor(Math.min(...speeds) / 10) * 10 : 0;
-    maxSpeed = speeds.length > 0 ? Math.ceil(Math.max(...speeds) / 10) * 10 : 10;
+    minSpeed =
+      speeds.length > 0 ? Math.floor(Math.min(...speeds) / 10) * 10 : 0;
+    maxSpeed =
+      speeds.length > 0 ? Math.ceil(Math.max(...speeds) / 10) * 10 : 10;
     if (maxSpeed <= 0) maxSpeed = 10;
     if (minSpeed >= 0) minSpeed = 0;
 
-    p.drawStaticGraphToBuffer(radarData);
-    p.redraw();
+    // *** KEY CHANGE ***
+    // Only try to draw the static graph if the duration is valid.
+    if (videoDuration > 0) {
+      p.drawStaticGraphToBuffer(radarData);
+    }
+    //p.redraw();
   };
 
   p.draw = function () {
-    if (!videoDuration) return;
+    // *** KEY CHANGE ***
+    // If duration is not ready, show a waiting message and stop
+    if (!videoDuration || videoDuration <= 0) {
+      const isDark = document.documentElement.classList.contains("dark");
+      p.background(isDark ? [55, 65, 81] : 255);
+      p.fill(isDark ? 200 : 100);
+      p.textAlign(p.CENTER, p.CENTER);
+      p.text("Waiting for video duration...", p.width / 2, p.height / 2);
+      return;
+    }
     p.image(staticBuffer, 0, 0);
     drawTimeIndicator();
   };
 
   function drawTimeIndicator() {
+    // This new, more robust check is the fix. It ensures that the video duration is valid AND
+    // the main application has initialized the currentFrame before attempting to draw.
+    if (
+      !videoDuration ||
+      videoDuration <= 0 ||
+      appState.currentFrame === null ||
+      appState.currentFrame === undefined
+    ) {
+      return; // Stop here if the state is not ready
+    }
+
     // Get the current frame's data as the single source of truth
     const frameData = appState.vizData.radarFrames[appState.currentFrame];
-    if (!frameData) return; // Exit if data isn't ready
+    if (!frameData) return; // Exit if data for the specific frame isn't ready
 
     // Calculate the X position from the current frame's precise timestamp
     const currentTimeSec = frameData.timestampMs / 1000.0;
@@ -186,7 +237,7 @@ export const speedGraphSketch = function (p) {
       speedGraphContainer.offsetHeight
     );
     staticBuffer = p.createGraphics(p.width, p.height);
-    if (appState.vizData && videoDuration) {
+    if (appState.vizData && videoDuration > 0) {
       p.drawStaticGraphToBuffer(appState.vizData);
     }
     p.redraw();

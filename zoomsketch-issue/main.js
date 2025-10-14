@@ -165,12 +165,101 @@ dropZone.addEventListener("drop", (event) => {
   handleFiles(event.dataTransfer.files);
 });
 
+// PASTE THIS NEW, ENHANCED FUNCTION INTO main.js
+
+/**
+ * The core processing pipeline. This function orchestrates the entire
+ * loading, parsing, and initialization process in the correct order.
+ */
 async function processFilePipeline() {
+    // 1. Show the unified loading modal.
+    showLoadingModal("Starting file load...");
+
+    // 2. Handle JSON Parsing FIRST (if a JSON file is present)
+    if (jsonFileToLoad) {
+        // ... (The JSON loading part remains unchanged) ...
+        appState.jsonFilename = jsonFileToLoad.name;
+        localStorage.setItem("jsonFilename", appState.jsonFilename);
+        await saveFileWithMetadata("json", jsonFileToLoad);
+        calculateAndSetOffset();
+
+        const worker = new Worker("./src/parser.worker.js");
+        const parsedData = await new Promise((resolve, reject) => {
+            worker.onmessage = (e) => {
+                const { type, data, percent, message } = e.data;
+                if (type === "progress") {
+                    updateLoadingModal(percent * 0.8, `Parsing JSON (${percent}%)...`);
+                } else if (type === "complete") {
+                    worker.terminate();
+                    resolve(data);
+                } else if (type === "error") {
+                    worker.terminate();
+                    reject(new Error(message));
+                }
+            };
+            worker.postMessage({ file: jsonFileToLoad });
+        });
+
+        const result = await parseVisualizationJson(parsedData, appState.radarStartTimeMs, appState.videoStartDate);
+        if (result.error) {
+            hideModal();
+            showModal(result.error);
+            return;
+        }
+        appState.vizData = result.data;
+        appState.globalMinSnr = result.minSnr;
+        appState.globalMaxSnr = result.maxSnr;
+    }
+
+    // 3. Handle Video Loading SECOND, now with a simulated progress spinner
+    if (videoFileToLoad) {
+        appState.videoFilename = videoFileToLoad.name;
+        localStorage.setItem("videoFilename", appState.videoFilename);
+        await saveFileWithMetadata("video", videoFileToLoad);
+        calculateAndSetOffset();
+
+        // --- START: NEW SIMULATED PROGRESS LOGIC ---
+        
+        // Start a simple text spinner animation in the modal
+        const spinnerChars = ["|", "/", "-", "\\"];
+        let spinnerIndex = 0;
+        const spinnerInterval = setInterval(() => {
+            const spinnerText = spinnerChars[spinnerIndex % spinnerChars.length];
+            updateLoadingModal(85, `Loading video ${spinnerText}`); // Keep progress bar mostly full
+            spinnerIndex++;
+        }, 150); // Update the spinner character every 150ms
+
+        await new Promise((resolve, reject) => {
+            const onReady = () => {
+                clearInterval(spinnerInterval); // IMPORTANT: Stop the spinner
+                resolve();
+            };
+            const onError = (e) => {
+                clearInterval(spinnerInterval); // IMPORTANT: Stop the spinner on error
+                reject(e);
+            };
+            videoPlayer.addEventListener('canplaythrough', onReady, { once: true });
+            videoPlayer.addEventListener('error', onError, { once: true });
+            setupVideoPlayer(URL.createObjectURL(videoFileToLoad));
+        });
+        // --- END: NEW SIMULATED PROGRESS LOGIC ---
+    }
+
+    // 4. Finalize the setup
+    updateLoadingModal(95, "Finalizing visualization...");
+    finalizeSetup();
+    
+    setTimeout(() => {
+        updateLoadingModal(100, "Complete!");
+        setTimeout(hideModal, 300);
+    }, 200);
+}
+
+/* async function processFilePipeline() {
   // 1. Show the unified loading modal.
   showLoadingModal("Starting file load...");
-  let _parsedJsonData = null;
 
-  // 2. Handle JSON Parsing FIRST (if a JSON file is present)
+  // 2. Handle JSON Parsing (if a JSON file is present)
   if (jsonFileToLoad) {
     appState.jsonFilename = jsonFileToLoad.name;
     localStorage.setItem("jsonFilename", appState.jsonFilename);
@@ -178,11 +267,16 @@ async function processFilePipeline() {
     calculateAndSetOffset();
 
     const worker = new Worker("./src/parser.worker.js");
+
+    // Use a promise to wait for the worker to finish parsing
     const parsedData = await new Promise((resolve, reject) => {
       worker.onmessage = (e) => {
         const { type, data, percent, message } = e.data;
         if (type === "progress") {
-          updateLoadingModal(percent * 0.8, `Parsing JSON (${percent}%)...`);
+          updateLoadingModal(
+            15 + percent * 0.8,
+            `Parsing JSON (${percent}%)...`
+          );
         } else if (type === "complete") {
           worker.terminate();
           resolve(data);
@@ -193,12 +287,15 @@ async function processFilePipeline() {
       };
       worker.postMessage({ file: jsonFileToLoad });
     });
-    _parsedJsonData = parsedData;
+
+    // 4. Post-process the parsed JSON data
+    updateLoadingModal(95, "Finalizing visualization...");
     const result = await parseVisualizationJson(
       parsedData,
       appState.radarStartTimeMs,
       appState.videoStartDate
     );
+
     if (result.error) {
       hideModal();
       showModal(result.error);
@@ -208,119 +305,36 @@ async function processFilePipeline() {
     appState.globalMinSnr = result.minSnr;
     appState.globalMaxSnr = result.maxSnr;
   }
-
-  // 3. Handle Video Loading SECOND, with two-stage initialization
+  // 3. Handle Video Loading first (if a video file is present)
   if (videoFileToLoad) {
-    videoPlayer.addEventListener(
-      "durationchange",
-      () => {
-        if (
-          videoPlayer.duration > 0 &&
-          appState.speedGraphInstance &&
-          appState.vizData
-        ) {
-          appState.speedGraphInstance.setData(
-            appState.vizData,
-            videoPlayer.duration
-          );
-        }
-      },
-      { once: true }
-    );
-    let spinnerInterval; // Declare here to be accessible in all scopes
-
-    // This single promise manages the entire video loading lifecycle.
-    const videoReadyPromise = new Promise((resolve, reject) => {
-      // Define cleanup logic to remove listeners and stop the spinner
-      const cleanup = () => {
-        clearInterval(spinnerInterval);
-        videoPlayer.removeEventListener("loadedmetadata", onMetadataLoaded);
-        videoPlayer.removeEventListener("canplaythrough", onCanPlayThrough);
-        videoPlayer.removeEventListener("error", onError);
-      };
-
-      // STAGE 1: Fired when video duration is known.
-      const onMetadataLoaded = () => {
-        updateLoadingModal(95, "Finalizing visualization...");
-        // This is the key fix: initialize data-dependent sketches immediately.
-        finalizeSetup(_parsedJsonData);
-      };
-
-      // STAGE 2: Fired when video is buffered enough to play.
-      const onCanPlayThrough = () => {
-        cleanup();
-        resolve(); // Resolve the promise, allowing the pipeline to complete.
-      };
-
-      // Handle any loading errors
-      const onError = (e) => {
-        console.error("Video loading error:", e);
-        cleanup();
-        reject(e);
-      };
-
-      // Attach the event listeners
-      videoPlayer.addEventListener("loadedmetadata", onMetadataLoaded, {
-        once: true,
-      });
-      videoPlayer.addEventListener("canplaythrough", onCanPlayThrough, {
-        once: true,
-      });
-      videoPlayer.addEventListener("error", onError, { once: true });
-    });
-
-    // Set up file metadata and start the simulated progress spinner
+    updateLoadingModal(5, `Loading video: ${videoFileToLoad.name}`);
     appState.videoFilename = videoFileToLoad.name;
     localStorage.setItem("videoFilename", appState.videoFilename);
     await saveFileWithMetadata("video", videoFileToLoad);
     calculateAndSetOffset();
 
-    const spinnerChars = ["|", "/", "-", "\\"];
-    let spinnerIndex = 0;
-    spinnerInterval = setInterval(() => {
-      const spinnerText = spinnerChars[spinnerIndex % spinnerChars.length];
-      updateLoadingModal(85, `Loading video ${spinnerText}`);
-      spinnerIndex++;
-    }, 150);
-
-    // Trigger the video loading process
-    setupVideoPlayer(URL.createObjectURL(videoFileToLoad));
-
-    // Await the promise, which resolves only after 'canplaythrough' fires.
-    await videoReadyPromise;
-
-    // 4. Finalize the UI by hiding the modal
-    updateLoadingModal(100, "Complete!");
-    setTimeout(hideModal, 300);
-  } else {
-    // If NO video was loaded, we must still finalize the setup and hide the modal.
-    updateLoadingModal(95, "Finalizing visualization...");
-    finalizeSetup(_parsedJsonData); // Setup with only JSON data
-    setTimeout(() => {
-      updateLoadingModal(100, "Complete!");
-      setTimeout(hideModal, 300);
-    }, 200);
+    // Use a promise to wait until the video metadata is loaded
+    await new Promise((resolve, reject) => {
+      videoPlayer.onloadedmetadata = resolve;
+      videoPlayer.onerror = reject;
+      setupVideoPlayer(URL.createObjectURL(videoFileToLoad));
+    });
+    updateLoadingModal(15, "Video metadata loaded.");
   }
-}
+  // 5. Finalize the setup and hide the modal
+  updateLoadingModal(100, "Complete!");
+  finalizeSetup();
+  setTimeout(hideModal, 300);
+} */
 
-function finalizeSetup(_parsedJsonData) {
+/**
+ * This function creates the p5 instances and finishes the UI setup.
+ * It's called after all file processing is complete.
+ */
+function finalizeSetup() {
   // Make sure the canvas placeholder is hidden and toggles are visible
   canvasPlaceholder.style.display = "none";
   featureToggles.classList.remove("hidden");
-
-  // --- START OF THE FIX ---
-  // This is the critical step. Before we do anything else, we loop through the
-  // radar data and recalculate the relative timestamp for every single frame.
-  // This ensures the data is perfectly synced to the video's confirmed timeline.
-  if (appState.vizData && appState.videoStartDate) {
-    appState.vizData.radarFrames.forEach((frame) => {
-      frame.timestampMs =
-        appState.radarStartTimeMs +
-        frame.timestamp -
-        appState.videoStartDate.getTime();
-    });
-  }
-  // --- END OF THE FIX ---
 
   // Create the p5 instances
   if (!appState.p5_instance) {
@@ -331,25 +345,24 @@ function finalizeSetup(_parsedJsonData) {
   }
 
   // Setup the speed graph if we have the necessary data
-  if (appState.vizData) {
+  if (appState.vizData && videoPlayer.duration > 0) {
     speedGraphPlaceholder.classList.add("hidden");
     if (!appState.speedGraphInstance) {
       appState.speedGraphInstance = new p5(speedGraphSketch);
     }
-    
-    // The previous logic for setting the frame and redrawing was correct.
-    // It failed because the underlying timestamp data was wrong.
-    resetVisualization(); 
     appState.speedGraphInstance.setData(appState.vizData, videoPlayer.duration);
-    appState.speedGraphInstance.redraw();
   }
 
-  // Update SNR inputs now that data is loaded
+  // Reset the visualization to the first frame
   if (appState.vizData) {
     snrMinInput.value = appState.globalMinSnr.toFixed(1);
     snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
+    resetVisualization();
   }
 }
+
+// --- [END] CORRECTED UNIFIED FILE LOADING LOGIC ---
+
 // Sets up the video player with the given file URL.
 function setupVideoPlayer(fileURL) {
   videoPlayer.src = fileURL;
@@ -403,6 +416,7 @@ function loadVideoWithProgress(videoObject) {
     () => {
       // This is the perfect time to re-sync data if needed
       if (appState.vizData) {
+        console.log("DEBUG: Video metadata loaded. Re-calculating timestamps.");
         appState.vizData.radarFrames.forEach((frame) => {
           frame.timestampMs =
             appState.radarStartTimeMs +
@@ -518,6 +532,10 @@ saveSessionBtn.addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
+/**
+ * A callback that runs for every new video frame presented to the screen.
+ * It calculates the time since the last frame to measure video performance.
+ */
 function videoFrameCallback(now, metadata) {
   // 'now' is a high-resolution timestamp provided by the browser
   if (appState.lastVideoFrameTime > 0) {
@@ -657,6 +675,110 @@ document.addEventListener("fullscreenchange", () => {
     fullscreenExitIcon.classList.add("hidden");
   }
 });
+
+// jsonFileInput event listener
+/* jsonFileInput.addEventListener("change", (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  appState.jsonFilename = file.name;
+  localStorage.setItem("jsonFilename", appState.jsonFilename);
+  calculateAndSetOffset();
+  saveFileWithMetadata("json", file); // We still cache the raw file
+
+  // 1. Show the modal with the progress bar
+  showModal("Parsing large JSON file...", false, true);
+  updateModalProgress(0);
+
+  // 2. Create a new Worker from our script
+  const worker = new Worker("./src/parser.worker.js");
+
+  // 3. Set up listeners for messages FROM the worker
+  worker.onmessage = async (e) => {
+    const { type, data, message, percent } = e.data;
+
+    if (type === "progress") {
+      updateModalProgress(percent);
+    } else if (type === "complete") {
+      updateModalProgress(100);
+
+      const result = await parseVisualizationJson(
+        data,
+        appState.radarStartTimeMs,
+        appState.videoStartDate
+      );
+
+      if (result.error) {
+        showModal(result.error);
+        worker.terminate(); // Terminate worker on error
+        return;
+      }
+
+      if (appState.p5_instance) {
+        appState.p5_instance.remove();
+        appState.p5_instance = null;
+      }
+      if (appState.speedGraphInstance) {
+        appState.speedGraphInstance.remove();
+        appState.speedGraphInstance = null;
+        speedGraphPlaceholder.classList.remove("hidden");
+      }
+
+      appState.vizData = result.data;
+      appState.globalMinSnr = result.minSnr;
+      appState.globalMaxSnr = result.maxSnr;
+      snrMinInput.value = appState.globalMinSnr.toFixed(1);
+      snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
+
+      resetVisualization();
+      canvasPlaceholder.style.display = "none";
+      featureToggles.classList.remove("hidden");
+
+      if (!appState.p5_instance) {
+        appState.p5_instance = new p5(radarSketch);
+      }
+
+      // --- START: This is the new, corrected logic ---
+      // After processing the new JSON, check if a video is already loaded and ready.
+      // If it is, this is the trigger to create or update the speed graph.
+      if (appState.vizData && videoPlayer.duration > 0) {
+        speedGraphPlaceholder.classList.add("hidden");
+        if (!appState.speedGraphInstance) {
+          appState.speedGraphInstance = new p5(speedGraphSketch);
+        }
+        appState.speedGraphInstance.setData(
+          appState.vizData,
+          videoPlayer.duration
+        );
+      }
+      // --- END: This is the new, corrected logic ---
+
+      document.getElementById("modal-ok-btn").click();
+      worker.terminate();
+    } else if (type === "error") {
+      showModal(message);
+      worker.terminate();
+    }
+  };
+
+  // 4. Send the file TO the worker to start the job
+  worker.postMessage({ file: file });
+}); */
+
+// Event listener for video file input change.
+/* videoFileInput.addEventListener("change", (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  appState.videoFilename = file.name;
+  localStorage.setItem("videoFilename", appState.videoFilename);
+  saveFileWithMetadata("video", file);
+
+  calculateAndSetOffset();
+  loadVideoWithProgress(file);
+  // Start the performance monitoring loop as soon as a video is attached.
+  videoPlayer.requestVideoFrameCallback(videoFrameCallback);
+}); */
 
 // Event listener for offset input change.
 offsetInput.addEventListener("input", () => {
@@ -1050,10 +1172,11 @@ function calculateAndSetOffset() {
       videoTimestampInfo.timestampStr,
       videoTimestampInfo.format
     );
-    if (appState.videoStartDate){
-  };
+    if (appState.videoStartDate)
+      console.log(
+        `Video start date set to: ${appState.videoStartDate.toISOString()}`
+      );
   }
-
   if (jsonTimestampInfo) {
     const jsonDate = parseTimestamp(
       jsonTimestampInfo.timestampStr,
@@ -1073,6 +1196,180 @@ function calculateAndSetOffset() {
     }
   }
 }
+
+// Application Initialization
+
+// FILE: steps/src/main.js
+
+// REPLACE the entire 'document.addEventListener("DOMContentLoaded", ...)' block with this:
+/* document.addEventListener("DOMContentLoaded", () => {
+  initializeTheme();
+  console.log("DEBUG: DOMContentLoaded fired. Starting session load.");
+
+  initDB(async () => {
+    console.log("DEBUG: Database initialized.");
+    // --- START: Restore Session and UI State from localStorage ---
+    const savedOffset = localStorage.getItem("visualizerOffset");
+    if (savedOffset !== null) {
+      offsetInput.value = savedOffset;
+    }
+
+    const savedSpeed = localStorage.getItem("playbackSpeed");
+    if (savedSpeed) {
+      speedSlider.value = savedSpeed;
+      speedDisplay.textContent = `${parseFloat(savedSpeed).toFixed(1)}x`;
+      videoPlayer.playbackRate = savedSpeed;
+    }
+
+    const savedSnrMin = localStorage.getItem("snrMin");
+    if (savedSnrMin) snrMinInput.value = savedSnrMin;
+
+    const savedSnrMax = localStorage.getItem("snrMax");
+    if (savedSnrMax) snrMaxInput.value = savedSnrMax;
+
+    // If custom SNR values were part of the session, apply them to the app state.
+    if (savedSnrMin && savedSnrMax) {
+      appState.globalMinSnr = parseFloat(savedSnrMin);
+      appState.globalMaxSnr = parseFloat(savedSnrMax);
+    }
+
+    // Restore the state of all toggle checkboxes.
+    const savedToggles = localStorage.getItem("togglesState");
+    if (savedToggles) {
+      try {
+        const toggles = JSON.parse(savedToggles);
+        toggleSnrColor.checked = toggles.snrColor;
+        toggleClusterColor.checked = toggles.clusterColor;
+        toggleInlierColor.checked = toggles.inlierColor;
+        toggleStationaryColor.checked = toggles.stationaryColor;
+        toggleVelocity.checked = toggles.velocity;
+        toggleTracks.checked = toggles.tracks;
+        toggleEgoSpeed.checked = toggles.egoSpeed;
+        toggleFrameNorm.checked = toggles.frameNorm;
+        toggleDebugOverlay.checked = toggles.debugOverlay;
+        toggleDebug2Overlay.checked = toggles.debug2Overlay;
+        toggleCloseUp.checked = toggles.closeUp;
+        togglePredictedPos.checked = toggles.predictedPos;
+        toggleCovariance.checked = toggles.covariance;
+      } catch (e) {
+        console.error("Could not parse saved toggle state.", e);
+      }
+    }
+    // --- END: Restore Session and UI State ---
+
+    // Get the filenames we EXPECT to load from localStorage
+    appState.videoFilename = localStorage.getItem("videoFilename");
+    appState.jsonFilename = localStorage.getItem("jsonFilename");
+
+    calculateAndSetOffset();
+
+    const videoBlob = await loadFreshFileFromDB(
+      "video",
+      appState.videoFilename
+    );
+    const jsonBlob = await loadFreshFileFromDB("json", appState.jsonFilename);
+
+    console.log(
+      "DEBUG: Freshness checks complete. Proceeding with valid data."
+    );
+
+    const finalizeSetup = async (parsedJson) => {
+      if (parsedJson) {
+        const result = await parseVisualizationJson(
+          parsedJson,
+          appState.radarStartTimeMs,
+          appState.videoStartDate
+        );
+
+        if (!result.error) {
+          appState.vizData = result.data;
+          // Note: We use the saved SNR values if they exist, otherwise the file's global values.
+          appState.globalMinSnr = savedSnrMin
+            ? parseFloat(savedSnrMin)
+            : result.minSnr;
+          appState.globalMaxSnr = savedSnrMax
+            ? parseFloat(savedSnrMax)
+            : result.maxSnr;
+          snrMinInput.value = savedSnrMin || result.minSnr.toFixed(1);
+          snrMaxInput.value = savedSnrMax || result.maxSnr.toFixed(1);
+        } else {
+          showModal(result.error);
+        }
+      }
+
+      if (appState.vizData) {
+        resetVisualization();
+        canvasPlaceholder.style.display = "none";
+        featureToggles.classList.remove("hidden");
+        if (!appState.p5_instance) {
+          appState.p5_instance = new p5(radarSketch);
+        }
+        if (!appState.zoomSketchInstance) {
+          appState.zoomSketchInstance = new p5(zoomSketch, 'zoom-canvas-container');
+        }
+      }
+      //document.getElementById("zoom-panel").style.display = "none";
+    };
+
+    if (jsonBlob) {
+      showModal("Loading data from cache...", false, true);
+      updateModalProgress(0);
+      const worker = new Worker("./src/parser.worker.js");
+      worker.onmessage = async (e) => {
+        const { type, data, message, percent } = e.data;
+        if (type === "progress") {
+          updateModalProgress(percent);
+        } else if (type === "complete") {
+          updateModalProgress(100);
+          await finalizeSetup(data);
+          document.getElementById("modal-ok-btn").click();
+          worker.terminate();
+          loadVideoWithProgress(videoBlob);
+        } else if (type === "error") {
+          showModal(message);
+          worker.terminate();
+        }
+      };
+      worker.postMessage({ file: jsonBlob });
+    } else {
+      await finalizeSetup(null);
+      loadVideoWithProgress(videoBlob);
+    }
+  });
+}); */
+
+/* // In main.js
+
+// --- INITIALIZATION ---
+document.addEventListener("DOMContentLoaded", () => {
+  initializeTheme();
+  initDB(async () => {
+    console.log("Database initialized. Checking for cached session...");
+
+    // --- START: RESTORED AUTO-RELOAD LOGIC ---
+    // Get the filenames we expect to find in the cache
+    appState.jsonFilename = localStorage.getItem("jsonFilename");
+    appState.videoFilename = localStorage.getItem("videoFilename");
+
+    if (appState.jsonFilename) {
+        const jsonBlob = await loadFreshFileFromDB("json", appState.jsonFilename);
+        const videoBlob = await loadFreshFileFromDB("video", appState.videoFilename);
+
+        // If the required JSON file is in the cache, start the loading process
+        if (jsonBlob) {
+            console.log("Cached session found. Starting auto-reload...");
+            filesToLoad = { json: jsonBlob, video: videoBlob };
+            startLoadingProcess(); // This will show our new unified modal
+            processJsonFile(jsonBlob); // Start the process with the cached file
+        } else {
+            console.log("No valid cached session found. Ready for manual file load.");
+        }
+    } else {
+        console.log("No previous session found. Ready for manual file load.");
+    }
+    // --- END: RESTORED AUTO-RELOAD LOGIC ---
+  });
+}); */
 
 // --- [START] CORRECTED INITIALIZATION LOGIC ---
 document.addEventListener("DOMContentLoaded", () => {

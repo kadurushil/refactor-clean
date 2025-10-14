@@ -11,6 +11,26 @@ import {
 } from "./dom.js";
 
 let modalResolve = null;
+
+// The showModal function is now simpler.
+/* export function showModal(message, isConfirm = false) {
+  return new Promise((resolve) => {
+    modalText.textContent = message;
+    modalCancelBtn.classList.toggle("hidden");
+    modalOkBtn.classList.toggle("hidden", isConfirm);
+    modalProgressContainer.classList.add("hidden"); // Hide progress by default
+
+    modalContainer.classList.remove("hidden");
+    setTimeout(() => {
+      modalOverlay.classList.remove("opacity-0");
+      modalContent.classList.remove("scale-95");
+    }, 10);
+    modalResolve = resolve;
+  });
+} */
+
+
+
 export function showModal(message, isConfirm = false) {
   return new Promise((resolve) => {
     modalText.textContent = message;

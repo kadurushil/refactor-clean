@@ -284,7 +284,6 @@ export const zoomSketch = function (p) {
   appState.zoomFactor = 4; // Set a default zoom factor in the global state
 
   p.setup = function () {
-    console.log("zoomSketch: Setup function has been called."); //debug
     p.noLoop();
   };
 
