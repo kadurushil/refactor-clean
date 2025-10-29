@@ -151,7 +151,7 @@ export const radarSketch = function (p) {
         if (togglePredictedPos.checked) {
           for (const track of appState.vizData.tracks) {
             const log = track.historyLog.find(
-              (log) => log.frameIdx === appState.currentFrame + 1
+              (log) => log.frameIdx === appState.currentFrame
             );
             if (
               log &&
@@ -243,29 +243,32 @@ export const radarSketch = function (p) {
           );
         }
       } else if (zoomPanel.style.display === "block") {
-    // --- THIS BLOCK IS THE FIX ---
-    // If NOT hovering, but the panel is still visible:
-    
-    // 1. Continue to update the zoom sketch's position to follow the mouse.
-    //    We pass an empty array for hoveredItems, so no tooltip is drawn.
-    if (appState.zoomSketchInstance && appState.zoomSketchInstance.updateAndDraw) {
-        appState.zoomSketchInstance.updateAndDraw(
+        // --- THIS BLOCK IS THE FIX ---
+        // If NOT hovering, but the panel is still visible:
+
+        // 1. Continue to update the zoom sketch's position to follow the mouse.
+        //    We pass an empty array for hoveredItems, so no tooltip is drawn.
+        if (
+          appState.zoomSketchInstance &&
+          appState.zoomSketchInstance.updateAndDraw
+        ) {
+          appState.zoomSketchInstance.updateAndDraw(
             p.mouseX,
             p.mouseY,
             [], // Pass empty array
             plotScales
-        );
-    }
+          );
+        }
 
-    // 2. If a "hide" timer isn't already running, start one.
-    if (!appState.zoomHoverTimeout) {
-        appState.zoomHoverTimeout = setTimeout(() => {
+        // 2. If a "hide" timer isn't already running, start one.
+        if (!appState.zoomHoverTimeout) {
+          appState.zoomHoverTimeout = setTimeout(() => {
             console.log("Cooling period ended. Hiding zoom panel.");
             zoomPanel.style.display = "none";
             appState.zoomHoverTimeout = null;
-        }, COOLING_PERIOD_MS);
-    }
-}
+          }, COOLING_PERIOD_MS);
+        }
+      }
     } else {
       zoomPanel.style.display = "none";
     }

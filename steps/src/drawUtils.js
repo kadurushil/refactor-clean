@@ -449,7 +449,7 @@ export function drawTrackMarkers(p, plotScales) {
     // --- END: Add the Same Safeguard Here ---
 
     const log = track.historyLog.find(
-      (log) => log.frameIdx === appState.currentFrame + 1
+      (log) => log.frameIdx === appState.currentFrame
     );
 
     if (log) {
@@ -639,30 +639,49 @@ export function handleCloseUpDisplay(p, plotScales) {
   const infoStrings = [];
   for (const item of hoveredItems) {
     let infoText = "";
+    let itemColor = item.color || null; // Initialize with existing item color or null
     const data = item.data;
     switch (item.type) {
       case "point":
         const vel = data.velocity !== null ? data.velocity.toFixed(2) : "N/A";
         const snr = data.snr !== null ? data.snr.toFixed(1) : "N/A";
-        infoText = `Point ${item.index} | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(
+        infoText = `Point ${item.index} | X:${data.x.toFixed(
           2
-        )} | V:${vel}, SNR:${snr}, Cluster: ${data.clusterNumber}`;
+        )}, Y:${data.y.toFixed(2)} | V:${vel}, SNR:${snr}, Cluster: ${
+          data.clusterNumber
+        }`;
         break;
       case "cluster":
         const rs =
           data.radialSpeed !== null ? data.radialSpeed.toFixed(2) : "N/A";
         const vx = data.vx !== null ? data.vx.toFixed(2) : "N/A";
         const vy = data.vy !== null ? data.vy.toFixed(2) : "N/A";
-        infoText = `Cluster ${data.id} | X:${data.x.toFixed(
+        infoText = `Cluster ${data.id} | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(
           2
-        )}, Y:${data.y.toFixed(2)} | rSpeed:${rs}, vX:${vx}, vY:${vy}`;
+        )} | rSpeed:${rs}, vX:${vx}, vY:${vy}`;
+        // itemColor is already set for clusters when pushed to hoveredItems
         break;
       case "track":
-        infoText = `Track ${
-          item.trackId
-        } | X:${data.correctedPosition[0].toFixed(
+        const trackX = data.correctedPosition[0];
+        const trackY = data.correctedPosition[1];
+        let trackSpeed = "N/A";
+        if (
+          data.predictedVelocity &&
+          data.predictedVelocity[0] !== null &&
+          data.predictedVelocity[1] !== null
+        ) {
+          const [vx, vy] = data.predictedVelocity;
+          // Calculate speed in km/h, similar to drawTrackMarkers
+          trackSpeed = (p.sqrt(vx * vx + vy * vy) * 3.6).toFixed(1) + " km/h";
+        }
+        infoText = `Track ${item.trackId} | X:${trackX.toFixed(
           2
-        )}, Y:${data.correctedPosition[1].toFixed(2)}`;
+        )}, Y:${trackY.toFixed(2)} | Speed: ${trackSpeed}`;
+        // Check for dark mode to ensure visibility
+        const isDark = document.documentElement.classList.contains("dark");
+        itemColor = isDark
+          ? p.color(100, 149, 237) // A lighter "Cornflower Blue" for dark mode
+          : p.color(0, 0, 255); // Original blue for light mode
         break;
       case "prediction":
         const p_vx =
@@ -673,15 +692,14 @@ export function handleCloseUpDisplay(p, plotScales) {
           data.predictedVelocity[1] !== null
             ? data.predictedVelocity[1].toFixed(2)
             : "N/A";
-        infoText = `Pred. for ${
-          item.trackId
-        } | X:${data.predictedPosition[0].toFixed(
+        infoText = `Pred. for ${item.trackId} | X:${data.predictedPosition[0].toFixed(
           2
         )}, Y:${data.predictedPosition[1].toFixed(2)} | vX:${p_vx}, vY:${p_vy}`;
+        itemColor = p.color(255, 0, 0); // Red color for prediction info
         break;
     }
     if (infoText) {
-      infoStrings.push({ text: infoText, color: item.color || null });
+      infoStrings.push({ text: infoText, color: itemColor });
     }
   }
 

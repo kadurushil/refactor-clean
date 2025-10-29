@@ -17,7 +17,6 @@ import {
   toggleCovariance,
 } from "../dom.js";
 
-
 function drawZoomTooltip(p, hoveredItems, mainMouseX) {
   if (!hoveredItems || hoveredItems.length === 0) return;
 
@@ -25,35 +24,71 @@ function drawZoomTooltip(p, hoveredItems, mainMouseX) {
   const infoStrings = [];
   for (const item of hoveredItems) {
     let infoText = "";
+    let itemColor = item.color || null; // Initialize with existing item color or null
     const data = item.data;
     switch (item.type) {
       case "point":
-        infoText = `Point${item.index} | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(
+        const vel = data.velocity !== null ? data.velocity.toFixed(2) : "N/A";
+        const snr = data.snr !== null ? data.snr.toFixed(1) : "N/A";
+        infoText = `Point ${item.index} | X:${data.x.toFixed(
           2
-        )} | V:${data.velocity?.toFixed(2)}, SNR:${data.snr?.toFixed(1)}`;
+        )}, Y:${data.y.toFixed(2)} | V:${vel}, SNR:${snr}, Cluster: ${
+          data.clusterNumber
+        }`;
         break;
       case "cluster":
+        const rs =
+          data.radialSpeed !== null ? data.radialSpeed.toFixed(2) : "N/A";
+        const vx = data.vx !== null ? data.vx.toFixed(2) : "N/A";
+        const vy = data.vy !== null ? data.vy.toFixed(2) : "N/A";
         infoText = `Cluster ${data.id} | X:${data.x.toFixed(
           2
-        )}, Y:${data.y.toFixed(2)} | rSpeed:${data.radialSpeed?.toFixed(2)}`;
+        )}, Y:${data.y.toFixed(2)} | rSpeed:${rs}, vX:${vx}, vY:${vy}`;
         break;
       case "track":
-        infoText = `Track ${
-          item.trackId
-        } | X:${data.correctedPosition[0].toFixed(
+        const trackX = data.correctedPosition[0];
+        const trackY = data.correctedPosition[1];
+        let trackSpeed = "N/A",
+          trackVx = "N/A",
+          trackVy = "N/A";
+        if (
+          data.predictedVelocity &&
+          data.predictedVelocity[0] !== null &&
+          data.predictedVelocity[1] !== null
+        ) {
+          const [vx, vy] = data.predictedVelocity;
+          trackVx = vx.toFixed(2);
+          trackVy = vy.toFixed(2);
+          trackSpeed = (p.sqrt(vx * vx + vy * vy) * 3.6).toFixed(1) + " km/h";
+        }
+        infoText = `Track ${item.trackId} | X:${trackX.toFixed(
           2
-        )}, Y:${data.correctedPosition[1].toFixed(2)}`;
+        )}, Y:${trackY.toFixed(2)} | Speed: ${trackSpeed}`;
+        const isDark = document.documentElement.classList.contains("dark");
+        itemColor = isDark
+          ? p.color(100, 149, 237) // Lighter blue for dark mode
+          : p.color(0, 0, 255); // Original blue for light mode
         break;
       case "prediction":
-        infoText = `Pred. for ${
+        const p_vx =
+          data.predictedVelocity[0] !== null
+            ? data.predictedVelocity[0].toFixed(2)
+            : "N/A";
+        const p_vy =
+          data.predictedVelocity[1] !== null
+            ? data.predictedVelocity[1].toFixed(2)
+            : "N/A";
+        infoText = `Pred. ${
           item.trackId
         } | X:${data.predictedPosition[0].toFixed(
           2
-        )}, Y:${data.predictedPosition[1].toFixed(2)}`;
+        )}, Y:${data.predictedPosition[1].toFixed(2)} | Vx:${p_vx}, Vy:${p_vy}`;
+        itemColor = p.color(255, 0, 0); // Red color for prediction info
         break;
     }
-    if (infoText)
-      infoStrings.push({ text: infoText, color: item.color || null });
+    if (infoText) {
+      infoStrings.push({ text: infoText, color: itemColor });
+    }
   }
 
   // 2. Find the average screen position of hovered items
@@ -171,22 +206,24 @@ export const zoomSketch = function (p) {
         canvas.parent(containerId);
         //console.log(`zoomSketch: Canvas CREATED with dimensions ${p.width}x${p.height}`); // debug
       } else {
-        console.warn("zoomSketch: updateAndDraw called, but container is not ready. Aborting draw."); //debug
+        console.warn(
+          "zoomSketch: updateAndDraw called, but container is not ready. Aborting draw."
+        ); //debug
         return;
       }
     }
     p.redraw();
   };
 
-  p.handleResize = function() {
+  p.handleResize = function () {
     console.log("zoomSketch: handleResize triggered. Destroying old canvas.");
     if (canvas) {
       canvas.remove(); // p5.js function to properly remove the canvas from the DOM
-      canvas = null;   // Set the internal reference to null
+      canvas = null; // Set the internal reference to null
     }
     // The canvas will be recreated automatically the next time updateAndDraw() is called,
     // at which point the container will have its correct, final dimensions.
-  }
+  };
   p.draw = function () {
     if (!appState.vizData || !canvas) return;
     p.background(
@@ -277,7 +314,7 @@ export const zoomSketch = function (p) {
     p.fill(textColor);
     p.noStroke();
     p.textSize(16);
-    p.textAlign(p.LEFT -2, p.TOP);
+    p.textAlign(p.LEFT - 2, p.TOP);
     p.textStyle(p.BOLD);
     p.text(titleText, 10, 10);
     p.pop();
@@ -289,5 +326,4 @@ export const zoomSketch = function (p) {
     p.line(p.width / 2 - 15, p.height / 2, p.width / 2 + 15, p.height / 2);
     p.line(p.width / 2, p.height / 2 - 15, p.width / 2, p.height / 2 + 15);
   };
-
 };
