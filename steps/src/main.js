@@ -17,6 +17,7 @@
 // ===========================================================================================================
 
 import { zoomSketch } from "./p5/zoomSketch.js";
+import { showExplorer, hideExplorer, displayInGrid } from "./dataExplorer.js";
 import {
   showModal,
   hideModal,
@@ -336,10 +337,9 @@ function finalizeSetup(_parsedJsonData) {
     if (!appState.speedGraphInstance) {
       appState.speedGraphInstance = new p5(speedGraphSketch);
     }
-    
     // The previous logic for setting the frame and redrawing was correct.
     // It failed because the underlying timestamp data was wrong.
-    resetVisualization(); 
+    resetVisualization();
     appState.speedGraphInstance.setData(appState.vizData, videoPlayer.duration);
     appState.speedGraphInstance.redraw();
   }
@@ -945,6 +945,7 @@ document.addEventListener("keydown", (event) => {
     "m",
     "q",
     "c",
+    "i",
   ];
 
   if (!appState.vizData || !recognizedKeys.includes(key)) {
@@ -1011,7 +1012,14 @@ document.addEventListener("keydown", (event) => {
       appState.p5_instance.redraw();
     }
   }
-
+  if (key === "i") {
+    const panel = document.getElementById("data-explorer-panel");
+    if (panel.classList.contains("hidden")) {
+      showExplorer();
+    } else {
+      hideExplorer();
+    }
+  }
   if (key === "p") {
     togglePredictedPos.click();
     appState.p5_instance.redraw();
@@ -1042,6 +1050,18 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+canvasContainer.addEventListener('click', () => {
+    if (!appState.vizData) return;
+
+    // For this example, let's just send the pointCloud of the current frame to the grid.
+    // A more advanced version could detect if you clicked on a specific track.
+    const currentFrameData = appState.vizData.radarFrames[appState.currentFrame];
+
+    if (currentFrameData && currentFrameData.pointCloud) {
+        displayInGrid(currentFrameData.pointCloud, `Frame ${appState.currentFrame} - Point Cloud`);
+    }
+});
+
 function calculateAndSetOffset() {
   const jsonTimestampInfo = extractTimestampInfo(appState.jsonFilename);
   const videoTimestampInfo = extractTimestampInfo(appState.videoFilename);
@@ -1050,8 +1070,8 @@ function calculateAndSetOffset() {
       videoTimestampInfo.timestampStr,
       videoTimestampInfo.format
     );
-    if (appState.videoStartDate){
-  };
+    if (appState.videoStartDate) {
+    }
   }
 
   if (jsonTimestampInfo) {

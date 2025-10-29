@@ -8,6 +8,8 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/oboe@2.1.5/dist/oboe-browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
   <script>
     tailwind.config = {
       darkMode: "class",
@@ -147,7 +149,7 @@
               id="toggle-debug2-overlay" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" /> Show
             Advanced Debug (A)</label>
           <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-close-up"
-              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" />    GOD MODE </label>
+              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" /> GOD MODE </label>
           <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-predicted-pos"
               class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" checked /> Show Predicted Position
             (P)</label>
@@ -260,6 +262,38 @@
         <p id="speed-graph-placeholder" class="text-gray-500 dark:text-gray-400 text-lg">Load JSON & Video to see speed
           graph
         </p>
+      </div>
+    </div>
+    <div id="data-explorer-panel"
+      class="hidden fixed bottom-24 right-4 bg-white dark:bg-gray-800 shadow-2xl rounded-lg z-30 flex flex-col w-full max-w-2xl h-1/2 border dark:border-gray-600">
+
+      <div class="flex items-center justify-between p-2 border-b dark:border-gray-700">
+        <h2 class="text-lg font-bold ml-2">Data Explorer</h2>
+        <button id="close-explorer-btn"
+          class="text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg p-1.5">&times;</button>
+      </div>
+
+      <div class="flex border-b dark:border-gray-700">
+        <button id="tab-btn-tree" class="px-4 py-2 text-sm font-medium border-b-2 border-blue-500">Tree View</button>
+        <button id="tab-btn-grid" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400">Grid
+          View</button>
+        <button id="tab-btn-plot" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400">Plot
+          View</button>
+      </div>
+
+      <div class="flex-grow p-2 overflow-auto">
+        <div id="tab-panel-tree" class="font-mono text-xs"></div>
+        <div id="tab-panel-grid" class="hidden h-full">
+          <div id="data-grid" class="ag-theme-alpine-dark h-full"></div>
+        </div>
+        <div id="tab-panel-plot" class="hidden p-2">
+          <canvas id="data-chart"></canvas>
+        </div>
+      </div>
+
+      <div id="explorer-footer" class="p-2 border-t dark:border-gray-700 text-right hidden">
+        <button id="plot-selected-btn"
+          class="bg-blue-600 text-white px-3 py-1 rounded-lg text-sm hover:bg-blue-700">Plot Selected Column</button>
       </div>
     </div>
   </main>
