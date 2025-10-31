@@ -103,6 +103,7 @@ import {
   menuScrim,
   toggleConfirmedOnly,
   resetUIForNewLoad,
+  explorerBtn,
 } from "./dom.js";
 
 import { initializeTheme } from "./theme.js";
@@ -1059,6 +1060,14 @@ canvasContainer.addEventListener('click', () => {
 
     if (currentFrameData && currentFrameData.pointCloud) {
         displayInGrid(currentFrameData.pointCloud, `Frame ${appState.currentFrame} - Point Cloud`);
+    }
+});
+explorerBtn.addEventListener('click', () => {
+   const panel = document.getElementById("data-explorer-panel");
+    if (panel.classList.contains("hidden")) {
+      showExplorer();
+    } else {
+      hideExplorer();
     }
 });
 

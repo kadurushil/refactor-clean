@@ -81,6 +81,8 @@ export const fullscreenEnterIcon = document.getElementById("fullscreen-enter-ico
 export const fullscreenExitIcon = document.getElementById("fullscreen-exit-icon");
 export const menuScrim = document.getElementById("menu-scrim");
 export const toggleConfirmedOnly = document.getElementById("toggle-confirmed-only");
+export const explorerBtn = document.getElementById("explorer-btn");
+
 
 
 //----------------------UPDATE FRAME Function----------------------//
