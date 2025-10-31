@@ -1,5 +1,6 @@
 import { appState } from "./state.js";
 import { formatUTCTime } from "./utils.js";
+import { throttledUpdateExplorer } from "./dataExplorer.js";
 // Also import VIDEO_FPS from constants
 import { VIDEO_FPS } from "./constants.js";
 
@@ -156,6 +157,9 @@ export function updateFrame(frame, forceVideoSeek) {
   // --- End of fix ---
 
   if (appState.p5_instance) appState.p5_instance.redraw(); // Redraw radar sketch
+  // --- NEW: Centralized Explorer Update ---
+  throttledUpdateExplorer();
+  // --- END: Centralized Explorer Update ---
   if (appState.speedGraphInstance && !appState.isPlaying)
     // Redraw speed graph if not playing.
   appState.speedGraphInstance.redraw();

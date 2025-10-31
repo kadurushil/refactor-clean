@@ -1,6 +1,7 @@
 // In src/dataExplorer.js
 
 import { appState } from './state.js';
+import { throttle } from './utils.js';
 import { 
     canvasContainer, 
     explorerBtn 
@@ -74,12 +75,12 @@ function hideExplorer() {
 function switchTab(targetTab) {
     Object.values(tabs).forEach(tab => {
         tab.panel.classList.add('hidden');
-        tab.btn.classList.remove('border-blue-500');
-        tab.btn.classList.add('text-gray-500', 'dark:text-gray-400');
+        tab.btn.classList.remove('border-blue-500', 'text-gray-900', 'dark:text-white');
+        tab.btn.classList.add('text-gray-500', 'dark:text-gray-400', 'border-transparent');
     });
 
     tabs[targetTab].panel.classList.remove('hidden');
-    tabs[targetTab].btn.classList.add('border-blue-500');
+    tabs[targetTab].btn.classList.add('border-blue-500', 'text-gray-900', 'dark:text-white');
     tabs[targetTab].btn.classList.remove('text-gray-500', 'dark:text-gray-400');
 
     footer.classList.toggle('hidden', targetTab !== 'grid');
@@ -125,6 +126,32 @@ function displayInGrid(data, title) {
     tabs.grid.btn.textContent = `Grid View: ${title}`;
     switchTab('grid');
 }
+
+// --- START: New Robust Update Logic ---
+let throttleTimer = null;
+let debounceTimer = null;
+
+/**
+ * A custom throttled and debounced function for updating the explorer.
+ * - It throttles calls to prevent updates more than once every 400ms.
+ * - It debounces calls to ensure a final, guaranteed update happens 500ms
+ *   after the last call, catching the "end" of a seeking action.
+ */
+export function throttledUpdateExplorer() {
+    // Clear any pending final update, as a new call has come in.
+    clearTimeout(debounceTimer);
+
+    // If we are not currently in a "cool-down" period from a throttled call...
+    if (!throttleTimer) {
+        updateExplorer(); // ...execute the update immediately.
+        // Then, set a cool-down timer to prevent another immediate execution.
+        throttleTimer = setTimeout(() => { throttleTimer = null; }, 400); // 400ms throttle
+    }
+
+    // Schedule a final, debounced update for after the interactions stop.
+    debounceTimer = setTimeout(() => { updateExplorer(); }, 500); // 500ms debounce
+}
+// --- END: New Robust Update Logic ---
 
 // --- Initialization Function (The file's only export) ---
 

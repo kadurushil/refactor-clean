@@ -18,7 +18,7 @@
 
 import { zoomSketch } from "./p5/zoomSketch.js";
 //import { showExplorer, hideExplorer, displayInGrid } from "./dataExplorer.js";
-import { initializeDataExplorer } from "./dataExplorer.js"; // <-- ADD THIS
+import { initializeDataExplorer, throttledUpdateExplorer } from "./dataExplorer.js"; // <-- ADD THIS
 import {
   showModal,
   hideModal,
@@ -742,7 +742,6 @@ timelineSlider.addEventListener("input", (event) => {
     updateFrame(frame, true);
     appState.mediaTimeStart = videoPlayer.currentTime;
     appState.masterClockStart = now;
-    timelineSlider.lastInputTime = now;
   }
 
   // --- 2. Final, Precise Sync (Debounced for reliability) ---
@@ -802,6 +801,7 @@ timelineSlider.addEventListener("wheel", (event) => {
     updatePersistentOverlays(videoPlayer.currentTime);
     updateDebugOverlay(videoPlayer.currentTime);
   }, 300); // Wait 300ms after the last scroll event
+  throttledUpdateExplorer();
 });
 
 // In src/main.js, add this new block of event listeners
