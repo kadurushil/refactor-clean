@@ -69,6 +69,29 @@
     #progress-bar {
       transition: width 0.1s linear;
     }
+
+    /* --- START: CSS for Resizable/Draggable Panel --- */
+    .resizer {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: transparent;
+      z-index: 10;
+    }
+    .resizer-t { top: -5px; left: 5px; right: 5px; height: 10px; cursor: ns-resize; }
+    .resizer-r { top: 5px; right: -5px; bottom: 5px; width: 10px; cursor: ew-resize; }
+    .resizer-b { bottom: -5px; left: 5px; right: 5px; height: 10px; cursor: ns-resize; }
+    .resizer-l { top: 5px; left: -5px; bottom: 5px; width: 10px; cursor: ew-resize; }
+    .resizer-tl { top: -5px; left: -5px; cursor: nwse-resize; }
+    .resizer-tr { top: -5px; right: -5px; cursor: nesw-resize; }
+    .resizer-br { bottom: -5px; right: -5px; cursor: nwse-resize; }
+    .resizer-bl { bottom: -5px; left: -5px; cursor: nesw-resize; }
+    /* When dragging/resizing, prevent text selection on the page */
+    body.resizing, body.dragging {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    /* --- END: CSS for Resizable/Draggable Panel --- */
   </style>
 </head>
 
@@ -275,24 +298,39 @@
     <div id="data-explorer-panel"
       class="hidden fixed bottom-24 right-4 bg-white dark:bg-gray-800 shadow-2xl rounded-lg z-30 flex flex-col w-full max-w-2xl h-1/2 border dark:border-gray-600">
 
-      <div class="flex items-center justify-between p-2 border-b dark:border-gray-700">
+      <!-- START: Add Draggable Header and Resizer Handles -->
+      <div id="data-explorer-header" class="flex items-center justify-between p-2 border-b dark:border-gray-700 cursor-move">
         <h2 class="text-lg font-bold ml-2">Data Explorer</h2>
         <button id="close-explorer-btn"
           class="text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg p-1.5">&times;</button>
       </div>
+      <div class="resizer resizer-t"></div>
+      <div class="resizer resizer-r"></div>
+      <div class="resizer resizer-b"></div>
+      <div class="resizer resizer-l"></div>
+      <div class="resizer resizer-tl"></div>
+      <div class="resizer resizer-tr"></div>
+      <div class="resizer resizer-br"></div>
+      <div class="resizer resizer-bl"></div>
+      <!-- END: Add Draggable Header and Resizer Handles -->
+
 
       <div class="flex border-b dark:border-gray-700">
         <button id="tab-btn-tree" class="px-4 py-2 text-sm font-medium border-b-2 border-blue-500">Tree View</button>
         <button id="tab-btn-grid" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400">Grid
           View</button>
+        <button id="tab-btn-track-grid" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400">Track Grid</button>
         <button id="tab-btn-plot" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400">Plot
           View</button>
       </div>
 
-      <div class="flex-grow p-2 overflow-auto">
+      <div class="flex-grow overflow-auto">
         <div id="tab-panel-tree" class="font-mono text-xs"></div>
-        <div id="tab-panel-grid" class="hidden h-full">
-          <div id="data-grid" class="ag-theme-alpine-dark h-full"></div>
+        <div id="tab-panel-grid" class="hidden h-full p-2">
+          <div id="data-grid" class="ag-theme-alpine-dark h-full w-full"></div>
+        </div>
+        <div id="tab-panel-track-grid" class="hidden h-full p-2">
+            <div id="track-data-grid" class="ag-theme-alpine-dark h-full w-full"></div>
         </div>
         <div id="tab-panel-plot" class="hidden p-2">
           <canvas id="data-chart"></canvas>
