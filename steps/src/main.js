@@ -17,7 +17,8 @@
 // ===========================================================================================================
 
 import { zoomSketch } from "./p5/zoomSketch.js";
-import { showExplorer, hideExplorer, displayInGrid } from "./dataExplorer.js";
+//import { showExplorer, hideExplorer, displayInGrid } from "./dataExplorer.js";
+import { initializeDataExplorer } from "./dataExplorer.js"; // <-- ADD THIS
 import {
   showModal,
   hideModal,
@@ -103,7 +104,7 @@ import {
   menuScrim,
   toggleConfirmedOnly,
   resetUIForNewLoad,
-  explorerBtn,
+  //explorerBtn,
 } from "./dom.js";
 
 import { initializeTheme } from "./theme.js";
@@ -946,7 +947,7 @@ document.addEventListener("keydown", (event) => {
     "m",
     "q",
     "c",
-    "i",
+    //"i",
   ];
 
   if (!appState.vizData || !recognizedKeys.includes(key)) {
@@ -1013,14 +1014,14 @@ document.addEventListener("keydown", (event) => {
       appState.p5_instance.redraw();
     }
   }
-  if (key === "i") {
+  /* if (key === "i") {
     const panel = document.getElementById("data-explorer-panel");
     if (panel.classList.contains("hidden")) {
       showExplorer();
     } else {
       hideExplorer();
     }
-  }
+  } */
   if (key === "p") {
     togglePredictedPos.click();
     appState.p5_instance.redraw();
@@ -1051,7 +1052,7 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-canvasContainer.addEventListener('click', () => {
+/* canvasContainer.addEventListener('click', () => {
     if (!appState.vizData) return;
 
     // For this example, let's just send the pointCloud of the current frame to the grid.
@@ -1061,8 +1062,8 @@ canvasContainer.addEventListener('click', () => {
     if (currentFrameData && currentFrameData.pointCloud) {
         displayInGrid(currentFrameData.pointCloud, `Frame ${appState.currentFrame} - Point Cloud`);
     }
-});
-explorerBtn.addEventListener('click', () => {
+}); */
+/* explorerBtn.addEventListener('click', () => {
    const panel = document.getElementById("data-explorer-panel");
     if (panel.classList.contains("hidden")) {
       showExplorer();
@@ -1070,7 +1071,7 @@ explorerBtn.addEventListener('click', () => {
       hideExplorer();
     }
 });
-
+ */
 function calculateAndSetOffset() {
   const jsonTimestampInfo = extractTimestampInfo(appState.jsonFilename);
   const videoTimestampInfo = extractTimestampInfo(appState.videoFilename);
@@ -1106,6 +1107,7 @@ function calculateAndSetOffset() {
 // --- [START] CORRECTED INITIALIZATION LOGIC ---
 document.addEventListener("DOMContentLoaded", () => {
   initializeTheme();
+  initializeDataExplorer(); // <-- ADD THIS LINE
   initDB(async () => {
     console.log("Database initialized. Checking for cached session...");
 

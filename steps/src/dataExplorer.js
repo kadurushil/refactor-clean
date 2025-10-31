@@ -1,8 +1,12 @@
 // In src/dataExplorer.js
 
 import { appState } from './state.js';
+import { 
+    canvasContainer, 
+    explorerBtn 
+} from './dom.js'; // Import the DOM elements we need to listen to
 
-// --- DOM Elements ---
+// --- DOM Elements (Internal to this module) ---
 const panel = document.getElementById('data-explorer-panel');
 const closeBtn = document.getElementById('close-explorer-btn');
 const footer = document.getElementById('explorer-footer');
@@ -17,7 +21,8 @@ const tabs = {
 const gridDiv = document.getElementById('data-grid');
 const chartCanvas = document.getElementById('data-chart');
 
-let gridApi = null; // This will hold the grid's API
+// --- Module-Local State ---
+let gridApi = null;
 let chartInstance = null;
 let currentGridData = null;
 
@@ -30,7 +35,6 @@ const gridOptions = {
         filter: true,
         resizable: true,
     },
-    // The onGridReady callback is no longer needed with the new createGrid method.
 };
 
 // --- Chart.js Configuration ---
@@ -56,7 +60,16 @@ function createChart(data, label) {
     });
 }
 
-// --- Core Functions ---
+// --- Core Functions (Internal) ---
+
+function showExplorer() {
+    panel.classList.remove('hidden');
+    updateExplorer();
+}
+
+function hideExplorer() {
+    panel.classList.add('hidden');
+}
 
 function switchTab(targetTab) {
     Object.values(tabs).forEach(tab => {
@@ -81,19 +94,12 @@ function createTreeView(data) {
     return pre;
 }
 
-export function showExplorer() {
-    panel.classList.remove('hidden');
-    updateExplorer();
-}
-
-export function hideExplorer() {
-    panel.classList.add('hidden');
-}
-
-export function updateExplorer() {
-    if (panel.classList.contains('hidden')) return;
-    const frame = appState.vizData?.radarFrames[appState.currentFrame];
+function updateExplorer() {
+    if (panel.classList.contains('hidden') || !appState.vizData) return;
+    
+    const frame = appState.vizData.radarFrames[appState.currentFrame];
     if (!frame) return;
+    
     tabs.tree.panel.innerHTML = '';
     tabs.tree.panel.appendChild(createTreeView({
         currentFrame: appState.currentFrame,
@@ -101,11 +107,17 @@ export function updateExplorer() {
     }));
 }
 
-export function displayInGrid(data, title) {
+function displayInGrid(data, title) {
     if (!data || data.length === 0 || !gridApi) return;
 
     currentGridData = data;
-    const columns = Object.keys(data[0]).map(key => ({ field: key }));
+    // Auto-generate columns from the first data object
+    const columns = Object.keys(data[0]).map(key => ({ 
+        field: key,
+        headerName: key, // Set header name
+        sortable: true,   // Ensure all generated columns are sortable
+        filter: true,     // Ensure all generated columns are filterable
+    }));
     
     gridApi.setGridOption('columnDefs', columns);
     gridApi.setGridOption('rowData', data);
@@ -114,35 +126,84 @@ export function displayInGrid(data, title) {
     switchTab('grid');
 }
 
-// --- Event Listeners ---
-closeBtn.addEventListener('click', hideExplorer);
+// --- Initialization Function (The file's only export) ---
 
-Object.keys(tabs).forEach(key => {
-    tabs[key].btn.addEventListener('click', () => switchTab(key));
-});
-
-plotBtn.addEventListener('click', () => {
-    // --- START: MODIFIED LOGIC ---
-    const focusedCell = gridApi.getFocusedCell();
-    if (!focusedCell) {
-        alert("Please click a column header to select it for plotting.");
-        return;
+export function initializeDataExplorer() {
+    // Initialize the grid
+    if (!gridApi) {
+        gridApi = agGrid.createGrid(gridDiv, gridOptions);
     }
-    
-    const colId = focusedCell.column.getColId();
-    // --- END: MODIFIED LOGIC ---
 
-    const plotData = currentGridData.map(row => row[colId]).filter(val => typeof val === 'number');
+    // --- Wire up all event listeners ---
 
-    if (plotData.length > 0) {
-        createChart(plotData, colId);
-        switchTab('plot');
-    } else {
-        alert("The selected column contains no numeric data to plot.");
-    }
-});
+    // Toggle panel visibility
+    explorerBtn.addEventListener('click', () => {
+        if (panel.classList.contains('hidden')) {
+            showExplorer();
+        } else {
+            hideExplorer();
+        }
+    });
+    closeBtn.addEventListener('click', hideExplorer);
 
-// --- START: THIS IS THE MAIN FIX ---
-// Initialize the grid using the new createGrid method and store its API.
-gridApi = agGrid.createGrid(gridDiv, gridOptions);
-// --- END: THIS IS THE MAIN FIX ---
+    // Tab switching
+    Object.keys(tabs).forEach(key => {
+        tabs[key].btn.addEventListener('click', () => switchTab(key));
+    });
+
+    // Plot button
+    plotBtn.addEventListener('click', () => {
+        // Fix: Use onColumnHeaderClicked or get column from focused cell
+        const focusedCell = gridApi.getFocusedCell();
+        if (!focusedCell) {
+            alert("Please click a cell in the column you wish to plot.");
+            return;
+        }
+        
+        const colId = focusedCell.column.getColId();
+        const plotData = currentGridData.map(row => row[colId]).filter(val => typeof val === 'number');
+
+        if (plotData.length > 0) {
+            createChart(plotData, colId);
+            switchTab('plot');
+        } else {
+            alert("The selected column contains no numeric data to plot.");
+        }
+    });
+
+    // Main canvas click listener
+    canvasContainer.addEventListener('click', () => {
+        if (!appState.vizData) return;
+
+        const currentFrameData = appState.vizData.radarFrames[appState.currentFrame];
+        if (currentFrameData && currentFrameData.pointCloud) {
+            // Send point cloud data to the grid
+            displayInGrid(currentFrameData.pointCloud, `Frame ${appState.currentFrame} - Point Cloud`);
+            // Show the explorer if it's hidden
+            if (panel.classList.contains('hidden')) {
+                showExplorer();
+            }
+        }
+    });
+
+    // Keyboard shortcut listener
+    document.addEventListener("keydown", (event) => {
+        // Ignore if typing in an input
+        const isTextInputFocused =
+            event.target.tagName === "INPUT" &&
+            (event.target.type === "text" || event.target.type === "number");
+        if (isTextInputFocused) {
+            return;
+        }
+
+        // Toggle explorer with 'i' key
+        if (event.key === "i") {
+            event.preventDefault();
+            if (panel.classList.contains("hidden")) {
+                showExplorer();
+            } else {
+                hideExplorer();
+            }
+        }
+    });
+}
