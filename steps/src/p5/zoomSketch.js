@@ -301,6 +301,22 @@ export const zoomSketch = function (p) {
     // --- Call the new, self-contained tooltip function ---
     drawZoomTooltip(p, hoveredItems, mainMouseX);
 
+    // --- START: Draw Purple Debug Circle ---
+    // This circle represents the hover radius, drawn in the zoomed coordinate space.
+    // The formula must match the one in drawUtils.js.
+    const hoverRadius = p.constrain(80 / appState.zoomFactor, 5, 25);
+    p.push();
+    p.noFill();
+    p.stroke(148, 0, 211, 150); // Deep purple, semi-transparent.
+    // The stroke weight is divided by the zoom factor to keep it thin.
+    p.strokeWeight(1 / appState.zoomFactor);
+    p.drawingContext.setLineDash([5 / appState.zoomFactor, 3 / appState.zoomFactor]);
+    // The circle is drawn at the mouse position from the main canvas.
+    p.ellipse(mainMouseX, mainMouseY, hoverRadius * 2, hoverRadius * 2);
+    p.drawingContext.setLineDash([]);
+    p.pop();
+    // --- END: Draw Purple Debug Circle ---
+
     p.pop(); // End zoom transformations
     // --- START: DRAW TITLE OVERLAY ---
     // This code runs *after* the zoom transformations have been popped,
@@ -319,6 +335,30 @@ export const zoomSketch = function (p) {
     p.text(titleText, 10, 10);
     p.pop();
     // --- END: DRAW TITLE OVERLAY ---
+
+    // --- START: Draw Countdown Overlay ---
+    if (appState.zoomCountdown !== null && appState.zoomCountdown > 0) {
+      p.push();
+      // Semi-transparent black background for readability
+      p.fill(0, 0, 0, 150);
+      p.noStroke();
+      p.rectMode(p.CENTER);
+      p.rect(p.width / 2, p.height / 2, p.width, p.height);
+
+      // Draw the text
+      p.fill(255);
+      p.textAlign(p.CENTER, p.CENTER);
+      p.textSize(18);
+      p.textStyle(p.NORMAL);
+      p.text(
+        "Hover over points again to resume the display",
+        p.width / 2,
+        p.height / 2 - 15
+      );
+      p.text(`Closing in ${appState.zoomCountdown}...`, p.width / 2, p.height / 2 + 15);
+      p.pop();
+    }
+    // --- END: Draw Countdown Overlay ---
 
     // --- Draw Crosshairs ---
     p.stroke(255, 0, 0, 150);

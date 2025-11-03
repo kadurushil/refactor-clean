@@ -1,5 +1,7 @@
 export const appState = {
-  zoomHoverTimeout: null, // timeout for hovering over the GOD MODE
+  zoomHideDelayTimeout: null, // Timeout before the hide countdown begins
+  zoomCountdown: null, // Holds the number of seconds left before zoom hides
+  zoomCountdownInterval: null, // The interval timer for the countdown
   isRawOnlyMode: false, // <-- ADD THIS LINE
 
   // Stores the parsed visualization data (radar frames, tracks, etc.)

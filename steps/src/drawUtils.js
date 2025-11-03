@@ -522,7 +522,7 @@ export function drawTrackMarkers(p, plotScales) {
  * @param {p5} p - The p5 instance.
  * @param {object} plotScales - The calculated scales for plotting.
  */
-export function handleCloseUpDisplay(p, plotScales) {
+export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
   // --- Step 1: Gather Hovered Items ---
   const frameData = appState.vizData.radarFrames[appState.currentFrame];
   if (!frameData) return []; // Return empty array if no data
@@ -544,7 +544,7 @@ export function handleCloseUpDisplay(p, plotScales) {
         if (pt.x === null || pt.y === null) continue;
         const screenX = pt.x * plotScales.plotScaleX + p.width / 2;
         const screenY = p.height * 0.95 - pt.y * plotScales.plotScaleY;
-        const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
+        const d = p.dist(mouseX, mouseY, screenX, screenY); // Use smoothed values
         if (d < radius) {
           // Add the index 'i' to the object we push
           hoveredItems.push({
@@ -568,7 +568,7 @@ export function handleCloseUpDisplay(p, plotScales) {
       if (cluster.x === null || cluster.y === null) continue;
       const screenX = cluster.x * plotScales.plotScaleX + p.width / 2;
       const screenY = p.height * 0.95 - cluster.y * plotScales.plotScaleY;
-      const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
+      const d = p.dist(mouseX, mouseY, screenX, screenY); // Use smoothed values
       if (d < radius) {
         const color =
           cluster.id > 0
@@ -599,7 +599,7 @@ export function handleCloseUpDisplay(p, plotScales) {
           const pos = currentLog.correctedPosition;
           const screenX = pos[0] * plotScales.plotScaleX + p.width / 2;
           const screenY = p.height * 0.95 - pos[1] * plotScales.plotScaleY;
-          const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
+          const d = p.dist(mouseX, mouseY, screenX, screenY); // Use smoothed values
           if (d < radius) {
             hoveredItems.push({
               type: "track",
@@ -622,7 +622,7 @@ export function handleCloseUpDisplay(p, plotScales) {
           const pos = currentLog.predictedPosition;
           const screenX = pos[0] * plotScales.plotScaleX + p.width / 2;
           const screenY = p.height * 0.95 - pos[1] * plotScales.plotScaleY;
-          const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
+          const d = p.dist(mouseX, mouseY, screenX, screenY); // Use smoothed values
           if (d < radius) {
             hoveredItems.push({
               type: "prediction",
@@ -727,11 +727,11 @@ export function handleCloseUpDisplay(p, plotScales) {
 
   const xOffset = 20;
   let boxX, lineAnchorX;
-  if (p.mouseX + xOffset + boxWidth > p.width) {
-    boxX = p.mouseX - boxWidth - xOffset;
+  if (mouseX + xOffset + boxWidth > p.width) { // Use smoothed values
+    boxX = mouseX - boxWidth - xOffset;
     lineAnchorX = boxX + boxWidth;
   } else {
-    boxX = p.mouseX + xOffset;
+    boxX = mouseX + xOffset;
     lineAnchorX = boxX;
   }
   let boxY = p.mouseY - boxHeight / 2;

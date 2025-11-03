@@ -39,6 +39,12 @@ export const radarSketch = function (p) {
   // p5.Graphics buffers for static elements to optimize drawing
   let staticBackgroundBuffer, snrLegendBuffer, trackLegendBuffer;
 
+  // --- START: Mouse Smoothing Variables ---
+  let smoothedMouseX = 0;
+  let smoothedMouseY = 0;
+  let isFirstFrame = true; // Flag to initialize smoothed position
+  // --- END: Mouse Smoothing Variables ---
+
   // Helper function to allow other sketches to access the static background
   p.getStaticBackground = function () {
     return staticBackgroundBuffer;
@@ -221,10 +227,28 @@ export const radarSketch = function (p) {
 
     // BUG FIX 1: Call the close-up handler if the mode is active
     // --- Zoom and Tooltip Logic ---
-    const COOLING_PERIOD_MS = 2000;
+    const COOLING_PERIOD_MS = 2000; // Set to 3 seconds for the countdown
     const zoomPanel = document.getElementById("zoom-panel");
     if (appState.isCloseUpMode) {
-      const hoveredItems = handleCloseUpDisplay(p, plotScales);
+      // --- START: Mouse Smoothing Logic ---
+      // On the first frame of zoom, snap the smoothed position to the real mouse position.
+      if (isFirstFrame) {
+        smoothedMouseX = p.mouseX;
+        smoothedMouseY = p.mouseY;
+        isFirstFrame = false;
+      }
+
+      // The smoothing factor. A smaller value (e.g., 0.1) means more smoothing.
+      // This can be adjusted to feel more or less responsive.
+      const smoothingFactor = 0.5;
+
+      // Linearly interpolate the smoothed position towards the actual mouse position.
+      smoothedMouseX = p.lerp(smoothedMouseX, p.mouseX, smoothingFactor);
+      smoothedMouseY = p.lerp(smoothedMouseY, p.mouseY, smoothingFactor);
+
+      // Use the smoothed coordinates for all subsequent zoom-related calculations.
+      const hoveredItems = handleCloseUpDisplay(p, plotScales, smoothedMouseX, smoothedMouseY);
+      // --- END: Mouse Smoothing Logic ---
 
       // --- START: Draw Zoom Area Rectangle & Debug Circle ---
       const zoomWindow = document.getElementById("zoom-canvas-container");
@@ -242,7 +266,7 @@ export const radarSketch = function (p) {
         p.strokeWeight(1); // Reduced thickness.
         p.drawingContext.setLineDash([5, 3]); // Dashed line.
         p.rectMode(p.CENTER);
-        p.rect(p.mouseX, p.mouseY, sourceWidth, sourceHeight);
+        p.rect(smoothedMouseX, smoothedMouseY, sourceWidth, sourceHeight); // Use smoothed values
         p.drawingContext.setLineDash([]); // Reset line dash
         p.pop();
       }
@@ -254,14 +278,18 @@ export const radarSketch = function (p) {
       p.noFill();
       p.stroke(148, 0, 211, 150); // Deep purple, semi-transparent.
       p.strokeWeight(1);
-      p.drawingContext.setLineDash([5,3])
-      p.ellipse(p.mouseX, p.mouseY, hoverRadius * 2, hoverRadius * 2);
+      p.ellipse(smoothedMouseX, smoothedMouseY, hoverRadius * 2, hoverRadius * 2); // Use smoothed values
       p.pop();
       // --- END: Draw Zoom Area Rectangle & Debug Circle ---
 
       if (hoveredItems.length > 0) {
-        clearTimeout(appState.zoomHoverTimeout); // Cancel the timer
-        appState.zoomHoverTimeout = null;
+        // If we are hovering, cancel any existing countdown.
+        clearTimeout(appState.zoomHideDelayTimeout);
+        appState.zoomHideDelayTimeout = null;
+        clearInterval(appState.zoomCountdownInterval);
+        appState.zoomCountdownInterval = null;
+        appState.zoomCountdown = null;
+
         if (zoomPanel.style.display !== "block") {
           zoomPanel.style.display = "block";
         }
@@ -270,41 +298,74 @@ export const radarSketch = function (p) {
           appState.zoomSketchInstance.updateAndDraw
         ) {
           appState.zoomSketchInstance.updateAndDraw(
-            p.mouseX,
-            p.mouseY,
+            smoothedMouseX, // Use smoothed values
+            smoothedMouseY, // Use smoothed values
             hoveredItems,
             plotScales
           );
         }
       } else if (zoomPanel.style.display === "block") {
-        // --- THIS BLOCK IS THE FIX ---
-        // If NOT hovering, but the panel is still visible:
-
-        // 1. Continue to update the zoom sketch's position to follow the mouse.
-        //    We pass an empty array for hoveredItems, so no tooltip is drawn.
+        // --- START: FIX for Grace Period Freeze ---
+        // If NOT hovering, but the panel is still visible, we must continue
+        // to update the zoom sketch so it follows the mouse.
+        // We pass an empty array for hoveredItems, so no tooltip is drawn.
         if (
           appState.zoomSketchInstance &&
           appState.zoomSketchInstance.updateAndDraw
         ) {
           appState.zoomSketchInstance.updateAndDraw(
-            p.mouseX,
-            p.mouseY,
-            [], // Pass empty array
+            smoothedMouseX, // Use smoothed values
+            smoothedMouseY, // Use smoothed values
+            [], // Pass empty array to hide tooltips
             plotScales
           );
         }
-
+        // --- END: FIX for Grace Period Freeze ---
         // 2. If a "hide" timer isn't already running, start one.
-        if (!appState.zoomHoverTimeout) {
-          appState.zoomHoverTimeout = setTimeout(() => {
-            console.log("Cooling period ended. Hiding zoom panel.");
-            zoomPanel.style.display = "none";
-            appState.zoomHoverTimeout = null;
-          }, COOLING_PERIOD_MS);
+        if (!appState.zoomHideDelayTimeout && !appState.zoomCountdownInterval) {
+          // Start a 2-second delay before the countdown begins.
+          appState.zoomHideDelayTimeout = setTimeout(() => {
+            appState.zoomHideDelayTimeout = null; // Clear the delay timer ID
+            // Now, start the actual 3-second countdown interval.
+            appState.zoomCountdown = Math.floor(COOLING_PERIOD_MS / 1000);
+            appState.zoomCountdownInterval = setInterval(() => {
+              appState.zoomCountdown--;
+              if (appState.zoomCountdown <= 0) {
+                // When countdown finishes, hide panel and clear interval.
+                clearInterval(appState.zoomCountdownInterval);
+                appState.zoomCountdownInterval = null;
+                appState.zoomCountdown = null;
+                zoomPanel.style.display = "none";
+              } else {
+                // Force a redraw of the zoom sketch to show the new countdown value.
+                // This call is still needed inside the interval to update the countdown text.
+                if (appState.zoomSketchInstance && appState.zoomSketchInstance.updateAndDraw) {
+                  // Pass empty hoveredItems to show the countdown text.
+                  appState.zoomSketchInstance.updateAndDraw(
+                    smoothedMouseX,
+                    smoothedMouseY,
+                    [],
+                    plotScales);
+                }
+              }
+            }, 1000);
+          }, 1000); // 1000ms = 1 second delay
         }
       }
     } else {
+      // --- START: Cleanup Logic ---
+      // When zoom mode is turned off, ensure all timers are cleared.
+      if (appState.zoomHideDelayTimeout) {
+        clearTimeout(appState.zoomHideDelayTimeout);
+        appState.zoomHideDelayTimeout = null;
+      }
+      if (appState.zoomCountdownInterval) {
+        clearInterval(appState.zoomCountdownInterval);
+        appState.zoomCountdownInterval = null;
+      }
+      // --- END: Cleanup Logic ---
       zoomPanel.style.display = "none";
+      isFirstFrame = true; // Reset for the next time zoom mode is enabled
     }
     // --- Legend Drawing ---
     // Draw the SNR legend if enabled
