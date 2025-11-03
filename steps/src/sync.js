@@ -71,8 +71,11 @@ export function animationLoop() {
   updatePersistentOverlays(currentMediaTime);
   updateDebugOverlay(currentMediaTime); 
 
-  // Redraw the speed graph if an instance exists
+  // --- START: Centralized Redraw Logic ---
+  // Explicitly redraw all active sketches in sync with the animation frame.
+  if (appState.p5_instance) appState.p5_instance.redraw();
   if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
+  // --- END: Centralized Redraw Logic ---
 
   // Request the next frame
   requestAnimationFrame(animationLoop);

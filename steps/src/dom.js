@@ -155,14 +155,14 @@ export function updateFrame(frame, forceVideoSeek) {
     updatePersistentOverlays(timeForUpdates);
   }
   // --- End of fix ---
-
-  if (appState.p5_instance) appState.p5_instance.redraw(); // Redraw radar sketch
+  // --- START: Conditional Redraw Logic ---
+  // Only force a redraw from here if the animation loop is NOT running.
+  // When playing, the animationLoop is responsible for redrawing.
+  if (!appState.isPlaying && appState.p5_instance) appState.p5_instance.redraw();
+  if (!appState.isPlaying && appState.speedGraphInstance) appState.speedGraphInstance.redraw();
   // --- NEW: Centralized Explorer Update ---
   throttledUpdateExplorer();
   // --- END: Centralized Explorer Update ---
-  if (appState.speedGraphInstance && !appState.isPlaying)
-    // Redraw speed graph if not playing.
-  appState.speedGraphInstance.redraw();
   const endTime = performance.now();
   appState.lastFrameRenderTime = endTime - startTime; // <-- End timer and update state
 
@@ -358,12 +358,15 @@ export function updatePersistentOverlays(currentMediaTime) {
     const targetRadarTimeMs = currentRadarFrame.timestampMs;
     const offsetMs = parseFloat(offsetInput.value) || 0;
     const driftMs = currentMediaTime * 1000 + offsetMs - targetRadarTimeMs;
-    const driftColor = Math.abs(driftMs) > 50 ? "#FF6347" : "#98FB98"; // Tomato red or Pale green
-    const colorMode = getCurrentColorMode();     
+    const driftColor = Math.abs(driftMs) > 50 ? "#FF6347" : "#98FB98"; // Tomato or Pale Green
+    const colorMode = getCurrentColorMode();
+    const fps = appState.fps;
+    const fpsColor = fps >= 58 && fps <= 62 ? "#98FB98" : "#FF6347"; // Pale Green or Tomato
 
     radarInfoOverlay.innerHTML = `
             Frame: ${appState.currentFrame + 1}
             Motion State: ${motionState}
+            | FPS: <b style="color: ${fpsColor};">${fps.toFixed(1)}</b>
             | Abs Time: ${formatUTCTime(absRadarTime)}
             | Color Mode: <b>${colorMode}</b>
             | Drift: <b style="color: ${driftColor};">${driftMs.toFixed(

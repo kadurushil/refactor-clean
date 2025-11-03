@@ -2,6 +2,7 @@ export const appState = {
   zoomHideDelayTimeout: null, // Timeout before the hide countdown begins
   zoomCountdown: null, // Holds the number of seconds left before zoom hides
   zoomCountdownInterval: null, // The interval timer for the countdown
+  fps: 0, // To store the calculated FPS for performance monitoring
   isRawOnlyMode: false, // <-- ADD THIS LINE
 
   // Stores the parsed visualization data (radar frames, tracks, etc.)

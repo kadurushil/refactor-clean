@@ -414,8 +414,7 @@ export function drawTrajectories(p, plotScales) {
       // --- END: New Dynamic Coloring Logic ---
     }
 
-    p.drawingContext.setLineDash([]);
-    p.pop();
+    p.pop(); // This was the missing pop call for each trajectory loop
   }
 }
 

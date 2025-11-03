@@ -45,6 +45,10 @@ export const radarSketch = function (p) {
   let isFirstFrame = true; // Flag to initialize smoothed position
   // --- END: Mouse Smoothing Variables ---
 
+  // --- START: FPS Calculation Variables ---
+  let lastFrameTime = 0;
+  // --- END: FPS Calculation Variables ---
+
   // Helper function to allow other sketches to access the static background
   p.getStaticBackground = function () {
     return staticBackgroundBuffer;
@@ -120,6 +124,21 @@ export const radarSketch = function (p) {
   };
 
   p.draw = function () {
+    // --- START: FPS Calculation & Display ---
+    const currentTime = p.millis();
+    if (lastFrameTime > 0) {
+      const delta = currentTime - lastFrameTime;
+      if (delta > 0) {
+        const currentFps = 1000 / delta;
+        // Use exponential moving average for smoothing
+        const smoothingFactor = 0.95;
+        appState.fps =
+          appState.fps * smoothingFactor + currentFps * (1 - smoothingFactor);
+      }
+    }
+    lastFrameTime = currentTime;
+    // --- END: FPS Calculation & Display ---
+
     // Set background color based on current theme (dark/light)
     p.background(
       document.documentElement.classList.contains("dark")
