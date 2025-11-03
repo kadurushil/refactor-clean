@@ -78,19 +78,70 @@
       background: transparent;
       z-index: 10;
     }
-    .resizer-t { top: -5px; left: 5px; right: 5px; height: 10px; cursor: ns-resize; }
-    .resizer-r { top: 5px; right: -5px; bottom: 5px; width: 10px; cursor: ew-resize; }
-    .resizer-b { bottom: -5px; left: 5px; right: 5px; height: 10px; cursor: ns-resize; }
-    .resizer-l { top: 5px; left: -5px; bottom: 5px; width: 10px; cursor: ew-resize; }
-    .resizer-tl { top: -5px; left: -5px; cursor: nwse-resize; }
-    .resizer-tr { top: -5px; right: -5px; cursor: nesw-resize; }
-    .resizer-br { bottom: -5px; right: -5px; cursor: nwse-resize; }
-    .resizer-bl { bottom: -5px; left: -5px; cursor: nesw-resize; }
+
+    .resizer-t {
+      top: -5px;
+      left: 5px;
+      right: 5px;
+      height: 10px;
+      cursor: ns-resize;
+    }
+
+    .resizer-r {
+      top: 5px;
+      right: -5px;
+      bottom: 5px;
+      width: 10px;
+      cursor: ew-resize;
+    }
+
+    .resizer-b {
+      bottom: -5px;
+      left: 5px;
+      right: 5px;
+      height: 10px;
+      cursor: ns-resize;
+    }
+
+    .resizer-l {
+      top: 5px;
+      left: -5px;
+      bottom: 5px;
+      width: 10px;
+      cursor: ew-resize;
+    }
+
+    .resizer-tl {
+      top: -5px;
+      left: -5px;
+      cursor: nwse-resize;
+    }
+
+    .resizer-tr {
+      top: -5px;
+      right: -5px;
+      cursor: nesw-resize;
+    }
+
+    .resizer-br {
+      bottom: -5px;
+      right: -5px;
+      cursor: nwse-resize;
+    }
+
+    .resizer-bl {
+      bottom: -5px;
+      left: -5px;
+      cursor: nesw-resize;
+    }
+
     /* When dragging/resizing, prevent text selection on the page */
-    body.resizing, body.dragging {
+    body.resizing,
+    body.dragging {
       user-select: none;
       -webkit-user-select: none;
     }
+
     /* --- END: CSS for Resizable/Draggable Panel --- */
   </style>
 </head>
@@ -105,7 +156,7 @@
     </p>
     <div class="absolute top-4 right-4 flex items-center gap-2">
       <button id="fullscreen-btn" type="button"
-        class="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium rounded-lg text-xs px-4 py-2 transition-colors">
+        class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 shadow-sm hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95 active:shadow-inner font-medium rounded-lg text-xs px-4 py-2 transition-all">
         FULLSCREEN
         <span
           class="text-xs font-mono bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-1.5 py-0.5 rounded">
@@ -113,15 +164,18 @@
         </span>
       </button>
       <button id="explorer-btn" type="button"
-        class="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium rounded-lg text-xs px-4 py-2 transition-colors">
+        class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 shadow-sm hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95 active:shadow-inner font-medium rounded-lg text-xs px-4 py-2 transition-all">
         Data-Explorer<br>(MATLAB-style)
         <span
           class="text-xs font-mono bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-1.5 py-0.5 rounded">
           (i)
         </span>
       </button>
-      <button id="theme-toggle" type="button"
-        class=" flex flex-row items-center gap-2 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
+      <a href="User_Manual.html" target="_blank" id="user-manual-btn"
+        class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 shadow-sm hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95 active:shadow-inner font-medium rounded-lg text-xs px-4 py-2 transition-all text-center">
+        Quick-Start<br>Guide
+      </a>
+      <button id="theme-toggle" type="button" class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 shadow-sm hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95 active:shadow-inner flex flex-row items-center gap-2 rounded-lg text-sm p-2.5 transition-all">
         <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
           <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
         </svg>
@@ -299,7 +353,8 @@
       class="hidden fixed bottom-24 right-4 bg-white dark:bg-gray-800 shadow-2xl rounded-lg z-30 flex flex-col w-full max-w-2xl h-1/2 border dark:border-gray-600">
 
       <!-- START: Add Draggable Header and Resizer Handles -->
-      <div id="data-explorer-header" class="flex items-center justify-between p-2 border-b dark:border-gray-700 cursor-move">
+      <div id="data-explorer-header"
+        class="flex items-center justify-between p-2 border-b dark:border-gray-700 cursor-move">
         <h2 class="text-lg font-bold ml-2">Data Explorer</h2>
         <button id="close-explorer-btn"
           class="text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg p-1.5">&times;</button>
@@ -319,7 +374,8 @@
         <button id="tab-btn-tree" class="px-4 py-2 text-sm font-medium border-b-2 border-blue-500">Tree View</button>
         <button id="tab-btn-grid" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400">Grid
           View</button>
-        <button id="tab-btn-track-grid" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400">Track Grid</button>
+        <button id="tab-btn-track-grid" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400">Track
+          Grid</button>
         <button id="tab-btn-plot" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400">Plot
           View</button>
       </div>
@@ -330,7 +386,7 @@
           <div id="data-grid" class="ag-theme-alpine-dark h-full w-full"></div>
         </div>
         <div id="tab-panel-track-grid" class="hidden h-full p-2">
-            <div id="track-data-grid" class="ag-theme-alpine-dark h-full w-full"></div>
+          <div id="track-data-grid" class="ag-theme-alpine-dark h-full w-full"></div>
         </div>
         <div id="tab-panel-plot" class="hidden p-2">
           <canvas id="data-chart"></canvas>

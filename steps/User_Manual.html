@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radar & Video Synchronizer - Infographic Manual</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f8fafc; /* slate-50 */
+            color: #1e293b; /* slate-800 */
+        }
+        .font-mono { font-family: 'Roboto Mono', monospace; }
+        
+        /* Infographic Palette */
+        :root {
+            --c-primary: #0284c7; /* sky-600 */
+            --c-primary-light: #f0f9ff; /* sky-50 */
+            --c-secondary: #059669; /* emerald-600 */
+            --c-accent: #db2777; /* pink-600 */
+            --c-dark: #334155; /* slate-700 */
+            --c-light: #f1f5f9; /* slate-100 */
+            --c-text: #374151; /* gray-700 */
+            --c-text-light: #64748b; /* slate-500 */
+        }
+
+        h1, h2, h3 { font-weight: 700; letter-spacing: -0.025em; color: var(--c-dark); }
+        h1 { font-size: 2.25rem; line-height: 2.5rem; font-weight: 800; }
+        h2 { font-size: 1.875rem; line-height: 2.25rem; border-bottom: 2px solid var(--c-light); padding-bottom: 0.5rem; }
+        h3 { font-size: 1.25rem; line-height: 1.75rem; color: var(--c-primary); }
+
+        .section-icon {
+            font-size: 2rem;
+            line-height: 1;
+            background-color: var(--c-primary-light);
+            color: var(--c-primary);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card {
+            background-color: white;
+            border: 1px solid #e2e8f0; /* slate-200 */
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
+            transition: all 0.2s ease-in-out;
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.07), 0 4px 6px -2px rgba(0,0,0,0.05);
+            border-color: var(--c-primary);
+        }
+        .feature-card-icon {
+            font-size: 1.875rem;
+            line-height: 2.25rem;
+            margin-right: 0.75rem;
+        }
+
+        .flow-step {
+            background-color: white;
+            border: 2px solid var(--c-primary);
+            color: var(--c-dark);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 500;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+        .flow-arrow {
+            color: var(--c-primary);
+            font-size: 2.25rem;
+            line-height: 2.5rem;
+            font-weight: 200;
+            margin: 0.5rem 0;
+        }
+
+        /* Keyboard Shortcut Styling */
+        kbd {
+            background-color: #e2e8f0; /* slate-200 */
+            border: 1px solid #cbd5e1; /* slate-300 */
+            border-bottom-width: 2px;
+            color: #334155; /* slate-700 */
+            border-radius: 0.375rem;
+            padding: 0.125rem 0.5rem;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            font-weight: 500;
+            display: inline-block;
+            margin: 0 0.125rem;
+        }
+
+        /* File Tree Styling */
+        .file-tree { list-style: none; padding-left: 0; }
+        .file-tree li { margin-bottom: 0.25rem; padding-left: 1.75rem; position: relative; font-family: 'Roboto Mono', monospace; color: var(--c-text); }
+        .file-tree .folder::before { content: '📁'; position: absolute; left: 0; color: #facc15; } /* yellow-400 */
+        .file-tree .file::before { content: '📄'; position: absolute; left: 0; color: #60a5fa; } /* blue-400 */
+
+        /* Wireframe Annotation Styling */
+        .wireframe-box {
+            background-color: var(--c-light);
+            border: 2px dashed #94a3b8; /* slate-400 */
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b; /* slate-500 */
+            font-weight: 500;
+        }
+        .annotation {
+            position: absolute;
+            background-color: white;
+            border: 1px solid var(--c-dark);
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+        .annotation p {
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            color: var(--c-text);
+        }
+        .annotation strong {
+            color: var(--c-dark);
+        }
+        .annotation code {
+            font-size: 0.75rem;
+            line-height: 1rem;
+            background-color: var(--c-light);
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            color: var(--c-accent);
+        }
+
+        @media (max-width: 768px) {
+            .flow-diagram { flex-direction: column; }
+            .flow-arrow { transform: rotate(90deg); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto px-4 py-12 max-w-6xl space-y-16">
+
+        <!-- 1. Hero Section -->
+        <section class="text-center">
+            <div class="section-icon">📡️ 🎬</div>
+            <h1 class="text-4xl md:text-5xl">Radar & Video Synchronizer</h1>
+            <p class="text-xl text-slate-600 max-w-3xl mx-auto mt-4">
+                An infographic user manual for the high-precision visualization tool.
+            </p>
+        </section>
+
+        <!-- 2. How to Use (30-Second Guide) -->
+        <section>
+            <h2 class="text-center mb-8">How to Use (The 30-Second Guide)</h2>
+            <div class="flow-diagram flex flex-col md:flex-row items-stretch justify-center gap-4 md:gap-8">
+                <div class="flow-step flex-1">
+                    <span class="text-3xl">1️⃣</span>
+                    <h3 class="mt-2">Load Files</h3>
+                    <p class="text-sm text-slate-600">Drag & drop your <kbd>.json</kbd> and <kbd>.mp4</kbd> files onto the window, or use the <kbd>Load JSON</kbd> / <kbd>Load Video</kbd> buttons.</p>
+                </div>
+                <div class="flow-arrow self-center">➔</div>
+                <div class="flow-step flex-1">
+                    <span class="text-3xl">2️⃣</span>
+                    <h3 class="mt-2">Play & Sync</h3>
+                    <p class="text-sm text-slate-600">Press <kbd>Play</kbd> (or <kbd>Spacebar</kbd>). The app automatically syncs the radar data to the video based on their timestamps.</p>
+                </div>
+                <div class="flow-arrow self-center">➔</div>
+                <div class="flow-step flex-1">
+                    <span class="text-3xl">3️⃣</span>
+                    <h3 class="mt-2">Explore & Analyze</h3>
+                    <p class="text-sm text-slate-600">Use the timeline, sidebar (<kbd>M</kbd>), zoom (<kbd>G</kbd>), and Data Explorer (<kbd>I</kbd>) to analyze the synchronized data.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. The Main Interface (VISUAL) -->
+        <section>
+            <h2 class="text-center mb-8">The Main Interface</h2>
+            
+            <div class="relative p-8 bg-white rounded-lg shadow-lg border border-slate-200">
+                <!-- Main Layout Wireframe -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[600px]">
+                    <div class="wireframe-box h-[500px] lg:h-full">Main Radar Canvas</div>
+                    <div class="flex flex-col gap-6">
+                        <div class="wireframe-box h-[300px]">Video Player</div>
+                        <div class="wireframe-box flex-1">Speed Graph</div>
+                    </div>
+                </div>
+                <div class="wireframe-box h-32 mt-6">Control Bar & Timeline</div>
+
+                <!-- Annotations -->
+                
+                <!-- Radar Canvas -->
+                <div class="annotation" style="top: 8rem; left: 10rem;">
+                    <strong>1. Radar Canvas</strong>
+                    <p>Main p5.js visualization. Shows:<br>
+                       - Point Clouds (Points)<br>
+                       - Object Trajectories (Lines)<br>
+                       - Track Markers (+)<br>
+                       - Ego Vehicle (Box at bottom)
+                    </p>
+                    <p class="mt-1">Overlays (top-left):<br>
+                       <code>Frame: 123</code> <code>Time: 12:30:01.456</code><br>
+                       <code>Mode: Color by SNR</code> <code>Drift: -15ms</code>
+                    </p>
+                </div>
+
+                <!-- Video Player -->
+                <div class="annotation" style="top: 8rem; right: 8rem;">
+                    <strong>2. Video Player</strong>
+                    <p>Shows the synchronized video feed.<br>
+                       Overlays (top-left):<br>
+                       <code>Frame: 110</code> <code>Time: 12:30:01.440</code>
+                    </p>
+                </div>
+                
+                <!-- Speed Graph -->
+                <div class="annotation" style="bottom: 17rem; right: 9rem;">
+                    <strong>3. Speed Graph</strong>
+                    <p>Shows Ego Speed vs. CAN Speed over time.<br>
+                       A red line indicates the current playback position.
+                    </p>
+                </div>
+
+                <!-- Control Bar -->
+                <div class="annotation" style="bottom: 5rem; left: 25%;">
+                    <strong>4. Control Bar & Timeline</strong>
+                    <p>Main controls for playback.<br>
+                       - <kbd>Play</kbd> / <kbd>Pause</kbd> (<kbd>Space</kbd>), <kbd>Stop</kbd><br>
+                       - Timeline slider (Click, drag, or <kbd>Scroll Wheel</kbd> to seek)<br>
+                       - Playback <kbd>Speed</kbd> slider
+                    </p>
+                </div>
+                
+                <!-- Sidebar Toggle -->
+                <div class="annotation" style="top: 2rem; left: 1rem;">
+                    <strong>Sidebar</strong>
+                    <p>Click ☰ (or <kbd>M</kbd>)<br>to open all toggles.</p>
+                </div>
+                
+                <!-- Data Explorer Toggle -->
+                <div class="annotation" style="top: 2rem; right: 1rem;">
+                    <strong>Data Explorer</strong>
+                    <p>Click ⛶ (or <kbd>I</kbd>)<br>to open data inspector.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Key Features & Controls -->
+        <section>
+            <h2 class="text-center mb-8">Key Features & Controls</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <!-- Feature: Loading -->
+                <div class="feature-card p-6">
+                    <div class="flex items-center">
+                        <span class="feature-card-icon">🖱️</span>
+                        <h3>File Loading & Caching</h3>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2">
+                        Load <kbd>.json</kbd> and <kbd>.mp4</kbd> files via <strong>Drag & Drop</strong> anywhere on the page or by using the <kbd>Load</kbd> buttons. Files are cached in `IndexedDB` for instant reloads.
+                    </p>
+                </div>
+                
+                <!-- Feature: Playback -->
+                <div class="feature-card p-6">
+                    <div class="flex items-center">
+                        <span class="feature-card-icon">⏱️</span>
+                        <h3>High-Precision Sync</h3>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2">
+                        The app uses a `performance.now()` master clock to drive playback, correcting any video drift. The <strong>time offset</strong> is automatically calculated from filenames (e.g., `fHist_...` and `WIN_...`).
+                    </p>
+                </div>
+                
+                <!-- Feature: Timeline -->
+                <div class="feature-card p-6">
+                    <div class="flex items-center">
+                        <span class="feature-card-icon">slider</span>
+                        <h3>Advanced Timeline Control</h3>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2">
+                        Click or drag the timeline to seek. You can also hover your <strong>mouse wheel</strong> over the slider to seek frame-by-frame (slow scroll) or scrub quickly (fast scroll).
+                    </p>
+                </div>
+                
+                <!-- Feature: Sidebar -->
+                <div class="feature-card p-6">
+                    <div class="flex items-center">
+                        <span class="feature-card-icon">🎨</span>
+                        <h3>Display Settings Sidebar (<kbd>M</kbd>)</h3>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2">
+                        Toggle visibility of: <strong>Tracks</strong> (<kbd>T</kbd>), <strong>Details</strong> (<kbd>D</kbd>), <strong>Predicted Pos</strong> (<kbd>P</kbd>), <strong>Covariance</strong>, and <strong>Confirmed Tracks</strong>.
+                        <br><strong>Color Modes:</strong> Switch between SNR (<kbd>1</kbd>), Cluster (<kbd>2</kbd>), Inlier (<kbd>3</kbd>), or Stationary (<kbd>4</kbd>).
+                        <br><strong>TTC Colors:</strong> Customize the Time-to-Collision (TTC) risk colors.
+                    </p>
+                </div>
+                
+                <!-- Feature: GOD Mode -->
+                <div class="feature-card p-6">
+                    <div class="flex items-center">
+                        <span class="feature-card-icon">🚀</span>
+                        <h3>"GOD MODE" Zoom (<kbd>G</kbd>)</h3>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2">
+                        Activates a separate, high-fidelity p5.js canvas that follows your mouse, showing a <strong>magnified view</strong>. Hover over points/tracks to see a detailed tooltip. Use the <strong>mouse wheel</strong> while in this mode to zoom in/out.
+                    </p>
+                </div>
+
+                <!-- Feature: Data Explorer -->
+                <div class="feature-card p-6">
+                    <div class="flex items-center">
+                        <span class="feature-card-icon">📈</span>
+                        <h3>Data Explorer (<kbd>I</kbd>)</h3>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2">
+                        Opens a resizable panel to inspect the raw data of the *current frame*.
+                        <br><strong>Tree View:</strong> Shows the full JSON structure.
+                        <br><strong>Grid View:</strong> Sortable/filterable AG-Grid of point clouds or tracks.
+                        <br><strong>Plot View:</strong> Click a grid header to plot that data with Chart.js.
+                    </p>
+                </div>
+                
+                <!-- Feature: CAN Data -->
+                <div class="feature-card p-6" hidden>
+                    <div class="flex items-center">
+                        <span class="feature-card-icon">🚗</span>
+                        <h3>CAN Speed Integration</h3>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2">
+                        The <kbd>Load CAN</kbd> button has been removed. The visualizer now expects CAN speed data (<code>canVehSpeed_kmph</code>) to be included <strong>directly within the main JSON file</strong>, associated with each radar frame.
+                    </p>
+                </div>
+                
+                <!-- Feature: Session -->
+                <div class="feature-card p-6" hidden>
+                    <div class="flex items-center">
+                        <span class="feature-card-icon">💾</span>
+                        <h3>Session Management</h3>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2">
+                        <kbd>Save Session</kbd> downloads a <kbd>.json</kbd> file with your current file names, offset, and all UI toggle states. <kbd>Load Session</kbd> restores this state (requires files to be cached).
+                    </p>
+                </div>
+                
+                <!-- Feature: Parsing -->
+                <div class="feature-card p-6">
+                    <div class="flex items-center">
+                        <span class="feature-card-icon">⚙️</span>
+                        <h3>Web Worker Parsing</h3>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2">
+                        Large JSON files are parsed in a background <strong>Web Worker</strong> using a streaming parser. This prevents the UI from freezing and shows a real-time progress bar.
+                    </p>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- 5. Full Keyboard Shortcuts -->
+        <section>
+            <h2 class="text-center mb-16">Full Keyboard Shortcuts</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Playback -->
+                <div class="feature-card p-6">
+                    <h3 class="mb-3">Playback & Navigation</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><kbd>Spacebar</kbd> - Play / Pause</li>
+                        <li><kbd>ArrowRight</kbd> - Next Frame (pauses)</li>
+                        <li><kbd>ArrowLeft</kbd> - Previous Frame (pauses)</li>
+                        <li><kbd>R</kbd> - Reset to Frame 0</li>
+                    </ul>
+                </div>
+                <!-- View & Toggles -->
+                <div class="feature-card p-6">
+                    <h3 class="mb-3">View & UI Toggles</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><kbd>M</kbd> - Toggle Sidebar Menu</li>
+                        <li><kbd>I</kbd> - Toggle Data Explorer</li>
+                        <li><kbd>G</kbd> - Toggle "GOD MODE" Zoom</li>
+                        <li><kbd>Q</kbd> - Toggle Dark/Light Theme</li>
+                        <li><kbd>A</kbd> - Toggle Advanced Debug Info</li>
+                        <li><kbd>F11</kbd> - Toggle Fullscreen</li>
+                    </ul>
+                </div>
+                <!-- Data Display -->
+                <div class="feature-card p-6">
+                    <h3 class="mb-3">Data Display Toggles</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><kbd>T</kbd> - Toggle Tracks</li>
+                        <li><kbd>D</kbd> - Toggle Object Details</li>
+                        <li><kbd>P</kbd> - Toggle Predicted Position</li>
+                        <li><kbd>C</kbd> - Toggle Confirmed Tracks Only</li>
+                        <li><kbd>1</kbd> / <kbd>S</kbd> - Color by SNR</li>
+                        <li><kbd>2</kbd> - Color by Cluster</li>
+                        <li><kbd>3</kbd> - Color by Inlier</li>
+                        <li><kbd>4</kbd> - Color by Stationary</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 6. Data & Setup -->
+        <section>
+            <h2 class="text-center mb-8">Data & Setup</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                
+                <!-- File Structure -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="mb-4">Project File Structure</h3>
+                    <ul class="file-tree text-sm">
+                        <li class="file">index.html (Main Page)</li>
+                        <li class="file">readme.md (Docs)</li>
+                        <li class="file">Visualizer_quick_start_Guide.html (This file)</li>
+                        <li class="file">Visualization_Start.bat</li>
+                        <li class="file">python_check.bat</li>
+                        <li class="folder">src/
+                            <ul class="file-tree pl-4 border-l border-slate-200 ml-1 mt-1">
+                                <li class="file">main.js (App Entry)</li>
+                                <li class="file">state.js (Global State)</li>
+                                <li class="file">sync.js (Animation Loop)</li>
+                                <li class="file">dom.js (UI Functions)</li>
+                                <li class="file">drawUtils.js (P5 Helpers)</li>
+                                <li class="file">fileParsers.js (Data Processing)</li>
+                                <li class="file">parser.worker.js (JSON Parsing)</li>
+                                <li class="file">dataExplorer.js (Grid/Plot)</li>
+                                <li class="file">db.js (Caching)</li>
+                                <li class="file">modal.js (Popups)</li>
+                                <li class="file">theme.js (Dark/Light)</li>
+                                <li class="file">utils.js (Helpers)</li>
+                                <li class="file">constants.js (Config)</li>
+                                <li class="folder">p5/
+                                    <ul class="file-tree pl-4 border-l border-slate-200 ml-1 mt-1">
+                                        <li class="file">radarSketch.js</li>
+                                        <li class="file">speedGraphSketch.js</li>
+                                        <li class="file">zoomSketch.js</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Setup Guide -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="mb-4">Local Setup Guide</h3>
+                    <p class="text-sm text-slate-600 mb-4">The app must be run from a local server due to browser security rules for modules.</p>
+                    <ol class="space-y-3">
+                        <li class="flex items-start">
+                            <span class="flow-step !p-2 !rounded-full w-8 h-8 mr-3 text-sm">1</span>
+                            <span class="text-sm text-slate-600">Run <kbd>Visualization_Start.bat</kbd>. This script checks for Python 3 and starts the server for you.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="flow-step !p-2 !rounded-full w-8 h-8 mr-3 text-sm">2</span>
+                            <span class="text-sm text-slate-600">Your browser should open to `http://localhost:8000` automatically.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="flow-step !p-2 !rounded-full w-8 h-8 mr-3 text-sm">3</span>
+                            <span class="text-sm text-slate-600"><strong>Keep the black terminal window open</strong> while you use the app. Close it to stop the server.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="flow-step !p-2 !rounded-full w-8 h-8 mr-3 text-sm">4</span>
+                            <span class="text-sm text-slate-600">If the `.bat` fails, run <kbd>python_check.bat</kbd> to diagnose, or manually run `python -m http.server 8000` in the `steps` folder.</span>
+                        </li>
+                    </ol>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center mt-12 text-slate-500 text-sm">
+            <p>This infographic was generated based on the project's readme.md and context.md files.</p>
+        </footer>
+
+    </div>
+
+</body>
+</html>
