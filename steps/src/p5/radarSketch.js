@@ -225,6 +225,40 @@ export const radarSketch = function (p) {
     const zoomPanel = document.getElementById("zoom-panel");
     if (appState.isCloseUpMode) {
       const hoveredItems = handleCloseUpDisplay(p, plotScales);
+
+      // --- START: Draw Zoom Area Rectangle & Debug Circle ---
+      const zoomWindow = document.getElementById("zoom-canvas-container");
+      if (zoomWindow) {
+        const zoomWindowWidth = zoomWindow.offsetWidth;
+        const zoomWindowHeight = zoomWindow.offsetHeight;
+
+        // Calculate the dimensions of the source rectangle on the main canvas.
+        const sourceWidth = zoomWindowWidth / appState.zoomFactor;
+        const sourceHeight = zoomWindowHeight / appState.zoomFactor;
+
+        p.push();
+        p.noFill();
+        p.stroke(255, 0, 0, 150); // Semi-transparent red, visible in both themes.
+        p.strokeWeight(1); // Reduced thickness.
+        p.drawingContext.setLineDash([5, 3]); // Dashed line.
+        p.rectMode(p.CENTER);
+        p.rect(p.mouseX, p.mouseY, sourceWidth, sourceHeight);
+        p.drawingContext.setLineDash([]); // Reset line dash
+        p.pop();
+      }
+
+      // Draw a temporary debug circle representing the hover radius.
+      // This formula must match the one in drawUtils.js for accurate visualization.
+      const hoverRadius = p.constrain(80 / appState.zoomFactor, 5, 25);
+      p.push();
+      p.noFill();
+      p.stroke(148, 0, 211, 150); // Deep purple, semi-transparent.
+      p.strokeWeight(1);
+      p.drawingContext.setLineDash([5,3])
+      p.ellipse(p.mouseX, p.mouseY, hoverRadius * 2, hoverRadius * 2);
+      p.pop();
+      // --- END: Draw Zoom Area Rectangle & Debug Circle ---
+
       if (hoveredItems.length > 0) {
         clearTimeout(appState.zoomHoverTimeout); // Cancel the timer
         appState.zoomHoverTimeout = null;

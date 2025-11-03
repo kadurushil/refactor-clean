@@ -527,7 +527,10 @@ export function handleCloseUpDisplay(p, plotScales) {
   const frameData = appState.vizData.radarFrames[appState.currentFrame];
   if (!frameData) return []; // Return empty array if no data
   const hoveredItems = [];
-  const radius = 10;
+  // --- START: Dynamic Radius Logic ---
+  // The hover radius is now inversely proportional to the zoom factor.
+  const radius = p.constrain(80 / appState.zoomFactor, 5, 25);
+  // --- END: Dynamic Radius Logic ---
   const localClusterColors = clusterColors(p); // <-- Get the color palette once
 
   // ... (Step 1a: Find hovered points - no changes here) ...
@@ -585,38 +588,45 @@ export function handleCloseUpDisplay(p, plotScales) {
   // Find hovered track markers and predicted positions
   if (appState.vizData.tracks) {
     for (const track of appState.vizData.tracks) {
-      const log = track.historyLog.find(
-        (log) => log.frameIdx === appState.currentFrame + 1
+      // --- FIX START: Fetch log for the CURRENT frame for the track marker ---
+      const currentLog = track.historyLog.find(
+        (log) => log.frameIdx === appState.currentFrame
       );
-      if (log) {
-        if (log.correctedPosition && log.correctedPosition[0] !== null) {
-          const pos = log.correctedPosition;
+      // --- FIX END ---
+
+      if (currentLog) {
+        if (currentLog.correctedPosition && currentLog.correctedPosition[0] !== null) {
+          const pos = currentLog.correctedPosition;
           const screenX = pos[0] * plotScales.plotScaleX + p.width / 2;
           const screenY = p.height * 0.95 - pos[1] * plotScales.plotScaleY;
           const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
           if (d < radius) {
             hoveredItems.push({
               type: "track",
-              data: log,
+              data: currentLog, // Use the log for the current frame
               trackId: track.id,
               screenX,
               screenY,
             });
           }
         }
+      }
+
+      // For predicted position, we now also use the current frame's log.
+      if (currentLog) {
         if (
           togglePredictedPos.checked &&
-          log.predictedPosition &&
-          log.predictedPosition[0] !== null
+          currentLog.predictedPosition &&
+          currentLog.predictedPosition[0] !== null
         ) {
-          const pos = log.predictedPosition;
+          const pos = currentLog.predictedPosition;
           const screenX = pos[0] * plotScales.plotScaleX + p.width / 2;
           const screenY = p.height * 0.95 - pos[1] * plotScales.plotScaleY;
           const d = p.dist(p.mouseX, p.mouseY, screenX, screenY);
           if (d < radius) {
             hoveredItems.push({
               type: "prediction",
-              data: log,
+              data: currentLog,
               trackId: track.id,
               screenX,
               screenY,

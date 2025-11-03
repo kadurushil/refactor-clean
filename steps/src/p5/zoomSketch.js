@@ -275,7 +275,7 @@ export const zoomSketch = function (p) {
       if (togglePredictedPos.checked) {
         for (const track of appState.vizData.tracks) {
           const log = track.historyLog.find(
-            (log) => log.frameIdx === appState.currentFrame + 1
+            (log) => log.frameIdx === appState.currentFrame
           );
           if (
             log &&
@@ -314,7 +314,7 @@ export const zoomSketch = function (p) {
     p.fill(textColor);
     p.noStroke();
     p.textSize(16);
-    p.textAlign(p.LEFT - 2, p.TOP);
+    p.textAlign(p.LEFT, p.TOP);
     p.textStyle(p.BOLD);
     p.text(titleText, 10, 10);
     p.pop();
