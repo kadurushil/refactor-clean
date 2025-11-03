@@ -304,10 +304,13 @@ export const zoomSketch = function (p) {
     // --- START: Draw Purple Debug Circle ---
     // This circle represents the hover radius, drawn in the zoomed coordinate space.
     // The formula must match the one in drawUtils.js.
+    const isDark = document.documentElement.classList.contains("dark");
     const hoverRadius = p.constrain(80 / appState.zoomFactor, 5, 25);
+    const circleColor = isDark ? p.color(50, 205, 50, 200) : p.color(0, 128, 0, 180);
+
     p.push();
     p.noFill();
-    p.stroke(148, 0, 211, 150); // Deep purple, semi-transparent.
+    p.stroke(circleColor);
     // The stroke weight is divided by the zoom factor to keep it thin.
     p.strokeWeight(1 / appState.zoomFactor);
     p.drawingContext.setLineDash([5 / appState.zoomFactor, 3 / appState.zoomFactor]);

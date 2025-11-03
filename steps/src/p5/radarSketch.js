@@ -260,9 +260,14 @@ export const radarSketch = function (p) {
         const sourceWidth = zoomWindowWidth / appState.zoomFactor;
         const sourceHeight = zoomWindowHeight / appState.zoomFactor;
 
+        // --- START: THEME-AWARE COLOR LOGIC ---
+        const isDark = document.documentElement.classList.contains("dark");
+        const rectColor = isDark ? p.color(255, 80, 80, 200) : p.color(220, 20, 60, 180);
+        // --- END: THEME-AWARE COLOR LOGIC ---
+
         p.push();
         p.noFill();
-        p.stroke(255, 0, 0, 150); // Semi-transparent red, visible in both themes.
+        p.stroke(rectColor);
         p.strokeWeight(1); // Reduced thickness.
         p.drawingContext.setLineDash([5, 3]); // Dashed line.
         p.rectMode(p.CENTER);
@@ -274,9 +279,12 @@ export const radarSketch = function (p) {
       // Draw a temporary debug circle representing the hover radius.
       // This formula must match the one in drawUtils.js for accurate visualization.
       const hoverRadius = p.constrain(80 / appState.zoomFactor, 5, 25);
+      const isDark = document.documentElement.classList.contains("dark");
+      const circleColor = isDark ? p.color(50, 205, 50, 200) : p.color(0, 128, 0, 180);
+
       p.push();
       p.noFill();
-      p.stroke(148, 0, 211, 150); // Deep purple, semi-transparent.
+      p.stroke(circleColor);
       p.strokeWeight(1);
       p.ellipse(smoothedMouseX, smoothedMouseY, hoverRadius * 2, hoverRadius * 2); // Use smoothed values
       p.pop();
