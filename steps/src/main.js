@@ -131,10 +131,12 @@ function handleFiles(files) {
   appState.vizData = null;
 
   // Identify the JSON and Video files from the list of files provided
+  // This loop now correctly handles both files without an else-if.
   Array.from(files).forEach((file) => {
     if (file.name.endsWith(".json")) {
       jsonFileToLoad = file;
-    } else if (file.type.startsWith("video/")) {
+    }
+    if (file.type.startsWith("video/")) {
       videoFileToLoad = file;
     }
   });
@@ -1115,16 +1117,28 @@ document.addEventListener("DOMContentLoaded", () => {
     appState.videoFilename = localStorage.getItem("videoFilename");
 
     if (appState.jsonFilename) {
-      const jsonBlob = await loadFreshFileFromDB("json", appState.jsonFilename);
-      const videoBlob = await loadFreshFileFromDB(
-        "video",
-        appState.videoFilename
-      );
+      // --- START: FIX FOR AUTO-RELOAD ---
+      const jsonBlob = await loadFreshFileFromDB("json", appState.jsonFilename); // This is a Blob
+      const videoBlob = await loadFreshFileFromDB("video", appState.videoFilename); // This is a Blob
 
       if (jsonBlob) {
         console.log("Cached session found. Starting auto-reload...");
-        // Use the handleFiles function to trigger the pipeline with cached blobs
-        handleFiles([jsonBlob, videoBlob].filter(Boolean)); // .filter(Boolean) removes null videoBlob if it doesn't exist
+
+        // The handleFiles function expects File objects with a .name property.
+        // Blobs from IndexedDB don't have a name. We must reconstruct File objects.
+        const filesToLoad = [];
+
+        // Recreate the JSON file with its original name.
+        filesToLoad.push(new File([jsonBlob], appState.jsonFilename, { type: "application/json" }));
+
+        // If a video exists, recreate it with its original name.
+        if (videoBlob && appState.videoFilename) {
+          filesToLoad.push(new File([videoBlob], appState.videoFilename, { type: videoBlob.type }));
+        }
+
+        // Now, pass the array of proper File objects to the handler.
+        handleFiles(filesToLoad);
+        // --- END: FIX FOR AUTO-RELOAD ---
       } else {
         console.log(
           "Cached session is stale or missing files. Ready for manual load."
