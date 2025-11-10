@@ -1,7 +1,7 @@
 // In src/parser.worker.js
 
 // Import the lightweight and worker-safe Clarinet library
-importScripts('https://cdn.jsdelivr.net/npm/clarinet@0.12.5/clarinet.min.js');
+importScripts('../vendor/clarinet.min.js'); //importing the clarinet.min.js (ver. 0.12.5) from the vendor folder.  
 
 self.onmessage = async function(event) {
     const file = event.data.file;

@@ -6,16 +6,63 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Radar and Video Visualizer - Timestamp Synchronized</title>
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/oboe@2.1.5/dist/oboe-browser.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+
+  <!-- <script src="https://cdn.tailwindcss.com"></script>  -->
+  <script src="./vendor/tailwind-cdn.js"></script>
+  <script>
+    !window.tailwind && (function() {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.tailwindcss.com';
+      document.head.appendChild(s);
+    })();
+  </script>
+  
+  <!-- <script src="https://unpkg.com/oboe@2.1.5/dist/oboe-browser.min.js"></script> -->
+  <script src="./vendor/oboe.min.js"></script>
+  <script>
+    !window.oboe && (function() {
+      var s = document.createElement('script');
+      s.src = 'https://unpkg.com/oboe@2.1.5/dist/oboe-browser.min.js';
+      document.head.appendChild(s);
+    })();
+  </script>
+  
+  <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
+  <script src="./vendor/chart.min.js"></script>
+  <script>
+    !window.Chart && (function() {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+      document.head.appendChild(s);
+    })();
+  </script>
+
+  
+  <!-- <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script> -->
+  <script src="./vendor/ag-grid-community.min.js"></script>
+  <script>
+    !window.agGrid && (function() {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js';
+      document.head.appendChild(s);
+    })();
+  </script>
+  
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script> -->
+  <script src="./vendor/p5.js"></script>
+  <script>
+    !window.p5 && (function() {
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js';
+      document.head.appendChild(s);
+    })();
+  </script>
+  
   <script>
     tailwind.config = {
       darkMode: "class",
     };
-  </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
+  </script> 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
