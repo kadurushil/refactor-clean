@@ -99,8 +99,6 @@ import {
   fullscreenBtn,
   mainContent,
   closeMenuBtn,
-  fullscreenEnterIcon,
-  fullscreenExitIcon,
   menuScrim,
   toggleConfirmedOnly,
   resetUIForNewLoad,
@@ -647,18 +645,6 @@ fullscreenBtn.addEventListener("click", () => {
     document.documentElement.requestFullscreen();
   } else if (document.exitFullscreen) {
     document.exitFullscreen();
-  }
-});
-
-// This listener updates the icon whenever fullscreen state changes,
-// whether it's triggered by our button or the F11 key.
-document.addEventListener("fullscreenchange", () => {
-  if (document.fullscreenElement) {
-    fullscreenEnterIcon.classList.add("hidden");
-    fullscreenExitIcon.classList.remove("hidden");
-  } else {
-    fullscreenEnterIcon.classList.remove("hidden");
-    fullscreenExitIcon.classList.add("hidden");
   }
 });
 
