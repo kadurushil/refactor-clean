@@ -521,12 +521,17 @@ saveSessionBtn.addEventListener("click", () => {
 });
 
 function videoFrameCallback(now, metadata) {
-  // 'now' is a high-resolution timestamp provided by the browser
-  if (appState.lastVideoFrameTime > 0) {
-    const delta = now - appState.lastVideoFrameTime;
-    appState.videoFrameRenderTime = delta;
+  // If the video is no longer playing, stop the callback loop.
+  if (!appState.isPlaying || videoPlayer.paused) {
+    return;
   }
-  appState.lastVideoFrameTime = now;
+
+  // This is now the main animation driver during playback.
+  // It's perfectly synced with the video's frame presentation.
+  const currentTime = metadata.mediaTime;
+  const frameIndex = findRadarFrameIndexForTime(currentTime * 1000);
+
+  updateFrame(frameIndex, false); // Update radar, but don't seek video.
 
   // Re-register the callback for the next frame to create a loop
   videoPlayer.requestVideoFrameCallback(videoFrameCallback);
@@ -685,8 +690,9 @@ playPauseBtn.addEventListener("click", () => {
       appState.mediaTimeStart = videoPlayer.currentTime;
       appState.lastSyncTime = appState.masterClockStart;
       videoPlayer.play();
+      videoPlayer.requestVideoFrameCallback(videoFrameCallback); // Start the high-precision loop
     }
-    requestAnimationFrame(animationLoop);
+    requestAnimationFrame(animationLoop); // Keep rAF for non-video sync (e.g. scrubbing)
   } else {
     if (videoPlayer.src) videoPlayer.pause();
   }
