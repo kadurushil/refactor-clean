@@ -530,6 +530,11 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
   // The hover radius is now inversely proportional to the zoom factor.
   const radius = p.constrain(80 / appState.zoomFactor, 5, 25);
   // --- END: Dynamic Radius Logic ---
+
+  // --- START: Squared Distance Optimization ---
+  // We calculate the squared radius once to avoid Math.sqrt() in our loops.
+  const radiusSq = radius * radius;
+  // --- END: Squared Distance Optimization ---
   const localClusterColors = clusterColors(p); // <-- Get the color palette once
 
   // ... (Step 1a: Find hovered points - no changes here) ...
@@ -543,8 +548,13 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
         if (pt.x === null || pt.y === null) continue;
         const screenX = pt.x * plotScales.plotScaleX + p.width / 2;
         const screenY = p.height * 0.95 - pt.y * plotScales.plotScaleY;
-        const d = p.dist(mouseX, mouseY, screenX, screenY); // Use smoothed values
-        if (d < radius) {
+
+        // --- START: Squared Distance Optimization ---
+        // Calculate squared distance to avoid the expensive square root operation.
+        const dx = mouseX - screenX;
+        const dy = mouseY - screenY;
+        if (dx * dx + dy * dy < radiusSq) {
+        // --- END: Squared Distance Optimization ---
           // Add the index 'i' to the object we push
           hoveredItems.push({
             type: "point",
@@ -567,8 +577,12 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
       if (cluster.x === null || cluster.y === null) continue;
       const screenX = cluster.x * plotScales.plotScaleX + p.width / 2;
       const screenY = p.height * 0.95 - cluster.y * plotScales.plotScaleY;
-      const d = p.dist(mouseX, mouseY, screenX, screenY); // Use smoothed values
-      if (d < radius) {
+
+      // --- START: Squared Distance Optimization ---
+      const dx = mouseX - screenX;
+      const dy = mouseY - screenY;
+      if (dx * dx + dy * dy < radiusSq) {
+      // --- END: Squared Distance Optimization ---
         const color =
           cluster.id > 0
             ? localClusterColors[(cluster.id - 1) % localClusterColors.length]
@@ -598,8 +612,11 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
           const pos = currentLog.correctedPosition;
           const screenX = pos[0] * plotScales.plotScaleX + p.width / 2;
           const screenY = p.height * 0.95 - pos[1] * plotScales.plotScaleY;
-          const d = p.dist(mouseX, mouseY, screenX, screenY); // Use smoothed values
-          if (d < radius) {
+          // --- START: Squared Distance Optimization ---
+          const dx = mouseX - screenX;
+          const dy = mouseY - screenY;
+          if (dx * dx + dy * dy < radiusSq) {
+          // --- END: Squared Distance Optimization ---
             hoveredItems.push({
               type: "track",
               data: currentLog, // Use the log for the current frame
@@ -621,8 +638,11 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
           const pos = currentLog.predictedPosition;
           const screenX = pos[0] * plotScales.plotScaleX + p.width / 2;
           const screenY = p.height * 0.95 - pos[1] * plotScales.plotScaleY;
-          const d = p.dist(mouseX, mouseY, screenX, screenY); // Use smoothed values
-          if (d < radius) {
+          // --- START: Squared Distance Optimization ---
+          const dx = mouseX - screenX;
+          const dy = mouseY - screenY;
+          if (dx * dx + dy * dy < radiusSq) {
+          // --- END: Squared Distance Optimization ---
             hoveredItems.push({
               type: "prediction",
               data: currentLog,
