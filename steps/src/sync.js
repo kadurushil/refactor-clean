@@ -4,12 +4,30 @@ import {
   speedSlider,
   offsetInput,
   stopBtn,
+  playPauseBtn,
   updateFrame,
   updateDebugOverlay,
   updatePersistentOverlays,
 } from "./dom.js";
 import { findRadarFrameIndexForTime } from "./utils.js";
 
+
+export function videoFrameCallback(now, metadata) {
+  // If the video is no longer playing, stop the callback loop.
+  if (!appState.isPlaying || videoPlayer.paused) {
+    return;
+  }
+
+  // This is now the main animation driver during playback.
+  // It's perfectly synced with the video's frame presentation.
+  const currentTime = metadata.mediaTime;
+  const frameIndex = findRadarFrameIndexForTime(currentTime * 1000);
+
+  updateFrame(frameIndex, false); // Update radar, but don't seek video.
+
+  // Re-register the callback for the next frame to create a loop
+  videoPlayer.requestVideoFrameCallback(videoFrameCallback);
+}
 
 export function animationLoop() {
   if (!appState.isPlaying) return;

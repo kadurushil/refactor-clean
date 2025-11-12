@@ -26,7 +26,7 @@ import {
   updateLoadingModal,
   showLoadingModal,
 } from "./modal.js"; // Modify this import
-import { animationLoop } from "./sync.js";
+import { animationLoop, videoFrameCallback } from "./sync.js";
 import { radarSketch } from "./p5/radarSketch.js";
 import { speedGraphSketch } from "./p5/speedGraphSketch.js";
 import { parseVisualizationJson, parseJsonWithOboe } from "./fileParsers.js";
@@ -521,22 +521,7 @@ saveSessionBtn.addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
-function videoFrameCallback(now, metadata) {
-  // If the video is no longer playing, stop the callback loop.
-  if (!appState.isPlaying || videoPlayer.paused) {
-    return;
-  }
-
-  // This is now the main animation driver during playback.
-  // It's perfectly synced with the video's frame presentation.
-  const currentTime = metadata.mediaTime;
-  const frameIndex = findRadarFrameIndexForTime(currentTime * 1000);
-
-  updateFrame(frameIndex, false); // Update radar, but don't seek video.
-
-  // Re-register the callback for the next frame to create a loop
-  videoPlayer.requestVideoFrameCallback(videoFrameCallback);
-}
+//videoframecallback exported from sync.js
 
 // When "Load Session" is clicked, it triggers the hidden file input.
 loadSessionBtn.addEventListener("click", () => {
