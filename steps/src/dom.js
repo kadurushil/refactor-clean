@@ -1,3 +1,4 @@
+// TODO(sync-refactor): move sync logic into src/sync.js
 import { appState } from "./state.js";
 import { formatUTCTime } from "./utils.js";
 import { throttledUpdateExplorer } from "./dataExplorer.js";

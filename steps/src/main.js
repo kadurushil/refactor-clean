@@ -1,3 +1,4 @@
+// TODO(sync-refactor): move sync logic into src/sync.js
 // ===========================================================================================================
 // REFACTOR PLAN: This monolithic script will be broken down into
 // the following modules in the '/src' directory:
