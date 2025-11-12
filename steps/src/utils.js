@@ -104,14 +104,6 @@ export function parseTimestamp(timestampStr, format) {
   // If getTime() returns NaN, the date is invalid.
   return isNaN(date.getTime()) ? null : date;
 }
-
-/**
- * Creates a throttled function that only invokes the provided function
- * at most once per every `delay` milliseconds.
- * @param {Function} func The function to throttle.
- * @param {number} delay The number of milliseconds to throttle invocations to.
- * @returns {Function} Returns the new throttled function.
- */
 export function throttle(func, delay) {
   // `lastCall` keeps track of the timestamp of the last successful invocation.
   let lastCall = 0;
@@ -130,11 +122,6 @@ export function throttle(func, delay) {
   };
 }
 
-/**
- * Formats milliseconds into a MM:SS.ms string.
- * @param {number} milliseconds The time in milliseconds.
- * @returns {string} The formatted time string.
- */
 export function formatTime(milliseconds) {
     if (isNaN(milliseconds) || milliseconds < 0) {
         return "00:00.000";
@@ -147,11 +134,6 @@ export function formatTime(milliseconds) {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
 }
 
-/**
- * Formats a Date object into a HH:MM:SS.ms UTC string.
- * @param {Date} date The date object to format.
- * @returns {string} The formatted time string.
- */
 export function formatUTCTime(date) {
     if (!date || isNaN(date.getTime())) {
         return "00:00:00.000";

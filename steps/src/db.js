@@ -31,11 +31,7 @@ export function initDB(callback) {
   };
 }
 
-/**
- * Saves a file and its metadata to IndexedDB for versioning and integrity checks.
- * @param {string} key The key to store the file under (e.g., 'json', 'video').
- * @param {File} file The file object to be cached.
- */
+
 // Saves a file (Blob) along with its metadata into the IndexedDB.
 export function saveFileWithMetadata(key, file) {
   if (!db) return;
@@ -68,12 +64,7 @@ export function saveFileWithMetadata(key, file) {
   };
 }
 
-/**
- * Loads a file from IndexedDB only if its filename and size match expected values.
- * @param {string} key The key of the file to load.
- * @param {string} expectedFilename The filename we expect to find.
- * @returns {Promise<Blob|null>} A Promise that resolves with the Blob if it's fresh, otherwise null.
- */
+
 // Loads a file from IndexedDB, performing checks for filename and size to ensure data integrity.
 export function loadFreshFileFromDB(key, expectedFilename) {
     return new Promise((resolve) => {

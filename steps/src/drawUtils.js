@@ -112,11 +112,7 @@ export function drawStaticRegionsToBuffer(p, b, plotScales) {
   b.pop();
 }
 
-/**
- * Draws the grid and axes for the radar plot.
- * @param {p5} p - The p5 instance.
- * @param {object} plotScales - The calculated scales for plotting.
- */
+
 export function drawAxes(p, plotScales) {
   p.push();
   // Determine axis and text colors based on the current theme (dark/light mode).
@@ -196,12 +192,7 @@ export function drawAxes(p, plotScales) {
   p.pop();
 }
 
-/**
- * Draws the point cloud on the radar canvas.
- * @param {p5} p - The p5 instance.
- * @param {Array} points - The array of point cloud data.
- * @param {object} plotScales - The calculated scales for plotting.
- */
+
 export function drawPointCloud(p, points, plotScales) {
   // Set stroke weight for points.
   p.strokeWeight(4);
@@ -287,11 +278,6 @@ export function drawPointCloud(p, points, plotScales) {
   }
 }
 
-/**
- * Draws the historical trajectories of tracked objects.
- * @param {p5} p - The p5 instance.
- * @param {object} plotScales - The calculated scales for plotting.
- */
 export function drawTrajectories(p, plotScales) {
   const localTtcColors = ttcColors(p);
 
@@ -418,13 +404,6 @@ export function drawTrajectories(p, plotScales) {
   }
 }
 
-/**
- * Draws markers for the current position of tracked objects.
- * @param {p5} p - The p5 instance.
- * @param {object} plotScales - The calculated scales for plotting.
- */
-// In src/drawUtils.js
-
 export function drawTrackMarkers(p, plotScales) {
   const showDetails = toggleVelocity.checked;
   const useStationary = toggleStationaryColor.checked;
@@ -516,11 +495,7 @@ export function drawTrackMarkers(p, plotScales) {
   }
 }
 
-/**
- * Handles the display of a comprehensive info tooltip for all elements under the mouse.
- * @param {p5} p - The p5 instance.
- * @param {object} plotScales - The calculated scales for plotting.
- */
+
 export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
   // --- Step 1: Gather Hovered Items ---
   const frameData = appState.vizData.radarFrames[appState.currentFrame];
@@ -836,12 +811,7 @@ export function drawCovarianceEllipse(
   p.pop();
 }
 
-// In src/drawUtils.js
 
-/**
- * Draws a simple representation of the ego vehicle at the origin (0,0).
- * @param {p5.Graphics} b - The p5.Graphics buffer to draw on.
- */
 export function drawEgoVehicle(p, plotScales) {
   const isDark = document.documentElement.classList.contains("dark");
   const carColor = isDark ? p.color(150, 150, 220) : p.color(151, 151, 220);
@@ -861,17 +831,6 @@ export function drawEgoVehicle(p, plotScales) {
   p.pop();
 }
 
-//OLD_Solid Fill Logic
-
-/**
- * Draws the defined regions of interest (ROI) based on dynamic data from the current frame.
- * @param {p5} p - The p5 instance to draw on.
- * @param {object} frameData - The data for the current radar frame.
- * @param {object} plotScales - The calculated scales for plotting.
- */
-/**
-
- */
 export function drawRegionsOfInterest(p, frameData, plotScales) {
   // --- THIS CHECK IS ESSENTIAL AND MUST NOT BE REMOVED ---
   // It gracefully handles frames that do not have the barrier data.
@@ -920,15 +879,7 @@ export function drawRegionsOfInterest(p, frameData, plotScales) {
 
   p.pop();
 }
-//OLD_Solid Fill Logic
 
-/**
- * Draws the cluster centroids on the radar canvas as an asterisk.
- * Handles cases where a single cluster is an object instead of an array.
- * @param {p5} p - The p5 instance.
- * @param {Array|object} clustersInput - The cluster data for the current frame.
- * @param {object} plotScales - The calculated scales for plotting.
- */
 export function drawClusterCentroids(p, clustersInput, plotScales) {
   if (!clustersInput) {
     return; // Do nothing if there's no cluster data

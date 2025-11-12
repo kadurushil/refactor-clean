@@ -456,24 +456,7 @@ export const radarSketch = function (p) {
     b.pop();
   };
 
-  // Handle window resizing event
-  /* p.windowResized = function () {
-    p.resizeCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight);
-    // BUG FIX 2: Re-create the buffer instead of resizing it
-    staticBackgroundBuffer = p.createGraphics(p.width, p.height);
-    trackLegendBuffer = p.createGraphics(100, 100);
-    p.drawTrackLegendToBuffer();
-    calculatePlotScales();
-    drawStaticRegionsToBuffer(p, staticBackgroundBuffer, plotScales);
-    if (appState.zoomSketchInstance) {
-        appState.zoomSketchInstance.handleResize();
-    }
-    if (appState.vizData) {
-      p.redraw();
-    }
-  }; */
 
-  // In src/p5/radarSketch.js
 
   p.windowResized = function () {
     console.log("radarSketch: windowResized triggered!");

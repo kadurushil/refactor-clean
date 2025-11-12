@@ -109,21 +109,6 @@ function hideExplorer() {
     panel.classList.add('hidden');
 }
 
-/* function switchTab(targetTab) {
-    Object.values(tabs).forEach(tab => {
-        tab.panel.classList.add('hidden');
-        tab.btn.classList.remove('border-blue-500', 'text-gray-900', 'dark:text-white');
-        tab.btn.classList.add('text-gray-500', 'dark:text-gray-400', 'border-transparent');
-    });
-
-    tabs[targetTab].panel.classList.remove('hidden');
-    tabs[targetTab].btn.classList.add('border-blue-500', 'text-gray-900', 'dark:text-white');
-    tabs[targetTab].btn.classList.remove('text-gray-500', 'dark:text-gray-400');
-
-    footer.classList.toggle('hidden', targetTab !== 'grid');
-} */
-// In src/dataExplorer.js
-
 function switchTab(targetTab) {
     Object.values(tabs).forEach(tab => {
         tab.panel.classList.add('hidden');
@@ -262,13 +247,6 @@ function displayTracksInGrid(trackData) {
 // --- START: New Robust Update Logic ---
 let throttleTimer = null;
 let debounceTimer = null;
-
-/**
- * A custom throttled and debounced function for updating the explorer.
- * - It throttles calls to prevent updates more than once every 400ms.
- * - It debounces calls to ensure a final, guaranteed update happens 500ms
- *   after the last call, catching the "end" of a seeking action.
- */
 export function throttledUpdateExplorer() {
     // Clear any pending final update, as a new call has come in.
     clearTimeout(debounceTimer);

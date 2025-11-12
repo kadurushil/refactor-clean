@@ -10,11 +10,7 @@ import {
 } from "./dom.js";
 import { findRadarFrameIndexForTime } from "./utils.js";
 
-/**
- * The main animation loop that drives the synchronized playback.
- * It calculates the current media time based on performance.now() for a smooth clock,
- * finds the corresponding radar frame, and handles resynchronization with the video element.
- */
+
 export function animationLoop() {
   if (!appState.isPlaying) return;
 

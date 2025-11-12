@@ -1,14 +1,3 @@
-/**
- * Parses a JSON file stream using Oboe.js to handle very large files.
- * @param {string} fileURL - A temporary URL created from the file object.
- * @param {function} onProgress - A callback to update the UI on progress.
- * @param {function} onComplete - A callback to run when parsing is complete.
- * @param {function} onError - A callback to run if an error occurs.
- */
-// This function can be deleted if it exists: parseJsonStream
-// This function can be deleted if it exists: parseJsonWithOboe
-
-// Add this simplified streaming function
 export function parseJsonWithOboe(fileURL, onComplete, onError, onProgress) {
   const vizData = {
     radarFrames: [],
