@@ -26,7 +26,13 @@ import {
   updateLoadingModal,
   showLoadingModal,
 } from "./modal.js"; // Modify this import
-import { animationLoop, videoFrameCallback } from "./sync.js";
+import {
+  animationLoop,
+  videoFrameCallback,
+  startPlayback,
+  pausePlayback,
+  stopPlayback,
+} from "./sync.js";
 import { radarSketch } from "./p5/radarSketch.js";
 import { speedGraphSketch } from "./p5/speedGraphSketch.js";
 import { parseVisualizationJson, parseJsonWithOboe } from "./fileParsers.js";
@@ -668,32 +674,23 @@ applySnrBtn.addEventListener("click", () => {
 // Event listener for play/pause button click.
 playPauseBtn.addEventListener("click", () => {
   if (!appState.vizData && !videoPlayer.src) return;
+
   appState.isPlaying = !appState.isPlaying;
   playPauseBtn.textContent = appState.isPlaying ? "Pause" : "Play";
+
   if (appState.isPlaying) {
-    if (videoPlayer.src && videoPlayer.readyState > 1) {
-      appState.masterClockStart = performance.now();
-      appState.mediaTimeStart = videoPlayer.currentTime;
-      appState.lastSyncTime = appState.masterClockStart;
-      videoPlayer.play();
-      videoPlayer.requestVideoFrameCallback(videoFrameCallback); // Start the high-precision loop
-    }
-    requestAnimationFrame(animationLoop); // Keep rAF for non-video sync (e.g. scrubbing)
+    startPlayback();
   } else {
-    if (videoPlayer.src) videoPlayer.pause();
+    pausePlayback();
   }
 });
 
 // Event listener for stop button click.
 stopBtn.addEventListener("click", () => {
-  videoPlayer.pause();
+  if (!appState.vizData && !videoPlayer.src) return;
+  stopPlayback();
   appState.isPlaying = false;
   playPauseBtn.textContent = "Play";
-  if (appState.vizData) {
-    updateFrame(0, true);
-  } else if (videoPlayer.src) {
-    videoPlayer.currentTime = 0;
-  }
   if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
 });
 

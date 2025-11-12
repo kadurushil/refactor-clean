@@ -11,6 +11,33 @@ import {
 } from "./dom.js";
 import { findRadarFrameIndexForTime } from "./utils.js";
 
+// --- NEW Playback Control Functions ---
+
+export function startPlayback() {
+  if (videoPlayer.src && videoPlayer.readyState > 1) {
+    appState.masterClockStart = performance.now();
+    appState.mediaTimeStart = videoPlayer.currentTime;
+    appState.lastSyncTime = appState.masterClockStart;
+    videoPlayer.play();
+    videoPlayer.requestVideoFrameCallback(videoFrameCallback); // Start the high-precision loop
+  }
+  requestAnimationFrame(animationLoop); // Keep rAF for non-video sync (e.g. scrubbing)
+}
+
+export function pausePlayback() {
+  if (videoPlayer.src) {
+    videoPlayer.pause();
+  }
+}
+
+export function stopPlayback() {
+  videoPlayer.pause();
+  if (appState.vizData) {
+    updateFrame(0, true);
+  } else if (videoPlayer.src) {
+    videoPlayer.currentTime = 0;
+  }
+}
 
 export function videoFrameCallback(now, metadata) {
   // If the video is no longer playing, stop the callback loop.
