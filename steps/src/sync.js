@@ -8,11 +8,16 @@ import {
   updateDebugOverlay,
   updatePersistentOverlays,
   videoPlayer,
+  timelineSlider,
 } from "./dom.js";
 import { findRadarFrameIndexForTime } from "./utils.js";
+import { throttledUpdateExplorer } from "./dataExplorer.js";
 
 // --- NEW Playback Control Functions ---
 
+let seekDebounceTimer = null;
+let lastScrollTime = 0;
+let scrollSpeed = 0;
 export function startPlayback() {
   if (videoPlayer.src && videoPlayer.readyState > 1) {
     appState.masterClockStart = performance.now();
@@ -141,4 +146,91 @@ export function animationLoop() {
 
   // Request the next frame
   requestAnimationFrame(animationLoop);
+}
+
+export function handleTimelineInput(event) {
+  if (!appState.vizData) return;
+  updateDebugOverlay(videoPlayer.currentTime);
+  updatePersistentOverlays(videoPlayer.currentTime);
+  // --- 1. Live Seeking (Throttled for performance) ---
+  // This part gives you the immediate visual feedback as you drag the slider.
+  // We use a simple timestamp check to prevent it from running too often.
+  const now = performance.now();
+  if (
+    !timelineSlider.lastInputTime ||
+    now - timelineSlider.lastInputTime > 32
+  ) {
+    // ~30fps throttle
+    if (appState.isPlaying) {
+      videoPlayer.pause();
+      appState.isPlaying = false;
+      playPauseBtn.textContent = "Play";
+    }
+    const frame = parseInt(event.target.value, 10);
+    updateFrame(frame, true);
+    appState.mediaTimeStart = videoPlayer.currentTime;
+    appState.masterClockStart = now;
+  }
+
+  // --- 2. Final, Precise Sync (Debounced for reliability) ---
+  // This part ensures a perfect sync only AFTER you stop moving the slider.
+  clearTimeout(seekDebounceTimer); // Always cancel the previously scheduled sync
+
+  seekDebounceTimer = setTimeout(() => {
+    console.log("Slider movement stopped. Performing final, debounced resync.");
+    const finalFrame = parseInt(event.target.value, 10);
+    updateFrame(finalFrame, true); // Perform the final, precise seek
+
+    // Also update the debug overlay with the final, settled time
+    updateDebugOverlay(videoPlayer.currentTime);
+  }, 250); // Wait for 250ms of inactivity before firing
+}
+
+export function handleTimelineWheel(event) {
+  if (!appState.vizData) return;
+  // 1. Prevent the page from scrolling up and down
+  event.preventDefault();
+
+  // 2. Calculate scroll speed
+  const now = performance.now();
+  const timeDelta = now - (lastScrollTime || now); // Handle first scroll
+  lastScrollTime = now;
+  // Calculate speed as "events per second", giving more weight to recent, fast scrolls
+  scrollSpeed = timeDelta > 0 ? 1000 / timeDelta : scrollSpeed;
+
+  // 3. Map scroll speed to a dynamic seek multiplier
+  // This creates a nice acceleration curve. The '50' is a sensitivity value you can adjust.
+  const speedMultiplier = 1 + Math.floor(scrollSpeed / 4);
+  const baseSeekAmount = 1; // Base frames to move on a slow scroll
+  let seekAmount = Math.max(baseSeekAmount, speedMultiplier);
+
+  // 4. Calculate the new frame index
+  const direction = Math.sign(event.deltaY); // +1 for down/right, -1 for up/left
+  const currentFrame = parseInt(timelineSlider.value, 10);
+  let newFrame = currentFrame - seekAmount * direction;
+
+  // Clamp the new frame to the valid range
+  const totalFrames = appState.vizData.radarFrames.length - 1;
+  newFrame = Math.max(0, Math.min(newFrame, totalFrames));
+
+  // 5. Update the UI
+  if (appState.isPlaying) {
+    playPauseBtn.click(); // Pause if playing
+  }
+  updateFrame(newFrame, true);
+
+  // 6. Reuse the debouncer for a final, precise sync after scrolling stops
+  clearTimeout(seekDebounceTimer);
+  seekDebounceTimer = setTimeout(() => {
+    console.log("Scrolling stopped. Performing final, debounced resync.");
+    updateFrame(newFrame, true);
+    updatePersistentOverlays(videoPlayer.currentTime);
+    updateDebugOverlay(videoPlayer.currentTime);
+  }, 300); // Wait 300ms after the last scroll event
+  throttledUpdateExplorer();
+}
+
+export function initSyncUIHandlers() {
+  timelineSlider.addEventListener("input", handleTimelineInput);
+  timelineSlider.addEventListener("wheel", handleTimelineWheel);
 }
