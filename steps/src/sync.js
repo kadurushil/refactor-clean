@@ -216,9 +216,9 @@ export function animationLoop() {
   if (now - appState.lastSyncTime > 150) {
     const videoTime = videoPlayer.currentTime;
     const drift = Math.abs(currentMediaTime - videoTime);
-    // Resync if drift is > 150ms
-    if (drift > 0.15) {
-      // Resync if drift is > 150ms
+    // Resync if drift is > 200ms
+    if (drift > 0.2) {
+      // Resync if drift is > 200ms
       console.warn(`Resyncing video. Drift was: ${drift.toFixed(3)}s`);
       videoPlayer.currentTime = currentMediaTime;
     }
