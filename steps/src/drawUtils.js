@@ -271,7 +271,12 @@ export function drawPointCloud(p, points, plotScales) {
         p.stroke(c);
         // Default point color if no specific coloring is applied.
       } else {
-        p.stroke(0, 150, 255);
+        // --- START: THEME-AWARE POINT COLOR ---
+        const isDark = document.documentElement.classList.contains("dark");
+        // Use a bright lime green for dark mode for better visibility, and the original blue for light mode.
+        const pointColor = isDark ? p.color(244, 255, 0) : p.color(0, 150, 255);
+        p.stroke(pointColor);
+        // --- END: THEME-AWARE POINT COLOR ---
       }
       p.point(pt.x * plotScales.plotScaleX, pt.y * plotScales.plotScaleY);
     }
