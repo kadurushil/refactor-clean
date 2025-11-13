@@ -34,6 +34,8 @@ import {
   stopPlayback,
   forceResyncWithOffset,
   initSyncUIHandlers,
+  updateFrame,
+  resetVisualization,
   handleTimelineInput,
 } from "./sync.js";
 import { radarSketch } from "./p5/radarSketch.js";
@@ -94,8 +96,6 @@ import {
   speedGraphContainer,
   speedGraphPlaceholder,
   toggleCloseUp,
-  updateFrame,
-  resetVisualization,
   updateDebugOverlay,
   timelineTooltip,
   saveSessionBtn,
@@ -915,14 +915,11 @@ document.addEventListener("keydown", (event) => {
   if (key === "a") {
     toggleDebugOverlay.click();
     toggleDebug2Overlay.click();
-    if (isDebug1Visible && isDebug2Visible) {
-      radarInfoOverlay.classList.add("hidden");
-      videoInfoOverlay.classList.add("hidden");
-      return;
-    }
-    // Otherwise, make sure they are visible.
-    radarInfoOverlay.classList.remove("hidden");
-    videoInfoOverlay.classList.remove("hidden");
+    updatePersistentOverlays(videoPlayer.currentTime);
+    // The 'a' key is a shortcut to toggle all debug overlays on/off.
+    // The `updateDebugOverlay` and `updatePersistentOverlays` functions,
+    // which are called by the toggle's 'change' event listener,
+    // already handle the logic for showing/hiding the other overlays.
   }
   if (key === "m") {
     if (collapsibleMenu.classList.contains("-translate-x-full")) {

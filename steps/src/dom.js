@@ -1,10 +1,7 @@
 // TODO(sync-refactor): move sync logic into src/sync.js
 import { appState } from "./state.js";
 import { formatUTCTime } from "./utils.js";
-import { throttledUpdateExplorer } from "./dataExplorer.js";
-// Also import VIDEO_FPS from constants
 import { VIDEO_FPS } from "./constants.js";
-
 // --- DOM Element References --- //
 
 export const themeToggleBtn = document.getElementById("theme-toggle");
@@ -86,89 +83,6 @@ export const toggleConfirmedOnly = document.getElementById("toggle-confirmed-onl
 export const explorerBtn = document.getElementById("explorer-btn");
 
 
-
-//----------------------UPDATE FRAME Function----------------------//
-// Updates the UI to reflect the current radar frame and synchronizes video playback.
-export function updateFrame(frame, forceVideoSeek) {
-  const startTime = performance.now(); //start emasuring timer of performance.
-  if (
-    !appState.vizData ||
-    frame < 0 ||
-    frame >= appState.vizData.radarFrames.length
-  )
-    // Exit if no visualization data or invalid frame.
-    return; // Exit if no visualization data or invalid frame
-  appState.currentFrame = frame;
-  timelineSlider.value = appState.currentFrame;
-  frameCounter.textContent = `Frame: ${appState.currentFrame + 1} / ${
-    appState.vizData.radarFrames.length
-  }`;
-  const frameData = appState.vizData.radarFrames[appState.currentFrame];
-  if (toggleEgoSpeed.checked && frameData) {
-    // Update ego speed display if enabled.
-    const egoVy_kmh = (frameData.egoVelocity[1] * 3.6).toFixed(1); // Convert m/s to km/h and format
-    egoSpeedDisplay.textContent = `Ego: ${egoVy_kmh} km/h`;
-    egoSpeedDisplay.classList.remove("hidden");
-  } else {
-    egoSpeedDisplay.classList.add("hidden"); // Hide ego speed display.
-  }
-
-  // --- ADD THIS NEW BLOCK ---
-  if (
-    frameData &&
-    frameData.canVehSpeed_kmph !== null &&
-    !isNaN(frameData.canVehSpeed_kmph)
-  ) {
-    canSpeedDisplay.textContent = `CAN: ${frameData.canVehSpeed_kmph.toFixed(
-      1
-    )} km/h`;
-    canSpeedDisplay.classList.remove("hidden");
-  } else {
-    canSpeedDisplay.classList.add("hidden");
-  }
-  // --- END OF NEW BLOCK ---
-
-  let timeForUpdates = videoPlayer.currentTime; // NEW: Default to the video's current time
-
-  if (
-    forceVideoSeek &&
-    videoPlayer.src &&
-    videoPlayer.readyState > 1 &&
-    appState.videoStartDate &&
-    frameData
-  ) {
-    const offsetMs = parseFloat(offsetInput.value) || 0;
-    const targetRadarTimeMs = frameData.timestampMs;
-    const targetVideoTimeSec = (targetRadarTimeMs - offsetMs) / 1000;
-    if (targetVideoTimeSec >= 0 && targetVideoTimeSec <= videoPlayer.duration) {
-      // Ensure target time is within video duration
-      if (Math.abs(videoPlayer.currentTime - targetVideoTimeSec) > 0.05) {
-        // Check for significant drift
-        videoPlayer.currentTime = targetVideoTimeSec; // Seek video if drift is significant
-      }
-      // MODIFIED: Use the calculated target time for our updates, not the stale videoPlayer.currentTime
-      timeForUpdates = targetVideoTimeSec; // Update time for subsequent UI updates
-    }
-  } // End of forceVideoSeek block
-
-  if (!appState.isPlaying) {
-    // MODIFIED: Use our new synchronized time variable
-    updatePersistentOverlays(timeForUpdates);
-  }
-  // --- End of fix ---
-  // --- START: Conditional Redraw Logic ---
-  // Only force a redraw from here if the animation loop is NOT running.
-  // When playing, the animationLoop is responsible for redrawing.
-  if (!appState.isPlaying && appState.p5_instance) appState.p5_instance.redraw();
-  if (!appState.isPlaying && appState.speedGraphInstance) appState.speedGraphInstance.redraw();
-  // --- NEW: Centralized Explorer Update ---
-  throttledUpdateExplorer();
-  // --- END: Centralized Explorer Update ---
-  const endTime = performance.now();
-  appState.lastFrameRenderTime = endTime - startTime; // <-- End timer and update state
-
-}
-
 //----------------------Reset UI for New file Load----------------------//
 // Resets the UI to make sure everything is clean before new files load. 
 export function resetUIForNewLoad() {
@@ -207,16 +121,6 @@ export function resetUIForNewLoad() {
 
     // Reset the speed graph container
     speedGraphPlaceholder.classList.remove('hidden');
-}
-
-//----------------------RESET VISUALIZATION Function----------------------//
-// Resets the visualization to its initial state.
-export function resetVisualization() {
-  appState.isPlaying = false;
-  playPauseBtn.textContent = "Play";
-  const numFrames = appState.vizData.radarFrames.length;
-  timelineSlider.max = numFrames > 0 ? numFrames - 1 : 0;
-  updateFrame(0, true); // Update to the first frame and force video seek
 }
 
 //----------------------CAN DISPLAY UPDATE Function----------------------//
