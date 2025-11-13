@@ -1,6 +1,5 @@
 import { appState } from "./state.js";
 import {
-  videoPlayer,
   speedSlider,
   offsetInput,
   stopBtn,
@@ -8,6 +7,7 @@ import {
   updateFrame,
   updateDebugOverlay,
   updatePersistentOverlays,
+  videoPlayer,
 } from "./dom.js";
 import { findRadarFrameIndexForTime } from "./utils.js";
 
@@ -28,6 +28,27 @@ export function pausePlayback() {
   if (videoPlayer.src) {
     videoPlayer.pause();
   }
+}
+
+export function forceResyncWithOffset() {
+  // Make sure visualization data is loaded before proceeding
+  if (!appState.vizData) return;
+
+  console.log(
+    `Forcing resync with new offset: ${offsetInput.value}`
+  );
+
+  // If the video is playing, pause it to allow for precise frame tuning.
+  if (appState.isPlaying) {
+    // Directly pause playback and update state, avoiding a synthetic click.
+    pausePlayback();
+    appState.isPlaying = false;
+    playPauseBtn.textContent = "Play";
+  }
+
+  // Call updateFrame, forcing it to resync the video to the current radar frame
+  // using the new offset value from the input box.
+  updateFrame(appState.currentFrame, true);
 }
 
 export function stopPlayback() {

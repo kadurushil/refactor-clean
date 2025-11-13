@@ -32,6 +32,7 @@ import {
   startPlayback,
   pausePlayback,
   stopPlayback,
+  forceResyncWithOffset,
 } from "./sync.js";
 import { radarSketch } from "./p5/radarSketch.js";
 import { speedGraphSketch } from "./p5/speedGraphSketch.js";
@@ -1052,6 +1053,15 @@ function calculateAndSetOffset() {
     }
   }
 }
+offsetInput.addEventListener("keydown", (event) => {
+  // Check if the key pressed was 'Enter'
+  if (event.key === "Enter") {
+    // Prevent the default browser action for the Enter key (like submitting a form)
+    event.preventDefault();
+    // Call the new centralized function from sync.js
+    forceResyncWithOffset();
+  }
+});
 
 // --- [START] CORRECTED INITIALIZATION LOGIC ---
 document.addEventListener("DOMContentLoaded", () => {
@@ -1097,28 +1107,3 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 // --- [END] CORRECTED INITIALIZATION LOGIC ---
-
-// In src/main.js, add this new event listener
-offsetInput.addEventListener("keydown", (event) => {
-  // Check if the key pressed was 'Enter'
-  if (event.key === "Enter") {
-    // Prevent the default browser action for the Enter key (like submitting a form)
-    event.preventDefault();
-
-    // Make sure visualization data is loaded before proceeding
-    if (!appState.vizData) return;
-
-    console.log(
-      `Enter pressed. Forcing resync with new offset: ${offsetInput.value}`
-    );
-
-    // If the video is playing, pause it to allow for precise frame tuning.
-    if (appState.isPlaying) {
-      playPauseBtn.click();
-    }
-
-    // Call updateFrame, forcing it to resync the video to the current radar frame
-    // using the new offset value from the input box.
-    updateFrame(appState.currentFrame, true);
-  }
-});
