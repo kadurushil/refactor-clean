@@ -217,11 +217,47 @@ export function animationLoop() {
     const videoTime = videoPlayer.currentTime;
     const drift = Math.abs(currentMediaTime - videoTime);
     // Resync if drift is > 200ms
-    if (drift > 0.2) {
-      // Resync if drift is > 200ms
+    if (drift > 0.2) { // The drift threshold is 200ms.
       console.warn(`Resyncing video. Drift was: ${drift.toFixed(3)}s`);
-      videoPlayer.currentTime = currentMediaTime;
+
+      // --- START: Resync Storm "Circuit Breaker" ---
+      if (appState.isResyncLockdownEnabled) {
+        const now = performance.now();
+        // If the last resync was recent (within 2s), increment the counter. Otherwise, reset it.
+        if (appState.lastResyncTimestamp && (now - appState.lastResyncTimestamp < 2000)) {
+          appState.consecutiveResyncs = (appState.consecutiveResyncs || 0) + 1;
+        } else {
+          appState.consecutiveResyncs = 1;
+        }
+        appState.lastResyncTimestamp = now;
+
+        // If more than 2 consecutive resyncs have occurred, trigger the lockdown.
+        if (appState.consecutiveResyncs > 2) {
+          // --- START: FIX for Lockdown Loop ---
+          if (!appState.isInLockdown) { // Only trigger if not already in lockdown
+            console.warn("Resync storm detected! Pausing playback to recover...");
+            appState.isInLockdown = true; // Enter lockdown state
+            pausePlayback(); // Pause the video.
+
+            // After a 1-second pause, resume playback.
+            // startPlayback() will handle the clock reset automatically.
+            setTimeout(() => {
+              console.log("Resuming playback after lockdown.");
+              appState.isInLockdown = false; // Exit lockdown state
+              startPlayback(); // Resume playback, which now correctly resets the clock.
+            }, 1000); // 1-second pause.
+
+            appState.consecutiveResyncs = 0; // Reset the counter.
+            return; // Exit the animation loop for this frame to allow the pause.
+          }
+          // --- END: FIX for Lockdown Loop ---
+        }
+      }
+      // --- END: Resync Storm "Circuit Breaker" ---
+
+      videoPlayer.currentTime = currentMediaTime; // Perform the standard resync.
     }
+
     appState.lastSyncTime = now;
   }
 

@@ -47,4 +47,10 @@ export const appState = {
     medium: { time: 3, color: "#BA8E23" },
     low: { color: "#00ff00" }, // Add this new line
   },
+  // --- Resync Storm "Circuit Breaker" ---
+  isResyncLockdownEnabled: true, // Feature is enabled by default
+  lastResyncTimestamp: 0, // Timestamp of the last resync event
+  consecutiveResyncs: 0, // Counter for consecutive resyncs
+  isInLockdown: false, // Flag to prevent nested lockdown triggers
+
 };
