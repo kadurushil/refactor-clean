@@ -8,15 +8,18 @@ import {
   updatePersistentOverlays,
   videoPlayer,
   frameCounter,
+  canvasContainer,
   toggleEgoSpeed,
   egoSpeedDisplay,
   canSpeedDisplay,
 } from "./dom.js";
+import { VIDEO_FPS } from "./constants.js";
 import { findRadarFrameIndexForTime, precomputeRadarVideoSync } from "./utils.js";
 import { throttledUpdateExplorer } from "./dataExplorer.js";
 import { debugFlags } from "./debug.js";
 
 // --- [START] MOVED FROM DOM.JS ---
+
 
 //----------------------RESET VISUALIZATION Function----------------------//
 // Resets the visualization to its initial state.
@@ -72,7 +75,7 @@ export function forceResyncWithOffset() {
 
 //----------------------UPDATE FRAME Function----------------------//
 // Updates the UI to reflect the current radar frame and synchronizes video playback.
-export function updateFrame(frame, forceVideoSeek = false) {
+export function updateFrame(frame, forceVideoSeek = false, overrideTime = null) {
   const startTime = performance.now(); //start emasuring timer of performance.
   if (
     !appState.vizData ||
@@ -141,8 +144,11 @@ export function updateFrame(frame, forceVideoSeek = false) {
 
   // --- START: FIX for Overlay Visibility During Scrubbing ---
   // Update overlays here to ensure they refresh when scrubbing while paused.
-  updatePersistentOverlays(videoPlayer.currentTime);
-  updateDebugOverlay(videoPlayer.currentTime);
+  // If an overrideTime is provided (e.g., from a scroll-seek), use it.
+  // Otherwise, use the video player's current time.
+  const displayTime = overrideTime !== null ? overrideTime : videoPlayer.currentTime;
+  updatePersistentOverlays(displayTime);
+  updateDebugOverlay(displayTime);
   // --- END: FIX for Overlay Visibility During Scrubbing ---
 }
 // --- [END] MOVED FROM DOM.JS ---
@@ -239,8 +245,19 @@ let lastScrollTime = 0;
 let scrollSpeed = 0;
 let seekDebounceTimer;
 
+let lastVideoScrollTime = 0;
+let videoScrollSpeed = 0;
+let videoSeekDebounceTimer;
+let targetVideoTime = null; // NEW: State variable to track target time during scroll
+
+
 function handleTimelineWheel(event) {
-  if (!appState.vizData) return;
+  // If no data, or if close-up mode is active, do not seek.
+  // The wheel event is used for zooming in close-up mode.
+  if (!appState.vizData || appState.isCloseUpMode) {
+    return;
+  }
+
   event.preventDefault(); // Prevent default page scroll
 
   // 1. Pause playback if the user starts scrubbing.
@@ -263,8 +280,8 @@ function handleTimelineWheel(event) {
 
   // 4. Calculate the new frame index.
   const direction = Math.sign(event.deltaY);
-  // FIX: Invert the direction. Scrolling down (positive deltaY) should advance the frame.
-  let newFrame = appState.currentFrame - direction * seekAmount;
+  // Scrolling down (positive deltaY) should advance the frame (increase index).
+  let newFrame = appState.currentFrame + direction * seekAmount;
 
   // 5. Clamp the new frame to the valid range.
   const totalFrames = appState.vizData.radarFrames.length - 1;
@@ -288,7 +305,79 @@ function handleTimelineWheel(event) {
   }, 300); // 300ms delay after the last scroll event.
 }
 
+function handleVideoPanelWheel(event) {
+  if (!appState.vizData || !videoPlayer.src || videoPlayer.duration <= 0) return;
+  event.preventDefault(); // Prevent default page scroll
+
+  // 1. On the first scroll event, pause playback and initialize our target time.
+  if (appState.isPlaying) {
+    pausePlayback();
+    appState.isPlaying = false;
+    playPauseBtn.textContent = "Play";
+  }
+  if (targetVideoTime === null) {
+    targetVideoTime = videoPlayer.currentTime;
+  }
+
+  // 2. Calculate scroll speed for acceleration.
+  const now = performance.now();
+  const timeDelta = now - (lastVideoScrollTime || now);
+  lastVideoScrollTime = now;
+  videoScrollSpeed = timeDelta > 0 ? 1000 / timeDelta : videoScrollSpeed;
+
+  // 3. Map scroll speed to an acceleration curve.
+  const speedMultiplier = Math.floor(videoScrollSpeed / 8);
+  const seekAmount = Math.max(1, speedMultiplier); // Always move at least 1 frame.
+
+  // 4. Calculate the new target time based on our stateful variable.
+  const direction = Math.sign(event.deltaY);
+  const timeIncrement = (direction * seekAmount) / VIDEO_FPS;
+  targetVideoTime += timeIncrement;
+
+  // 5. Clamp the new time to the video's bounds.
+  targetVideoTime = Math.max(0, Math.min(targetVideoTime, videoPlayer.duration));
+
+  // 6. Find the corresponding radar frame for the new target time.
+  const newRadarFrame = findRadarFrameIndexForTime(targetVideoTime, appState.vizData);
+
+  console.log('--- Video Wheel Debug ---');
+  console.log(`Scroll Speed: ${videoScrollSpeed.toFixed(2)}`);
+  console.log(`Seek Amount (frames): ${seekAmount}`);
+  console.log(`Time Increment (s): ${timeIncrement.toFixed(4)}`);
+  console.log(`New Target Time (s): ${targetVideoTime.toFixed(4)}`);
+  console.log(`New Radar Frame: ${newRadarFrame}`);
+
+  // 7. Update the UI immediately for responsive feedback, but WITHOUT forcing a video seek.
+  updateFrame(newRadarFrame, false, targetVideoTime);
+  if (appState.p5_instance) appState.p5_instance.redraw();
+  if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
+
+  // 8. Use a debouncer for the expensive video seek.
+  clearTimeout(videoSeekDebounceTimer);
+  videoSeekDebounceTimer = setTimeout(() => {
+    console.log(`--- Debounced Seek Fired ---`);
+    console.log(`Final Seek Time (s): ${targetVideoTime.toFixed(4)}`);
+    // Perform the final, expensive video seek.
+    videoPlayer.currentTime = targetVideoTime;
+    // Reset the state variable, so the next scroll interaction starts fresh.
+    targetVideoTime = null;
+    lastVideoScrollTime = 0; // Also reset scroll time to prevent huge initial jump
+    videoScrollSpeed = 0; // FIX: Reset scroll speed to prevent "sticky" acceleration.
+  }, 150);
+}
+
+
 export function initSyncUIHandlers() {
   timelineSlider.addEventListener("input", handleTimelineInput);
-  timelineSlider.addEventListener("wheel", handleTimelineWheel, { passive: false });
+  timelineSlider.addEventListener("wheel", handleTimelineWheel, {
+    passive: false,
+  });
+  // Use the canvas container for radar frame seeking
+  canvasContainer.addEventListener("wheel", handleTimelineWheel, {
+    passive: false,
+  });
+  // Use the video player for video frame seeking
+  videoPlayer.addEventListener("wheel", handleVideoPanelWheel, {
+    passive: false,
+  });
 }
