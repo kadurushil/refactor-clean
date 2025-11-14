@@ -75,40 +75,45 @@ export const radarSketch = function (p) {
       canvasContainer.offsetHeight
     );
     canvas.parent("canvas-container");
-    // --- START: ADD MOUSE WHEEL LISTENER HERE ---
-    canvas.mouseWheel((event) => {
-      // Only run this logic if the close-up mode is active
-      if (appState.isCloseUpMode) {
-        event.preventDefault(); // Prevent the page from scrolling
 
-        const zoomSpeed = 0.5;
-        const direction = Math.sign(event.deltaY);
-        let newZoomFactor = appState.zoomFactor - direction * zoomSpeed;
+    // --- START: Manual Mouse Wheel Listener for Passive Option ---
+    // We attach the listener manually to the canvas element to set the `passive` flag to `false`.
+    // This is necessary to allow `event.preventDefault()` and signals to the browser that
+    // we are intentionally handling the scroll behavior, resolving the console warning.
+    canvas.elt.addEventListener(
+      "wheel",
+      (event) => {
+        // Only run this logic if the close-up mode is active
+        if (appState.isCloseUpMode) {
+          event.preventDefault(); // Prevent the page from scrolling
 
-        // Clamp the zoom factor to a reasonable range
-        newZoomFactor = p.constrain(newZoomFactor, 1.5, 30);
-        appState.zoomFactor = newZoomFactor;
+          const zoomSpeed = 0.5;
+          const direction = Math.sign(event.deltaY);
+          let newZoomFactor = appState.zoomFactor - direction * zoomSpeed;
 
-        // IMPORTANT: We must manually trigger a redraw of the zoom sketch
-        // so it immediately updates with the new zoom factor.
-        if (
-          appState.zoomSketchInstance &&
-          appState.zoomSketchInstance.updateAndDraw
-        ) {
-          // We just need to trigger an update; the zoom sketch will read the new
-          // appState.zoomFactor when it redraws.
-          // We find the current hovered items again to pass them.
-          const hoveredItems = handleCloseUpDisplay(p, plotScales);
-          appState.zoomSketchInstance.updateAndDraw(
-            p.mouseX,
-            p.mouseY,
-            hoveredItems,
-            plotScales
-          );
+          // Clamp the zoom factor to a reasonable range
+          newZoomFactor = p.constrain(newZoomFactor, 1.5, 30);
+          appState.zoomFactor = newZoomFactor;
+
+          // IMPORTANT: We must manually trigger a redraw of the zoom sketch
+          // so it immediately updates with the new zoom factor.
+          if (
+            appState.zoomSketchInstance &&
+            appState.zoomSketchInstance.updateAndDraw
+          ) {
+            const hoveredItems = handleCloseUpDisplay(p, plotScales);
+            appState.zoomSketchInstance.updateAndDraw(
+              p.mouseX,
+              p.mouseY,
+              hoveredItems,
+              plotScales
+            );
+          }
         }
-      }
-    });
-    // --- END: ADD MOUSE WHEEL LISTENER HERE ---
+      },
+      { passive: false }
+    );
+    // --- END: Manual Mouse Wheel Listener ---
 
     // Initialize graphics buffers
     staticBackgroundBuffer = p.createGraphics(p.width, p.height);

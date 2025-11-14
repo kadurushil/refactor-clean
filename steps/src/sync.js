@@ -170,6 +170,7 @@ export function videoFrameCallback(now, metadata) {
   // 3. Update the application state. This is the ONLY state this function changes.
   if (frameIndex !== appState.currentFrame) {
     appState.currentFrame = frameIndex;
+    updateFrame(appState.currentFrame); // <-- MOVE UI UPDATE CALL HERE
   }
 
   // Re-register the callback for the next frame to create a loop
@@ -183,11 +184,9 @@ export function videoFrameCallback(now, metadata) {
 export function animationLoop() {
   if (debugFlags.sync) console.log("anim_DEBUG: animationLoop running.");
 
-  // 1. Update all UI elements based on the current frame.
-  updateFrame(appState.currentFrame);
-
   // Update debug overlay information
   updatePersistentOverlays(videoPlayer.currentTime);
+  // updatePersistentOverlays(); // This is a duplicate call and can be removed
   updateDebugOverlay(videoPlayer.currentTime);
 
   // --- START: Centralized Redraw Logic ---

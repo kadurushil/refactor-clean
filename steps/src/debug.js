@@ -5,10 +5,10 @@
 
 export const debugFlags = {
   // Logs from videoFrameCallback and animationLoop in sync.js
-  sync: false,
+  sync: true,
 
   // Logs from the main p5.js draw() functions (e.g., radarSketch.js)
-  drawing: false,
+  drawing: true,
 
   // Logs related to file loading, parsing, and caching
   fileLoading: false,
