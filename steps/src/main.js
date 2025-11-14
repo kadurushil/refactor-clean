@@ -346,6 +346,11 @@ function finalizeSetup(_parsedJsonData) {
     appState.speedGraphInstance.setData(appState.vizData, videoPlayer.duration);
     appState.speedGraphInstance.redraw();
   }
+  // --- START: FIX for Initial Overlay Visibility ---
+  // Manually update overlays on initial load so they are visible before playback starts.
+  updatePersistentOverlays(videoPlayer.currentTime);
+  updateDebugOverlay(videoPlayer.currentTime);
+  // --- END: FIX for Initial Overlay Visibility ---
 
   // Update SNR inputs now that data is loaded
   if (appState.vizData) {

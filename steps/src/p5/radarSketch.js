@@ -130,7 +130,9 @@ export const radarSketch = function (p) {
   };
 
   p.draw = function () {
-    if (debugFlags.drawing) console.log("draw_DEBUG: radarSketch.draw() called.");
+    if (debugFlags.drawing) {
+      console.log(`[${performance.now().toFixed(3)}] draw_DEBUG: radarSketch.draw() called.`);
+    }
 
     // --- START: FPS Calculation & Display ---
     const currentTime = p.millis();
