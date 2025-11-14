@@ -32,11 +32,9 @@ import {
   startPlayback,
   pausePlayback,
   stopPlayback,
-  forceResyncWithOffset,
   initSyncUIHandlers,
   updateFrame,
   resetVisualization,
-  handleTimelineInput,
 } from "./sync.js";
 import { radarSketch } from "./p5/radarSketch.js";
 import { speedGraphSketch } from "./p5/speedGraphSketch.js";
@@ -57,7 +55,9 @@ import {
   formatTime,
 } from "./utils.js";
 import { appState } from "./state.js";
+import { debugFlags } from "./debug.js"; // Import the new debug flags
 window.appState = appState; // exposing the appState to console
+window.debugFlags = debugFlags; // Expose debug flags to the console for runtime toggling
 import {
   themeToggleBtn,
   canvasContainer,
@@ -317,20 +317,17 @@ function finalizeSetup(_parsedJsonData) {
   canvasPlaceholder.style.display = "none";
   featureToggles.classList.remove("hidden");
 
-  // --- START OF THE FIX ---
-  // This is the critical step. Before we do anything else, we loop through the
-  // radar data and recalculate the relative timestamp for every single frame.
-  // This ensures the data is perfectly synced to the video's confirmed timeline.
-  if (appState.vizData && appState.videoStartDate) {
+  // This is the critical step. We loop through the radar data ONCE to create
+  // a relative timestamp in seconds for every frame. This simplifies all
+  // future synchronization math.
+  if (appState.vizData) {
     appState.vizData.radarFrames.forEach((frame) => {
-      frame.timestampMs =
-        appState.radarStartTimeMs +
-        frame.timestamp -
-        appState.videoStartDate.getTime();
+      // frame.timestamp is the relative time in ms from the radar's start.
+      // We convert it to seconds for easier comparison with video.mediaTime.
+      frame.relativeTimeSec = frame.timestamp / 1000;
     });
   }
-  // --- END OF THE FIX ---
-
+  
   // Create the p5 instances
   if (!appState.p5_instance) {
     appState.p5_instance = new p5(radarSketch);
@@ -345,8 +342,6 @@ function finalizeSetup(_parsedJsonData) {
     if (!appState.speedGraphInstance) {
       appState.speedGraphInstance = new p5(speedGraphSketch);
     }
-    // The previous logic for setting the frame and redrawing was correct.
-    // It failed because the underlying timestamp data was wrong.
     resetVisualization();
     appState.speedGraphInstance.setData(appState.vizData, videoPlayer.duration);
     appState.speedGraphInstance.redraw();
@@ -358,95 +353,13 @@ function finalizeSetup(_parsedJsonData) {
     snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
   }
 }
+
 // Sets up the video player with the given file URL.
 function setupVideoPlayer(fileURL) {
   videoPlayer.src = fileURL;
   videoPlayer.classList.remove("hidden");
   videoPlaceholder.classList.add("hidden");
   videoPlayer.playbackRate = parseFloat(speedSlider.value);
-}
-
-// In src/main.js, add this new function
-function loadVideoWithProgress(videoObject) {
-  if (!videoObject) return;
-
-  showModal("Loading video...", false, true);
-  updateModalProgress(0);
-
-  // Define event handlers so we can add and remove them correctly
-  const onProgress = () => {
-    if (videoPlayer.duration > 0) {
-      // Find the end of the buffered content
-      const bufferedEnd =
-        videoPlayer.buffered.length > 0 ? videoPlayer.buffered.end(0) : 0;
-      const percent = (bufferedEnd / videoPlayer.duration) * 100;
-      updateModalProgress(percent);
-    }
-  };
-
-  const onCanPlayThrough = () => {
-    updateModalProgress(100);
-    // Give the user a moment to see 100% before closing the modal
-    setTimeout(() => {
-      document.getElementById("modal-ok-btn").click();
-    }, 400);
-
-    // Clean up the event listeners we added
-    videoPlayer.removeEventListener("progress", onProgress);
-    videoPlayer.removeEventListener("canplaythrough", onCanPlayThrough);
-  };
-
-  const onError = () => {
-    showModal("Error: Could not load the video file.");
-    // Clean up event listeners on error
-    videoPlayer.removeEventListener("progress", onProgress);
-    videoPlayer.removeEventListener("canplaythrough", onCanPlayThrough);
-    videoPlayer.removeEventListener("error", onError);
-  };
-
-  // This one-time event is for re-syncing data once the video's metadata is ready
-
-  videoPlayer.addEventListener(
-    "loadedmetadata",
-    () => {
-      // This is the perfect time to re-sync data if needed
-      if (appState.vizData) {
-        appState.vizData.radarFrames.forEach((frame) => {
-          frame.timestampMs =
-            appState.radarStartTimeMs +
-            frame.timestamp -
-            appState.videoStartDate.getTime();
-        });
-        resetVisualization();
-      }
-
-      // --- START: New Speed Graph Logic ---
-      // If we have data and the video is ready, create/update the speed graph
-      if (appState.vizData && videoPlayer.duration > 0) {
-        speedGraphPlaceholder.classList.add("hidden");
-        if (!appState.speedGraphInstance) {
-          appState.speedGraphInstance = new p5(speedGraphSketch);
-        }
-        appState.speedGraphInstance.setData(
-          appState.vizData,
-          videoPlayer.duration
-        );
-      }
-      // --- END: New Speed Graph Logic ---
-    },
-    { once: true }
-  ); // { once: true } makes sure this runs only once per load
-
-  // { once: true } //makes sure this runs only once per load
-
-  // Add the listeners for progress tracking
-  videoPlayer.addEventListener("progress", onProgress);
-  videoPlayer.addEventListener("canplaythrough", onCanPlayThrough);
-  videoPlayer.addEventListener("error", onError);
-
-  // Create the object URL and set the video source to trigger loading
-  const fileURL = URL.createObjectURL(videoObject);
-  setupVideoPlayer(fileURL);
 }
 
 // Event listener for loading JSON file.
@@ -647,7 +560,7 @@ fullscreenBtn.addEventListener("click", () => {
 // Event listener for offset input change.
 offsetInput.addEventListener("input", () => {
   autoOffsetIndicator.classList.add("hidden");
-  localStorage.setItem("visualizerOffset", offsetInput.value);
+  // The value is now saved to localStorage only when 'Enter' is pressed.
 });
 
 // Event listener for apply SNR button click.
@@ -675,11 +588,12 @@ playPauseBtn.addEventListener("click", () => {
   if (!appState.vizData && !videoPlayer.src) return;
 
   appState.isPlaying = !appState.isPlaying;
-  playPauseBtn.textContent = appState.isPlaying ? "Pause" : "Play";
 
   if (appState.isPlaying) {
+    playPauseBtn.textContent = "Pause";
     startPlayback();
   } else {
+    playPauseBtn.textContent = "Play";
     pausePlayback();
   }
 });
@@ -727,7 +641,7 @@ timelineSlider.addEventListener("mousemove", (event) => {
   if (!frameData) return;
 
   // 3. Update the tooltip's content
-  const formattedTime = formatTime(frameData.timestampMs);
+  const formattedTime = formatTime(frameData.relativeTimeSec * 1000);
   timelineTooltip.innerHTML = `Frame: ${
     frameIndex + 1
   }<br>Time: ${formattedTime}`;
@@ -954,12 +868,12 @@ function calculateAndSetOffset() {
       appState.radarStartTimeMs = jsonDate.getTime();
       console.log(`Radar start date set to: ${jsonDate.toISOString()}`);
       if (appState.videoStartDate) {
-        const offset =
+        appState.offset =
           appState.radarStartTimeMs - appState.videoStartDate.getTime();
-        offsetInput.value = offset;
-        localStorage.setItem("visualizerOffset", offset);
+        offsetInput.value = appState.offset;
+        localStorage.setItem("visualizerOffset", appState.offset);
         autoOffsetIndicator.classList.remove("hidden");
-        console.log(`Auto-calculated offset: ${offset} ms`);
+        console.log(`Auto-calculated offset: ${appState.offset} ms`);
       }
     }
   }
@@ -969,8 +883,17 @@ offsetInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     // Prevent the default browser action for the Enter key (like submitting a form)
     event.preventDefault();
-    // Call the new centralized function from sync.js
-    forceResyncWithOffset();
+    
+    // Update state and persist
+    const newOffset = parseFloat(offsetInput.value) || 0;
+    appState.offset = newOffset;
+    localStorage.setItem("visualizerOffset", newOffset);
+    console.log(`Manual offset entered: ${appState.offset}ms`);
+
+    // Force a resync of the video to the current frame
+    if (appState.vizData) {
+      updateFrame(appState.currentFrame, true);
+    }
   }
 });
 
@@ -982,8 +905,10 @@ document.addEventListener("DOMContentLoaded", () => {
   initDB(async () => {
     console.log("Database initialized. Checking for cached session...");
 
+    // Load filenames and the last known offset from localStorage
     appState.jsonFilename = localStorage.getItem("jsonFilename");
     appState.videoFilename = localStorage.getItem("videoFilename");
+    appState.offset = parseFloat(localStorage.getItem("visualizerOffset")) || 0;
 
     if (appState.jsonFilename) {
       // --- START: FIX FOR AUTO-RELOAD ---

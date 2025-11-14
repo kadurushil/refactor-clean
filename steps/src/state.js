@@ -9,6 +9,8 @@ export const appState = {
   vizData: null,
   zoomSketchInstance: null, // Add this line
   // Stores the processed CAN bus data (speed, time)
+  offset: 0, // The calculated or manually set offset in milliseconds.
+
   videoStartDate: null,
   // The timestamp (in milliseconds) of the first radar frame, extracted from the JSON filename
   radarStartTimeMs: 0,

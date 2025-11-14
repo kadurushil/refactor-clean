@@ -1,7 +1,6 @@
 import { appState } from "./state.js";
 import {
   timelineSlider,
-  speedSlider,
   offsetInput,
   stopBtn,
   playPauseBtn,
@@ -15,6 +14,7 @@ import {
 } from "./dom.js";
 import { findRadarFrameIndexForTime } from "./utils.js";
 import { throttledUpdateExplorer } from "./dataExplorer.js";
+import { debugFlags } from "./debug.js";
 
 // --- [START] MOVED FROM DOM.JS ---
 
@@ -30,14 +30,8 @@ export function resetVisualization() {
 
 // --- NEW Playback Control Functions ---
 
-let seekDebounceTimer = null;
-let lastScrollTime = 0;
-let scrollSpeed = 0;
 export function startPlayback() {
   if (videoPlayer.src && videoPlayer.readyState > 1) {
-    appState.masterClockStart = performance.now();
-    appState.mediaTimeStart = videoPlayer.currentTime;
-    appState.lastSyncTime = appState.masterClockStart;
     videoPlayer.play();
     videoPlayer.requestVideoFrameCallback(videoFrameCallback); // Start the high-precision loop
   }
@@ -54,10 +48,12 @@ export function forceResyncWithOffset() {
   // Make sure visualization data is loaded before proceeding
   if (!appState.vizData) return;
 
-  console.log(
-    `Forcing resync with new offset: ${offsetInput.value}`
-  );
+  const newOffset = parseFloat(offsetInput.value) || 0;
+  appState.offset = newOffset; // Update the central state
+  localStorage.setItem("visualizerOffset", newOffset); // Persist it
 
+  console.log(`Forcing resync with new offset: ${appState.offset}ms`);
+  
   // If the video is playing, pause it to allow for precise frame tuning.
   if (appState.isPlaying) {
     // Directly pause playback and update state, avoiding a synthetic click.
@@ -73,7 +69,7 @@ export function forceResyncWithOffset() {
 
 //----------------------UPDATE FRAME Function----------------------//
 // Updates the UI to reflect the current radar frame and synchronizes video playback.
-export function updateFrame(frame, forceVideoSeek) {
+export function updateFrame(frame, forceVideoSeek = false) {
   const startTime = performance.now(); //start emasuring timer of performance.
   if (
     !appState.vizData ||
@@ -111,19 +107,18 @@ export function updateFrame(frame, forceVideoSeek) {
     canSpeedDisplay.classList.add("hidden");
   }
   // --- END OF NEW BLOCK ---
-
-  let timeForUpdates = videoPlayer.currentTime; // NEW: Default to the video's current time
-
+  
   if (
     forceVideoSeek &&
     videoPlayer.src &&
     videoPlayer.readyState > 1 &&
-    appState.videoStartDate &&
     frameData
   ) {
-    const offsetMs = parseFloat(offsetInput.value) || 0;
-    const targetRadarTimeMs = frameData.timestampMs;
-    const targetVideoTimeSec = (targetRadarTimeMs - offsetMs) / 1000;
+    // Convert frame's relative time to the video's timeline
+    const targetRadarTimeSec = frameData.relativeTimeSec;
+    const targetVideoTimeSec = targetRadarTimeSec + (appState.offset / 1000);
+
+
     if (targetVideoTimeSec >= 0 && targetVideoTimeSec <= videoPlayer.duration) {
       // Ensure target time is within video duration
       if (Math.abs(videoPlayer.currentTime - targetVideoTimeSec) > 0.05) {
@@ -131,20 +126,12 @@ export function updateFrame(frame, forceVideoSeek) {
         videoPlayer.currentTime = targetVideoTimeSec; // Seek video if drift is significant
       }
       // MODIFIED: Use the calculated target time for our updates, not the stale videoPlayer.currentTime
-      timeForUpdates = targetVideoTimeSec; // Update time for subsequent UI updates
     }
   } // End of forceVideoSeek block
 
-  if (!appState.isPlaying) {
-    // MODIFIED: Use our new synchronized time variable
-    updatePersistentOverlays(timeForUpdates);
-  }
-  // --- End of fix ---
-  // --- START: Conditional Redraw Logic ---
-  // Only force a redraw from here if the animation loop is NOT running.
-  // When playing, the animationLoop is responsible for redrawing.
-  if (!appState.isPlaying && appState.p5_instance) appState.p5_instance.redraw();
-  if (!appState.isPlaying && appState.speedGraphInstance) appState.speedGraphInstance.redraw();
+  // The animationLoop is now responsible for all redraws.
+  // We no longer call redraw() from here.
+
   // --- NEW: Centralized Explorer Update ---
   throttledUpdateExplorer();
   // --- END: Centralized Explorer Update ---
@@ -162,114 +149,46 @@ export function stopPlayback() {
   }
 }
 
+/**
+ * DATA LOOP: Runs on the video's clock (~30 FPS).
+ * Its ONLY job is to update appState.currentFrame. It does NO drawing.
+ */
 export function videoFrameCallback(now, metadata) {
-  // If the video is no longer playing, stop the callback loop.
-  if (!appState.isPlaying || videoPlayer.paused) {
+  if (debugFlags.sync) console.log("vfc_DEBUG: videoFrameCallback running.");
+
+  if (!appState.isPlaying || videoPlayer.paused || !appState.vizData) {
     return;
   }
 
-  // This is now the main animation driver during playback.
-  // It's perfectly synced with the video's frame presentation.
-  const currentTime = metadata.mediaTime;
-  const frameIndex = findRadarFrameIndexForTime(currentTime * 1000);
+  // 1. Get video time and calculate the target time on the radar's timeline.
+  const videoNowSec = metadata.mediaTime;
+  const targetRadarTimeSec = videoNowSec - (appState.offset / 1000);
 
-  updateFrame(frameIndex, false); // Update radar, but don't seek video.
+  // 2. Find the corresponding radar frame index.
+  const frameIndex = findRadarFrameIndexForTime(targetRadarTimeSec, appState.vizData);
+
+  // 3. Update the application state. This is the ONLY state this function changes.
+  if (frameIndex !== appState.currentFrame) {
+    appState.currentFrame = frameIndex;
+  }
 
   // Re-register the callback for the next frame to create a loop
   videoPlayer.requestVideoFrameCallback(videoFrameCallback);
 }
 
+/**
+ * RENDER LOOP: Runs on the monitor's refresh rate (~60+ FPS).
+ * Its ONLY job is to draw the current state. It does NO data calculation.
+ */
 export function animationLoop() {
-  if (!appState.isPlaying) return;
+  if (debugFlags.sync) console.log("anim_DEBUG: animationLoop running.");
 
-  // Get the current playback speed from the slider
-  const playbackSpeed = parseFloat(speedSlider.value);
-  // Calculate the elapsed real time since the master clock started
-  const elapsedRealTime = performance.now() - appState.masterClockStart;
-  // Calculate the current media time based on the master clock, initial media time, elapsed real time, and playback speed
-  const currentMediaTime =
-    appState.mediaTimeStart + (elapsedRealTime / 1000) * playbackSpeed;
-
-  // Update radar frame based on the master clock
-  // Check if visualization data and video start date are available
-  if (appState.vizData && appState.videoStartDate) {
-    // Get the offset from the input field, default to 0 if not a valid number
-    // --- START: Corrected Logic ---
-    const offsetMs = parseFloat(offsetInput.value) || 0;
-    // The master clock represents the VIDEO's timeline.
-    // To find the corresponding RADAR time, we must add the offset.
-    const targetRadarTimeMs = currentMediaTime * 1000 + offsetMs;
-
-    const targetFrame = findRadarFrameIndexForTime(
-      targetRadarTimeMs,
-      appState.vizData
-    );
-    // --- END: Corrected Logic ---
-    if (targetFrame !== appState.currentFrame) {
-      // Update the displayed frame if it's different from the current one
-      updateFrame(targetFrame, false);
-    }
-  }
-
-  // Periodically check for drift between master clock and video element
-  const now = performance.now();
-  if (now - appState.lastSyncTime > 150) {
-    const videoTime = videoPlayer.currentTime;
-    const drift = Math.abs(currentMediaTime - videoTime);
-    // Resync if drift is > 200ms
-    if (drift > 0.2) { // The drift threshold is 200ms.
-      console.warn(`Resyncing video. Drift was: ${drift.toFixed(3)}s`);
-
-      // --- START: Resync Storm "Circuit Breaker" ---
-      if (appState.isResyncLockdownEnabled) {
-        const now = performance.now();
-        // If the last resync was recent (within 2s), increment the counter. Otherwise, reset it.
-        if (appState.lastResyncTimestamp && (now - appState.lastResyncTimestamp < 2000)) {
-          appState.consecutiveResyncs = (appState.consecutiveResyncs || 0) + 1;
-        } else {
-          appState.consecutiveResyncs = 1;
-        }
-        appState.lastResyncTimestamp = now;
-
-        // If more than 2 consecutive resyncs have occurred, trigger the lockdown.
-        if (appState.consecutiveResyncs > 2) {
-          // --- START: FIX for Lockdown Loop ---
-          if (!appState.isInLockdown) { // Only trigger if not already in lockdown
-            console.warn("Resync storm detected! Pausing playback to recover...");
-            appState.isInLockdown = true; // Enter lockdown state
-            pausePlayback(); // Pause the video.
-
-            // After a 1-second pause, resume playback.
-            // startPlayback() will handle the clock reset automatically.
-            setTimeout(() => {
-              console.log("Resuming playback after lockdown.");
-              appState.isInLockdown = false; // Exit lockdown state
-              startPlayback(); // Resume playback, which now correctly resets the clock.
-            }, 1000); // 1-second pause.
-
-            appState.consecutiveResyncs = 0; // Reset the counter.
-            return; // Exit the animation loop for this frame to allow the pause.
-          }
-          // --- END: FIX for Lockdown Loop ---
-        }
-      }
-      // --- END: Resync Storm "Circuit Breaker" ---
-
-      videoPlayer.currentTime = currentMediaTime; // Perform the standard resync.
-    }
-
-    appState.lastSyncTime = now;
-  }
-
-  // Stop playback at the end of the video
-  if (currentMediaTime >= videoPlayer.duration) {
-    stopBtn.click();
-    return;
-  }
+  // 1. Update all UI elements based on the current frame.
+  updateFrame(appState.currentFrame);
 
   // Update debug overlay information
-  updatePersistentOverlays(currentMediaTime);
-  updateDebugOverlay(currentMediaTime); 
+  updatePersistentOverlays(videoPlayer.currentTime);
+  updateDebugOverlay(videoPlayer.currentTime);
 
   // --- START: Centralized Redraw Logic ---
   // Explicitly redraw all active sketches in sync with the animation frame.
@@ -278,92 +197,27 @@ export function animationLoop() {
   // --- END: Centralized Redraw Logic ---
 
   // Request the next frame
-  requestAnimationFrame(animationLoop);
+  if (appState.isPlaying) {
+    requestAnimationFrame(animationLoop);
+  }
 }
 
 export function handleTimelineInput(event) {
   if (!appState.vizData) return;
-  updateDebugOverlay(videoPlayer.currentTime);
-  updatePersistentOverlays(videoPlayer.currentTime);
-  // --- 1. Live Seeking (Throttled for performance) ---
-  // This part gives you the immediate visual feedback as you drag the slider.
-  // We use a simple timestamp check to prevent it from running too often.
-  const now = performance.now();
-  if (
-    !timelineSlider.lastInputTime ||
-    now - timelineSlider.lastInputTime > 32
-  ) {
-    // ~30fps throttle
-    if (appState.isPlaying) {
-      videoPlayer.pause();
-      appState.isPlaying = false;
-      playPauseBtn.textContent = "Play";
-    }
-    const frame = parseInt(event.target.value, 10);
-    updateFrame(frame, true);
-    appState.mediaTimeStart = videoPlayer.currentTime;
-    appState.masterClockStart = now;
-  }
 
-  // --- 2. Final, Precise Sync (Debounced for reliability) ---
-  // This part ensures a perfect sync only AFTER you stop moving the slider.
-  clearTimeout(seekDebounceTimer); // Always cancel the previously scheduled sync
-
-  seekDebounceTimer = setTimeout(() => {
-    console.log("Slider movement stopped. Performing final, debounced resync.");
-    const finalFrame = parseInt(event.target.value, 10);
-    updateFrame(finalFrame, true); // Perform the final, precise seek
-
-    // Also update the debug overlay with the final, settled time
-    updateDebugOverlay(videoPlayer.currentTime);
-  }, 250); // Wait for 250ms of inactivity before firing
-}
-
-export function handleTimelineWheel(event) {
-  if (!appState.vizData) return;
-  // 1. Prevent the page from scrolling up and down
-  event.preventDefault();
-
-  // 2. Calculate scroll speed
-  const now = performance.now();
-  const timeDelta = now - (lastScrollTime || now); // Handle first scroll
-  lastScrollTime = now;
-  // Calculate speed as "events per second", giving more weight to recent, fast scrolls
-  scrollSpeed = timeDelta > 0 ? 1000 / timeDelta : scrollSpeed;
-
-  // 3. Map scroll speed to a dynamic seek multiplier
-  // This creates a nice acceleration curve. The '50' is a sensitivity value you can adjust.
-  const speedMultiplier = 1 + Math.floor(scrollSpeed / 4);
-  const baseSeekAmount = 1; // Base frames to move on a slow scroll
-  let seekAmount = Math.max(baseSeekAmount, speedMultiplier);
-
-  // 4. Calculate the new frame index
-  const direction = Math.sign(event.deltaY); // +1 for down/right, -1 for up/left
-  const currentFrame = parseInt(timelineSlider.value, 10);
-  let newFrame = currentFrame - seekAmount * direction;
-
-  // Clamp the new frame to the valid range
-  const totalFrames = appState.vizData.radarFrames.length - 1;
-  newFrame = Math.max(0, Math.min(newFrame, totalFrames));
-
-  // 5. Update the UI
   if (appState.isPlaying) {
-    playPauseBtn.click(); // Pause if playing
+    pausePlayback();
+    appState.isPlaying = false;
+    playPauseBtn.textContent = "Play";
   }
-  updateFrame(newFrame, true);
 
-  // 6. Reuse the debouncer for a final, precise sync after scrolling stops
-  clearTimeout(seekDebounceTimer);
-  seekDebounceTimer = setTimeout(() => {
-    console.log("Scrolling stopped. Performing final, debounced resync.");
-    updateFrame(newFrame, true);
-    updatePersistentOverlays(videoPlayer.currentTime);
-    updateDebugOverlay(videoPlayer.currentTime);
-  }, 300); // Wait 300ms after the last scroll event
-  throttledUpdateExplorer();
+  const frame = parseInt(event.target.value, 10);
+  updateFrame(frame, true); // Seek the video to the new frame
+  // Manually trigger redraws since the animation loop is not running
+  if (appState.p5_instance) appState.p5_instance.redraw();
+  if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
 }
 
 export function initSyncUIHandlers() {
   timelineSlider.addEventListener("input", handleTimelineInput);
-  timelineSlider.addEventListener("wheel", handleTimelineWheel);
 }

@@ -1,4 +1,5 @@
 import { appState } from "../state.js";
+import { debugFlags } from "../debug.js";
 import {
   RADAR_X_MAX,
   // Define radar plot boundaries
@@ -124,6 +125,8 @@ export const radarSketch = function (p) {
   };
 
   p.draw = function () {
+    if (debugFlags.drawing) console.log("draw_DEBUG: radarSketch.draw() called.");
+
     // --- START: FPS Calculation & Display ---
     const currentTime = p.millis();
     if (lastFrameTime > 0) {

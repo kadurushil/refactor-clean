@@ -1,4 +1,4 @@
-export function findRadarFrameIndexForTime(targetTimeMs, vizData) {
+export function findRadarFrameIndexForTime(targetTimeSec, vizData) {
   if (!vizData || vizData.radarFrames.length === 0) return -1;
   // Initialize low, high, and answer variables for binary search
   // 'ans' will store the index of the closest frame found so far
@@ -11,7 +11,7 @@ export function findRadarFrameIndexForTime(targetTimeMs, vizData) {
     let mid = Math.floor((low + high) / 2);
     // If the current frame's timestamp is less than or equal to the target time,
     // it's a potential answer, and we try to find a more recent one in the right half.
-    if (vizData.radarFrames[mid].timestampMs <= targetTimeMs) {
+    if (vizData.radarFrames[mid].relativeTimeSec <= targetTimeSec) {
       ans = mid;
       low = mid + 1;
     } else {
@@ -144,4 +144,3 @@ export function formatUTCTime(date) {
     const milliseconds = String(date.getUTCMilliseconds()).padStart(3, '0');
     return `${hours}:${minutes}:${seconds}.${milliseconds}`;
 }
-
