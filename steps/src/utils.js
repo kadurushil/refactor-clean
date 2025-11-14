@@ -1,27 +1,35 @@
+/**
+ * Performs a binary search on the radar frames to find the frame index
+ * closest to the target video time.
+ *
+ * @param {number} targetTimeSec - The target time in seconds (from video.currentTime).
+ * @param {object} vizData - The visualization data containing radarFrames.
+ * @returns {number} The index of the closest radar frame.
+ */
 export function findRadarFrameIndexForTime(targetTimeSec, vizData) {
   if (!vizData || vizData.radarFrames.length === 0) return -1;
   // Initialize low, high, and answer variables for binary search
   // 'ans' will store the index of the closest frame found so far
   // 'low' and 'high' define the search range
   let low = 0,
-    high = vizData.radarFrames.length - 1,
-    ans = 0;
+    high = vizData.radarFrames.length - 1;
+
   // Perform binary search to find the radar frame whose timestamp is closest to, but not exceeding, the target time
   while (low <= high) {
     let mid = Math.floor((low + high) / 2);
-    // If the current frame's timestamp is less than or equal to the target time,
-    // it's a potential answer, and we try to find a more recent one in the right half.
-    if (vizData.radarFrames[mid].relativeTimeSec <= targetTimeSec) {
-      ans = mid;
+    const frameTime = vizData.radarFrames[mid].videoSyncedTime;
+
+    if (frameTime < targetTimeSec) {
       low = mid + 1;
-    } else {
-      // If the current frame's timestamp is greater than the target time,
-      // we need to look in the left half.
+    } else if (frameTime > targetTimeSec) {
       high = mid - 1;
+    } else {
+      // Exact match found
+      return mid;
     }
   }
-  // Return the index of the found radar frame.
-  return ans;
+  // No exact match, return the closest index (clamped to bounds)
+  return Math.max(0, Math.min(high, vizData.radarFrames.length - 1));
 }
 
 
@@ -143,4 +151,17 @@ export function formatUTCTime(date) {
     const seconds = String(date.getUTCSeconds()).padStart(2, '0');
     const milliseconds = String(date.getUTCMilliseconds()).padStart(3, '0');
     return `${hours}:${minutes}:${seconds}.${milliseconds}`;
+}
+
+/**
+ * Pre-calculates the video-synchronized timestamp for each radar frame.
+ * This "bakes" the offset into the data, simplifying future sync calculations.
+ *
+ * @param {object} vizData - The visualization data containing radarFrames.
+ * @param {number} offsetMs - The time offset between radar and video in milliseconds.
+ */
+export function precomputeRadarVideoSync(vizData, offsetMs) {
+  vizData.radarFrames.forEach((frame) => {
+    frame.videoSyncedTime = (frame.timestamp + offsetMs) / 1000;
+  });
 }

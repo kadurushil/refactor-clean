@@ -51,6 +51,7 @@ import {
   findRadarFrameIndexForTime,
   extractTimestampInfo,
   parseTimestamp,
+  precomputeRadarVideoSync,
   throttle,
   formatTime,
 } from "./utils.js";
@@ -216,6 +217,7 @@ async function processFilePipeline() {
     appState.vizData = result.data;
     appState.globalMinSnr = result.minSnr;
     appState.globalMaxSnr = result.maxSnr;
+    precomputeRadarVideoSync(appState.vizData, appState.offset);
   }
 
   // 3. Handle Video Loading SECOND, with two-stage initialization
@@ -317,16 +319,6 @@ function finalizeSetup(_parsedJsonData) {
   canvasPlaceholder.style.display = "none";
   featureToggles.classList.remove("hidden");
 
-  // This is the critical step. We loop through the radar data ONCE to create
-  // a relative timestamp in seconds for every frame. This simplifies all
-  // future synchronization math.
-  if (appState.vizData) {
-    appState.vizData.radarFrames.forEach((frame) => {
-      // frame.timestamp is the relative time in ms from the radar's start.
-      // We convert it to seconds for easier comparison with video.mediaTime.
-      frame.relativeTimeSec = frame.timestamp / 1000;
-    });
-  }
   
   // Create the p5 instances
   if (!appState.p5_instance) {
@@ -852,35 +844,50 @@ document.addEventListener("keydown", (event) => {
 });
 
 
-function calculateAndSetOffset() {
+function calculateAndSetOffset() {  
   const jsonTimestampInfo = extractTimestampInfo(appState.jsonFilename);
   const videoTimestampInfo = extractTimestampInfo(appState.videoFilename);
+
+  let videoDate = null;
   if (videoTimestampInfo) {
-    appState.videoStartDate = parseTimestamp(
+    videoDate = parseTimestamp(
       videoTimestampInfo.timestampStr,
       videoTimestampInfo.format
     );
-    if (appState.videoStartDate) {
-    }
+    appState.videoStartDate = videoDate; // Store for potential future use
   }
 
+  let jsonDate = null;
   if (jsonTimestampInfo) {
-    const jsonDate = parseTimestamp(
+    jsonDate = parseTimestamp(
       jsonTimestampInfo.timestampStr,
       jsonTimestampInfo.format
     );
-    if (jsonDate) {
-      appState.radarStartTimeMs = jsonDate.getTime();
-      console.log(`Radar start date set to: ${jsonDate.toISOString()}`);
-      if (appState.videoStartDate) {
-        appState.offset =
-          appState.radarStartTimeMs - appState.videoStartDate.getTime();
-        offsetInput.value = appState.offset;
-        localStorage.setItem("visualizerOffset", appState.offset);
-        autoOffsetIndicator.classList.remove("hidden");
-        console.log(`Auto-calculated offset: ${appState.offset} ms`);
-      }
+  }
+
+  let calculatedOffset = 0;
+  if (jsonDate && videoDate) {
+    appState.radarStartTimeMs = jsonDate.getTime();
+    const offset = jsonDate.getTime() - videoDate.getTime();
+
+    // Logic Rule: If offset is invalid or too large, default to 0.
+    if (isNaN(offset) || Math.abs(offset) > 30000) {
+      console.warn(`Calculated offset of ${offset}ms is invalid or exceeds 30s threshold. Defaulting to 0.`);
+      calculatedOffset = 0;
+    } else {
+      calculatedOffset = offset;
+      autoOffsetIndicator.classList.remove("hidden");
+      console.log(`Auto-calculated offset: ${calculatedOffset} ms`);
     }
+  }
+
+  appState.offset = calculatedOffset;
+  offsetInput.value = appState.offset;
+  localStorage.setItem("visualizerOffset", appState.offset);
+
+  // Trigger Baking: This is the point where we apply the offset to the data.
+  if (appState.vizData) {
+    precomputeRadarVideoSync(appState.vizData, appState.offset);
   }
 }
 offsetInput.addEventListener("keydown", (event) => {
@@ -893,6 +900,7 @@ offsetInput.addEventListener("keydown", (event) => {
     const newOffset = parseFloat(offsetInput.value) || 0;
     appState.offset = newOffset;
     localStorage.setItem("visualizerOffset", newOffset);
+    if (appState.vizData) precomputeRadarVideoSync(appState.vizData, appState.offset);
     console.log(`Manual offset entered: ${appState.offset}ms`);
 
     // Force a resync of the video to the current frame

@@ -12,7 +12,7 @@ import {
   egoSpeedDisplay,
   canSpeedDisplay,
 } from "./dom.js";
-import { findRadarFrameIndexForTime } from "./utils.js";
+import { findRadarFrameIndexForTime, precomputeRadarVideoSync } from "./utils.js";
 import { throttledUpdateExplorer } from "./dataExplorer.js";
 import { debugFlags } from "./debug.js";
 
@@ -51,6 +51,9 @@ export function forceResyncWithOffset() {
   const newOffset = parseFloat(offsetInput.value) || 0;
   appState.offset = newOffset; // Update the central state
   localStorage.setItem("visualizerOffset", newOffset); // Persist it
+
+  // Re-Bake: Overwrite the pre-calculated sync times with the new offset.
+  precomputeRadarVideoSync(appState.vizData, appState.offset);
 
   console.log(`Forcing resync with new offset: ${appState.offset}ms`);
   
@@ -115,11 +118,9 @@ export function updateFrame(frame, forceVideoSeek = false) {
     frameData
   ) {
     // Convert frame's relative time to the video's timeline
-    const targetRadarTimeSec = frameData.relativeTimeSec;
-    const targetVideoTimeSec = targetRadarTimeSec + (appState.offset / 1000);
+    const targetVideoTimeSec = frameData.videoSyncedTime;
 
-
-    if (targetVideoTimeSec >= 0 && targetVideoTimeSec <= videoPlayer.duration) {
+    if (targetVideoTimeSec >= 0 && videoPlayer.duration && targetVideoTimeSec <= videoPlayer.duration) {
       // Ensure target time is within video duration
       if (Math.abs(videoPlayer.currentTime - targetVideoTimeSec) > 0.05) {
         // Check for significant drift
@@ -168,14 +169,13 @@ export function videoFrameCallback(now, metadata) {
     return;
   }
 
-  // 1. Get video time and calculate the target time on the radar's timeline.
-  const videoNowSec = metadata.mediaTime;
-  const targetRadarTimeSec = videoNowSec - (appState.offset / 1000);
+  // 1. Get the video's current time directly from the callback metadata.
+  const videoCurrentTime = metadata.mediaTime;
 
   // 2. Find the corresponding radar frame index.
-  const frameIndex = findRadarFrameIndexForTime(targetRadarTimeSec, appState.vizData);
+  const frameIndex = findRadarFrameIndexForTime(videoCurrentTime, appState.vizData);
 
-  // 3. Update the application state. This is the ONLY state this function changes.
+  // 3. Update the application state if the frame has changed.
   if (frameIndex !== appState.currentFrame) {
     appState.currentFrame = frameIndex;
     // This is the ONLY state this function should change. All UI updates are in animationLoop.
@@ -264,7 +264,7 @@ function handleTimelineWheel(event) {
   // 4. Calculate the new frame index.
   const direction = Math.sign(event.deltaY);
   // FIX: Invert the direction. Scrolling down (positive deltaY) should advance the frame.
-  let newFrame = appState.currentFrame + direction * seekAmount;
+  let newFrame = appState.currentFrame - direction * seekAmount;
 
   // 5. Clamp the new frame to the valid range.
   const totalFrames = appState.vizData.radarFrames.length - 1;
