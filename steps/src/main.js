@@ -736,6 +736,8 @@ document.addEventListener("keydown", (event) => {
   const recognizedKeys = [
     "ArrowRight",
     "ArrowLeft",
+    "ArrowUp",
+    "ArrowDown",
     " ",
     "1",
     "2",
@@ -780,7 +782,40 @@ document.addEventListener("keydown", (event) => {
     }
     if (newFrame !== appState.currentFrame) {
       updateFrame(newFrame, true);
+      // Manually trigger redraws since the animation loop is paused
+      // This is the fix to ensure the radar plot updates on seek.
+      if (appState.p5_instance) appState.p5_instance.redraw();
+      if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
     }
+  }
+
+  // --- Arrow keys for video frame-by-frame seeking ---
+  if (key === "ArrowUp" || key === "ArrowDown") {
+    if (appState.isPlaying) {
+      playPauseBtn.click(); // Pause playback to allow for precise stepping
+    }
+
+    const frameDuration = 1 / VIDEO_FPS;
+    let newVideoTime = videoPlayer.currentTime;
+
+    if (key === "ArrowUp") {
+      newVideoTime += frameDuration;
+    } else if (key === "ArrowDown") {
+      newVideoTime -= frameDuration;
+    }
+
+    // Clamp the new time to be within the video's bounds
+    videoPlayer.currentTime = Math.max(0, Math.min(newVideoTime, videoPlayer.duration));
+
+    // Find the corresponding radar frame for the new video time
+    const newFrameIndex = findRadarFrameIndexForTime(videoPlayer.currentTime, appState.vizData);
+
+    // Update the application state, but don't force another video seek
+    updateFrame(newFrameIndex, false);
+
+    // Manually trigger redraws since the animation loop is paused
+    if (appState.p5_instance) appState.p5_instance.redraw();
+    if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
   }
 
   // --- Number keys for color modes ---
