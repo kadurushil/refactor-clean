@@ -35,6 +35,7 @@ import {
   initSyncUIHandlers,
   updateFrame,
   resetVisualization,
+  forceResyncWithOffset,
 } from "./sync.js";
 import { radarSketch } from "./p5/radarSketch.js";
 import { speedGraphSketch } from "./p5/speedGraphSketch.js";
@@ -893,20 +894,8 @@ function calculateAndSetOffset() {
 offsetInput.addEventListener("keydown", (event) => {
   // Check if the key pressed was 'Enter'
   if (event.key === "Enter") {
-    // Prevent the default browser action for the Enter key (like submitting a form)
     event.preventDefault();
-    
-    // Update state and persist
-    const newOffset = parseFloat(offsetInput.value) || 0;
-    appState.offset = newOffset;
-    localStorage.setItem("visualizerOffset", newOffset);
-    if (appState.vizData) precomputeRadarVideoSync(appState.vizData, appState.offset);
-    console.log(`Manual offset entered: ${appState.offset}ms`);
-
-    // Force a resync of the video to the current frame
-    if (appState.vizData) {
-      updateFrame(appState.currentFrame, true);
-    }
+    forceResyncWithOffset();
   }
 });
 

@@ -185,18 +185,14 @@ export function updateDebugOverlay(currentMediaTime) {
       appState.vizData &&
       appState.vizData.radarFrames[appState.currentFrame]
     ) {
-      // --- START: Corrected Debug Logic ---
       const currentRadarFrame =
         appState.vizData.radarFrames[appState.currentFrame];
-      const targetRadarTimeMs = currentRadarFrame.timestampMs;
-      const offsetMs = parseFloat(offsetInput.value) || 0; // Read the current offset
-
-      // Make the drift calculation "offset-aware"
-      const driftMs = currentMediaTime * 1000 + offsetMs - targetRadarTimeMs;
-      // --- END: Corrected Debug Logic ---
+      
+      // The correct drift is the difference between the video's actual time and the pre-calculated "baked-in" sync time for the current radar frame.
+      const driftMs = (currentMediaTime - currentRadarFrame.videoSyncedTime) * 1000;
 
       // Style the drift value to be green if sync is good, and red if it's off.
-      const driftColor = Math.abs(driftMs) > 40 ? "#FF6347" : "#98FB98"; // Tomato red or Pale green
+      const driftColor = Math.abs(driftMs) > 50 ? "#FF6347" : "#98FB98"; // Tomato red or Pale green
 
       content.push(`Video Time (s): ${currentMediaTime.toFixed(3)}`); // Display current video time
       content.push(`Target Radar Time (ms): ${targetRadarTimeMs.toFixed(0)}`);
@@ -258,11 +254,9 @@ export function updatePersistentOverlays(currentMediaTime) {
   const motionState = frameData.motionState;
   if (currentRadarFrame) {
     const absRadarTime = new Date(
-      appState.videoStartDate.getTime() + currentRadarFrame.timestampMs
+      appState.radarStartTimeMs + currentRadarFrame.timestamp
     );
-    const targetRadarTimeMs = currentRadarFrame.timestampMs;
-    const offsetMs = parseFloat(offsetInput.value) || 0;
-    const driftMs = currentMediaTime * 1000 + offsetMs - targetRadarTimeMs;
+    const driftMs = (currentMediaTime - currentRadarFrame.videoSyncedTime) * 1000;
     const driftColor = Math.abs(driftMs) > 50 ? "#FF6347" : "#98FB98"; // Tomato or Pale Green
     const colorMode = getCurrentColorMode();
     const fps = appState.fps;
