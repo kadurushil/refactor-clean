@@ -195,7 +195,7 @@ export function updateDebugOverlay(currentMediaTime) {
       const driftColor = Math.abs(driftMs) > 50 ? "#FF6347" : "#98FB98"; // Tomato red or Pale green
 
       content.push(`Video Time (s): ${currentMediaTime.toFixed(3)}`); // Display current video time
-      content.push(`Target Radar Time (ms): ${targetRadarTimeMs.toFixed(0)}`);
+      content.push(`Target Sync Time (s): ${currentRadarFrame.videoSyncedTime.toFixed(3)}`);
       content.push(`Drift (ms): <b style="color: ${driftColor};">${driftMs.toFixed(0)}</b>`);
       content.push(`Video Start Time: ${appState.videoStartDate.toISOString()}`);
       content.push(`Radar Start Time: ${new Date(appState.radarStartTimeMs).toISOString()}`);
@@ -226,21 +226,16 @@ function getCurrentColorMode() {
 }
 
 export function updatePersistentOverlays(currentMediaTime) {
-  // If we don't have the necessary data, hide the overlays and exit.
-  const isDebug1Visible = toggleDebugOverlay.checked;
-  const isDebug2Visible = toggleDebug2Overlay.checked;
+  // If the advanced debug overlay is visible, hide the persistent overlays and exit.
+  if (toggleDebug2Overlay.checked) {
+    radarInfoOverlay.classList.add("hidden");
+    videoInfoOverlay.classList.add("hidden");
+    return;
+  }
 
+  // If we don't have the necessary data, hide the overlays and exit.
   if (!appState.vizData || !appState.videoStartDate) {
     radarInfoOverlay.classList.add("hidden");
-    videoInfoOverlay.classList.add("hidden");
-    return;
-  }
-  if (isDebug1Visible && isDebug2Visible) {
-    radarInfoOverlay.classList.add("hidden");
-    videoInfoOverlay.classList.add("hidden");
-    return;
-  }
-  if(isDebug1Visible || isDebug2Visible){
     videoInfoOverlay.classList.add("hidden");
     return;
   }
