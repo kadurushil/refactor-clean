@@ -253,8 +253,8 @@ let targetVideoTime = null; // NEW: State variable to track target time during s
 
 function handleTimelineWheel(event) {
   // If no data, or if close-up mode is active, do not seek.
-  // The wheel event is used for zooming in close-up mode.
-  if (!appState.vizData || appState.isCloseUpMode) {
+  // The wheel event is used for zooming in close-up mode, unless Shift is held.
+  if (!appState.vizData || (appState.isCloseUpMode && !event.shiftKey)) {
     return;
   }
 

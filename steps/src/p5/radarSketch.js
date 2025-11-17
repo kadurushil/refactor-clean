@@ -84,8 +84,9 @@ export const radarSketch = function (p) {
       "wheel",
       (event) => {
         // Only run this logic if the close-up mode is active
-        if (appState.isCloseUpMode) {
-          event.preventDefault(); // Prevent the page from scrolling
+      // Only allow zooming in god mode if the shift key is NOT pressed.
+      // When shift is pressed, the scroll event is used for timeline seeking.
+      if (appState.isCloseUpMode && !event.shiftKey) {          event.preventDefault(); // Prevent the page from scrolling
 
           const zoomSpeed = 0.5;
           const direction = Math.sign(event.deltaY);
@@ -260,6 +261,15 @@ export const radarSketch = function (p) {
     const zoomPanel = document.getElementById("zoom-panel");
     if (appState.isCloseUpMode) {
       // --- START: Mouse Smoothing Logic ---
+      // --- START: Cursor Indicator Logic ---
+      // Change the cursor to provide a visual cue for the current scroll behavior.
+      if (p.keyIsDown(p.SHIFT)) {
+        p.cursor("ew-resize"); // Indicates horizontal seeking (timeline scrub)
+      } else {
+        p.cursor("crosshair"); // Default for zoom/inspection
+      }
+      // --- END: Cursor Indicator Logic ---
+
       // On the first frame of zoom, snap the smoothed position to the real mouse position.
       if (isFirstFrame) {
         smoothedMouseX = p.mouseX;
@@ -401,6 +411,7 @@ export const radarSketch = function (p) {
         appState.zoomCountdownInterval = null;
       }
       // --- END: Cleanup Logic ---
+      p.cursor(p.AUTO); // Reset cursor when exiting god mode
       zoomPanel.style.display = "none";
       isFirstFrame = true; // Reset for the next time zoom mode is enabled
     }
