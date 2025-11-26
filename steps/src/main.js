@@ -182,13 +182,25 @@ async function processFilePipeline() {
   showLoadingModal("Starting file load...");
   let _parsedJsonData = null;
 
-  // 2. Handle JSON Parsing FIRST (if a JSON file is present)
+  // --- PRE-PROCESSING: Setup Filenames and Cache ---
   if (jsonFileToLoad) {
     appState.jsonFilename = jsonFileToLoad.name;
     localStorage.setItem("jsonFilename", appState.jsonFilename);
     await saveFileWithMetadata("json", jsonFileToLoad);
-    calculateAndSetOffset();
+  }
 
+  if (videoFileToLoad) {
+    appState.videoFilename = videoFileToLoad.name;
+    localStorage.setItem("videoFilename", appState.videoFilename);
+    await saveFileWithMetadata("video", videoFileToLoad);
+  }
+
+  // --- CALCULATE OFFSET ---
+  // Calculate offset/dates once we have all potential filenames.
+  calculateAndSetOffset();
+
+  // 2. Handle JSON Parsing (if a JSON file is present)
+  if (jsonFileToLoad) {
     const worker = new Worker("./src/parser.worker.js");
     const parsedData = await new Promise((resolve, reject) => {
       worker.onmessage = (e) => {
@@ -255,8 +267,6 @@ async function processFilePipeline() {
       // STAGE 1: Fired when video duration is known.
       const onMetadataLoaded = () => {
         updateLoadingModal(95, "Finalizing visualization...");
-        // This is the key fix: initialize data-dependent sketches immediately.
-        finalizeSetup(_parsedJsonData);
       };
 
       // STAGE 2: Fired when video is buffered enough to play.
@@ -283,10 +293,7 @@ async function processFilePipeline() {
     });
 
     // Set up file metadata and start the simulated progress spinner
-    appState.videoFilename = videoFileToLoad.name;
-    localStorage.setItem("videoFilename", appState.videoFilename);
-    await saveFileWithMetadata("video", videoFileToLoad);
-    calculateAndSetOffset();
+    // Note: Filename setup and caching moved to start of processFilePipeline
 
     const spinnerChars = ["|", "/", "-", "\\"];
     let spinnerIndex = 0;
@@ -301,6 +308,8 @@ async function processFilePipeline() {
 
     // Await the promise, which resolves only after 'canplaythrough' fires.
     await videoReadyPromise;
+
+    finalizeSetup(_parsedJsonData);
 
     // 4. Finalize the UI by hiding the modal
     updateLoadingModal(100, "Complete!");
