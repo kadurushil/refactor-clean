@@ -35,7 +35,7 @@ import {
  * This is the main handler for both manual clicks and drag-and-drop.
  * It identifies the files and triggers the unified processing pipeline.
  */
-export function handleFiles(files) {
+export function handleFiles(files, fromCache = false) {
   // Identify new files from the input
   let incomingJson = null;
   let incomingVideo = null;
@@ -53,26 +53,37 @@ export function handleFiles(files) {
   if (!incomingJson && !incomingVideo) return;
 
   // Trigger the pipeline with the identified files
-  processFilePipeline(incomingJson, incomingVideo);
+  processFilePipeline(incomingJson, incomingVideo, fromCache);
 }
 
-async function processFilePipeline(jsonFile, videoFile) {
+async function processFilePipeline(jsonFile, videoFile, fromCache) {
   // 1. Show the unified loading modal.
   showLoadingModal("Processing files...");
-  let _parsedJsonData = null;
 
-  // --- PART A: Handle JSON Replacement ---
+  // --- PART A: Setup Filenames & Cache (Moved Up) ---
+  if (jsonFile) {
+    appState.jsonFilename = jsonFile.name;
+    localStorage.setItem("jsonFilename", appState.jsonFilename);
+    if (!fromCache) await saveFileWithMetadata("json", jsonFile);
+  }
+
+  if (videoFile) {
+    appState.videoFilename = videoFile.name;
+    localStorage.setItem("videoFilename", appState.videoFilename);
+    if (!fromCache) await saveFileWithMetadata("video", videoFile);
+  }
+
+  // --- PART B: Calculate Offset (Moved Up) ---
+  // Critical: This must run BEFORE JSON parsing so valid start times are available.
+  calculateAndSetOffset();
+
+  // --- PART C: Handle JSON Parsing ---
   if (jsonFile) {
     // Reset old visualization data immediately
     appState.vizData = null;
     // Pause P5 loop to prevent errors while data is missing
     if (appState.p5_instance) appState.p5_instance.noLoop();
     
-    // Persist filename & Cache
-    appState.jsonFilename = jsonFile.name;
-    localStorage.setItem("jsonFilename", appState.jsonFilename);
-    await saveFileWithMetadata("json", jsonFile);
-
     // Parse JSON
     const worker = new Worker("./src/parser.worker.js");
     const parsedData = await new Promise((resolve, reject) => {
@@ -90,12 +101,8 @@ async function processFilePipeline(jsonFile, videoFile) {
       };
       worker.postMessage({ file: jsonFile });
     });
-
-    _parsedJsonData = parsedData;
     
-    // Post-process JSON
-    // Note: We pass appState.videoStartDate (which might be null if video isn't loaded yet)
-    // This is fine; offset calculation handles the sync later.
+    // Post-process JSON with correct dates
     const result = await parseVisualizationJson(
       parsedData,
       appState.radarStartTimeMs,
@@ -113,21 +120,8 @@ async function processFilePipeline(jsonFile, videoFile) {
     appState.globalMaxSnr = result.maxSnr;
   }
 
-  // --- PART B: Handle Video Replacement ---
-  if (videoFile) {
-    // Persist filename & Cache
-    appState.videoFilename = videoFile.name;
-    localStorage.setItem("videoFilename", appState.videoFilename);
-    await saveFileWithMetadata("video", videoFile);
-  }
-
-  // --- PART C: Calculate Offset ---
-  // We run this if *either* file changed, as the sync relationship might have changed.
-  // This updates appState.offset and appState.videoStartDate (if video filename is available)
-  calculateAndSetOffset();
-
   // --- PART D: Precompute Sync ---
-  // Now that we have the latest offset, bake it into the data.
+  // Bake the offset into the data (needs vizData from Part C and offset from Part B)
   if (appState.vizData) {
       precomputeRadarVideoSync(appState.vizData, appState.offset);
   }

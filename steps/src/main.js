@@ -516,7 +516,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // Now, pass the array of proper File objects to the handler.
-        handleFiles(filesToLoad);
+        handleFiles(filesToLoad, true);
         // --- END: FIX FOR AUTO-RELOAD ---
       } else {
         console.log(
