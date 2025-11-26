@@ -17,52 +17,25 @@
 // - main.js:           The main application entry point that wires everything
 // ===========================================================================================================
 
-import { zoomSketch } from "./p5/zoomSketch.js";
 //import { showExplorer, hideExplorer, displayInGrid } from "./dataExplorer.js";
-import { initializeDataExplorer, throttledUpdateExplorer } from "./dataExplorer.js"; // <-- ADD THIS
+import { initializeDataExplorer } from "./dataExplorer.js"; 
 import {
   showModal,
   hideModal,
-  updateLoadingModal,
-  showLoadingModal,
-} from "./modal.js"; // Modify this import
+} from "./modal.js"; 
 import {
-  animationLoop,
-  videoFrameCallback,
+  initSyncUIHandlers,
   startPlayback,
   pausePlayback,
   stopPlayback,
-  initSyncUIHandlers,
-  updateFrame,
-  resetVisualization,
   forceResyncWithOffset,
 } from "./sync.js";
-import { radarSketch } from "./p5/radarSketch.js";
-import { speedGraphSketch } from "./p5/speedGraphSketch.js";
-import { parseVisualizationJson, parseJsonWithOboe } from "./fileParsers.js";
-import {
-  MAX_TRAJECTORY_LENGTH,
-  VIDEO_FPS,
-  RADAR_X_MIN,
-  RADAR_X_MAX,
-  RADAR_Y_MIN,
-  RADAR_Y_MAX,
-} from "./constants.js";
-import {
-  findRadarFrameIndexForTime,
-  extractTimestampInfo,
-  parseTimestamp,
-  precomputeRadarVideoSync,
-  throttle,
-  formatTime,
-} from "./utils.js";
+import { formatTime } from "./utils.js";
 import { appState } from "./state.js";
 import { debugFlags } from "./debug.js"; // Import the new debug flags
 window.appState = appState; // exposing the appState to console
 window.debugFlags = debugFlags; // Expose debug flags to the console for runtime toggling
 import {
-  themeToggleBtn,
-  canvasContainer,
   canvasPlaceholder,
   videoPlayer,
   videoPlaceholder,
@@ -73,7 +46,6 @@ import {
   playPauseBtn,
   stopBtn,
   timelineSlider,
-  frameCounter,
   offsetInput,
   speedSlider,
   speedDisplay,
@@ -88,15 +60,12 @@ import {
   toggleFrameNorm,
   toggleDebugOverlay,
   toggleDebug2Overlay,
-  egoSpeedDisplay,
   debugOverlay,
   snrMinInput,
   snrMaxInput,
   applySnrBtn,
   autoOffsetIndicator,
   clearCacheBtn,
-  speedGraphContainer,
-  speedGraphPlaceholder,
   toggleCloseUp,
   updateDebugOverlay,
   timelineTooltip,
@@ -109,50 +78,17 @@ import {
   collapsibleMenu,
   toggleMenuBtn,
   fullscreenBtn,
-  mainContent,
   closeMenuBtn,
   menuScrim,
   toggleConfirmedOnly,
   resetUIForNewLoad,
-  //explorerBtn,
 } from "./dom.js";
 
 import { initializeTheme } from "./theme.js";
 
-import { initDB, saveFileWithMetadata, loadFreshFileFromDB } from "./db.js";
+import { initDB, loadFreshFileFromDB } from "./db.js";
 import { initKeyboardShortcuts } from "./keyboard.js";
-
-// --- [START] CORRECTED UNIFIED FILE LOADING LOGIC ---
-
-// These variables will hold the file objects during the loading process.
-let jsonFileToLoad = null;
-let videoFileToLoad = null;
-
-/**
- * This is the main handler for both manual clicks and drag-and-drop.
- * It identifies the files and triggers the unified processing pipeline.
- */
-function handleFiles(files) {
-  // Reset the UI and clear any old data to prepare for a new session
-  resetUIForNewLoad();
-  appState.vizData = null;
-
-  // Identify the JSON and Video files from the list of files provided
-  // This loop now correctly handles both files without an else-if.
-  Array.from(files).forEach((file) => {
-    if (file.name.endsWith(".json")) {
-      jsonFileToLoad = file;
-    }
-    if (file.type.startsWith("video/")) {
-      videoFileToLoad = file;
-    }
-  });
-
-  // Start the main loading process if we have at least one valid file.
-  if (jsonFileToLoad || videoFileToLoad) {
-    processFilePipeline();
-  }
-}
+import { handleFiles } from "./fileLoader.js";
 
 // Wire up the manual file inputs to the new handler
 jsonFileInput.addEventListener("change", (event) =>
@@ -177,198 +113,6 @@ dropZone.addEventListener("drop", (event) => {
   handleFiles(event.dataTransfer.files);
 });
 
-async function processFilePipeline() {
-  // 1. Show the unified loading modal.
-  showLoadingModal("Starting file load...");
-  let _parsedJsonData = null;
-
-  // --- PRE-PROCESSING: Setup Filenames and Cache ---
-  if (jsonFileToLoad) {
-    appState.jsonFilename = jsonFileToLoad.name;
-    localStorage.setItem("jsonFilename", appState.jsonFilename);
-    await saveFileWithMetadata("json", jsonFileToLoad);
-  }
-
-  if (videoFileToLoad) {
-    appState.videoFilename = videoFileToLoad.name;
-    localStorage.setItem("videoFilename", appState.videoFilename);
-    await saveFileWithMetadata("video", videoFileToLoad);
-  }
-
-  // --- CALCULATE OFFSET ---
-  // Calculate offset/dates once we have all potential filenames.
-  calculateAndSetOffset();
-
-  // 2. Handle JSON Parsing (if a JSON file is present)
-  if (jsonFileToLoad) {
-    const worker = new Worker("./src/parser.worker.js");
-    const parsedData = await new Promise((resolve, reject) => {
-      worker.onmessage = (e) => {
-        const { type, data, percent, message } = e.data;
-        if (type === "progress") {
-          updateLoadingModal(percent * 0.8, `Parsing JSON (${percent}%)...`);
-        } else if (type === "complete") {
-          worker.terminate();
-          resolve(data);
-        } else if (type === "error") {
-          worker.terminate();
-          reject(new Error(message));
-        }
-      };
-      worker.postMessage({ file: jsonFileToLoad });
-    });
-    _parsedJsonData = parsedData;
-    const result = await parseVisualizationJson(
-      parsedData,
-      appState.radarStartTimeMs,
-      appState.videoStartDate
-    );
-    if (result.error) {
-      hideModal();
-      showModal(result.error);
-      return;
-    }
-    appState.vizData = result.data;
-    appState.globalMinSnr = result.minSnr;
-    appState.globalMaxSnr = result.maxSnr;
-    precomputeRadarVideoSync(appState.vizData, appState.offset);
-  }
-
-  // 3. Handle Video Loading SECOND, with two-stage initialization
-  if (videoFileToLoad) {
-    videoPlayer.addEventListener(
-      "durationchange",
-      () => {
-        if (
-          videoPlayer.duration > 0 &&
-          appState.speedGraphInstance &&
-          appState.vizData
-        ) {
-          appState.speedGraphInstance.setData(
-            appState.vizData,
-            videoPlayer.duration
-          );
-        }
-      },
-      { once: true }
-    );
-    let spinnerInterval; // Declare here to be accessible in all scopes
-
-    // This single promise manages the entire video loading lifecycle.
-    const videoReadyPromise = new Promise((resolve, reject) => {
-      // Define cleanup logic to remove listeners and stop the spinner
-      const cleanup = () => {
-        clearInterval(spinnerInterval);
-        videoPlayer.removeEventListener("loadedmetadata", onMetadataLoaded);
-        videoPlayer.removeEventListener("canplaythrough", onCanPlayThrough);
-        videoPlayer.removeEventListener("error", onError);
-      };
-
-      // STAGE 1: Fired when video duration is known.
-      const onMetadataLoaded = () => {
-        updateLoadingModal(95, "Finalizing visualization...");
-      };
-
-      // STAGE 2: Fired when video is buffered enough to play.
-      const onCanPlayThrough = () => {
-        cleanup();
-        resolve(); // Resolve the promise, allowing the pipeline to complete.
-      };
-
-      // Handle any loading errors
-      const onError = (e) => {
-        console.error("Video loading error:", e);
-        cleanup();
-        reject(e);
-      };
-
-      // Attach the event listeners
-      videoPlayer.addEventListener("loadedmetadata", onMetadataLoaded, {
-        once: true,
-      });
-      videoPlayer.addEventListener("canplaythrough", onCanPlayThrough, {
-        once: true,
-      });
-      videoPlayer.addEventListener("error", onError, { once: true });
-    });
-
-    // Set up file metadata and start the simulated progress spinner
-    // Note: Filename setup and caching moved to start of processFilePipeline
-
-    const spinnerChars = ["|", "/", "-", "\\"];
-    let spinnerIndex = 0;
-    spinnerInterval = setInterval(() => {
-      const spinnerText = spinnerChars[spinnerIndex % spinnerChars.length];
-      updateLoadingModal(85, `Loading video ${spinnerText}`);
-      spinnerIndex++;
-    }, 150);
-
-    // Trigger the video loading process
-    setupVideoPlayer(URL.createObjectURL(videoFileToLoad));
-
-    // Await the promise, which resolves only after 'canplaythrough' fires.
-    await videoReadyPromise;
-
-    finalizeSetup(_parsedJsonData);
-
-    // 4. Finalize the UI by hiding the modal
-    updateLoadingModal(100, "Complete!");
-    setTimeout(hideModal, 300);
-  } else {
-    // If NO video was loaded, we must still finalize the setup and hide the modal.
-    updateLoadingModal(95, "Finalizing visualization...");
-    finalizeSetup(_parsedJsonData); // Setup with only JSON data
-    setTimeout(() => {
-      updateLoadingModal(100, "Complete!");
-      setTimeout(hideModal, 300);
-    }, 200);
-  }
-}
-
-function finalizeSetup(_parsedJsonData) {
-  // Make sure the canvas placeholder is hidden and toggles are visible
-  canvasPlaceholder.style.display = "none";
-  featureToggles.classList.remove("hidden");
-
-  
-  // Create the p5 instances
-  if (!appState.p5_instance) {
-    appState.p5_instance = new p5(radarSketch);
-  }
-  if (!appState.zoomSketchInstance) {
-    appState.zoomSketchInstance = new p5(zoomSketch, "zoom-canvas-container");
-  }
-
-  // Setup the speed graph if we have the necessary data
-  if (appState.vizData) {
-    speedGraphPlaceholder.classList.add("hidden");
-    if (!appState.speedGraphInstance) {
-      appState.speedGraphInstance = new p5(speedGraphSketch);
-    }
-    resetVisualization();
-    appState.speedGraphInstance.setData(appState.vizData, videoPlayer.duration);
-    appState.speedGraphInstance.redraw();
-  }
-  // --- START: FIX for Initial Overlay Visibility ---
-  // Manually update overlays on initial load so they are visible before playback starts.
-  updatePersistentOverlays(videoPlayer.currentTime);
-  updateDebugOverlay(videoPlayer.currentTime);
-  // --- END: FIX for Initial Overlay Visibility ---
-
-  // Update SNR inputs now that data is loaded
-  if (appState.vizData) {
-    snrMinInput.value = appState.globalMinSnr.toFixed(1);
-    snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
-  }
-}
-
-// Sets up the video player with the given file URL.
-function setupVideoPlayer(fileURL) {
-  videoPlayer.src = fileURL;
-  videoPlayer.classList.remove("hidden");
-  videoPlaceholder.classList.add("hidden");
-  videoPlayer.playbackRate = parseFloat(speedSlider.value);
-}
 
 // Event listener for loading JSON file.
 loadJsonBtn.addEventListener("click", () => jsonFileInput.click());
@@ -729,52 +473,6 @@ videoPlayer.addEventListener("ended", () => {
   playPauseBtn.textContent = "Play";
 });
 
-function calculateAndSetOffset() {  
-  const jsonTimestampInfo = extractTimestampInfo(appState.jsonFilename);
-  const videoTimestampInfo = extractTimestampInfo(appState.videoFilename);
-
-  let videoDate = null;
-  if (videoTimestampInfo) {
-    videoDate = parseTimestamp(
-      videoTimestampInfo.timestampStr,
-      videoTimestampInfo.format
-    );
-    appState.videoStartDate = videoDate; // Store for potential future use
-  }
-
-  let jsonDate = null;
-  if (jsonTimestampInfo) {
-    jsonDate = parseTimestamp(
-      jsonTimestampInfo.timestampStr,
-      jsonTimestampInfo.format
-    );
-  }
-
-  let calculatedOffset = 0;
-  if (jsonDate && videoDate) {
-    appState.radarStartTimeMs = jsonDate.getTime();
-    const offset = jsonDate.getTime() - videoDate.getTime();
-
-    // Logic Rule: If offset is invalid or too large, default to 0.
-    if (isNaN(offset) || Math.abs(offset) > 30000) {
-      console.warn(`Calculated offset of ${offset}ms is invalid or exceeds 30s threshold. Defaulting to 0.`);
-      calculatedOffset = 0;
-    } else {
-      calculatedOffset = offset;
-      autoOffsetIndicator.classList.remove("hidden");
-      console.log(`Auto-calculated offset: ${calculatedOffset} ms`);
-    }
-  }
-
-  appState.offset = calculatedOffset;
-  offsetInput.value = appState.offset;
-  localStorage.setItem("visualizerOffset", appState.offset);
-
-  // Trigger Baking: This is the point where we apply the offset to the data.
-  if (appState.vizData) {
-    precomputeRadarVideoSync(appState.vizData, appState.offset);
-  }
-}
 offsetInput.addEventListener("keydown", (event) => {
   // Check if the key pressed was 'Enter'
   if (event.key === "Enter") {
@@ -786,7 +484,7 @@ offsetInput.addEventListener("keydown", (event) => {
 // --- [START] CORRECTED INITIALIZATION LOGIC ---
 document.addEventListener("DOMContentLoaded", () => {
   initializeTheme();
-  initializeDataExplorer(); // <-- ADD THIS LINE
+  initializeDataExplorer(); 
   initKeyboardShortcuts();
   initSyncUIHandlers();
   initDB(async () => {

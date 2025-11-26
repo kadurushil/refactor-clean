@@ -15,8 +15,93 @@
     <p>Check the browser's console for detailed results.</p>
     <div id="results"></div>
 
+    <script src="../vendor/p5.js"></script>
     <script type="module" src="utils.test.js"></script>
-    <script type="module" src="fileParsers.test.js"></script> </body>
+    <script type="module" src="fileParsers.test.js"></script> 
+    <script type="module" src="fileLoader.test.js"></script>
 
+    <!-- Mock DOM for dom.js -->
+    <div id="mock-dom" style="display: none;">
+        <button id="theme-toggle"></button>
+        <div id="canvas-container"></div>
+        <div id="canvas-placeholder"></div>
+        <video id="video-player"></video>
+        <div id="video-placeholder"></div>
+        <button id="load-json-btn"></button>
+        <button id="load-video-btn"></button>
+        <button id="load-can-btn"></button>
+        <input id="json-file-input" type="file">
+        <input id="video-file-input" type="file">
+        <input id="can-file-input" type="file">
+        <button id="play-pause-btn"></button>
+        <button id="stop-btn"></button>
+        <input id="timeline-slider" type="range">
+        <div id="frame-counter"></div>
+        <input id="offset-input">
+        <input id="speed-slider" type="range">
+        <div id="speed-display"></div>
+        <div id="feature-toggles">
+             <input type="checkbox" id="toggle-snr-color">
+             <input type="checkbox" id="toggle-cluster-color">
+             <input type="checkbox" id="toggle-inlier-color">
+             <input type="checkbox" id="toggle-stationary-color">
+             <input type="checkbox" id="toggle-velocity">
+             <input type="checkbox" id="toggle-tracks">
+             <input type="checkbox" id="toggle-ego-speed">
+             <input type="checkbox" id="toggle-frame-norm">
+             <input type="checkbox" id="toggle-debug-overlay">
+             <input type="checkbox" id="toggle-debug2-overlay">
+             <input type="checkbox" id="toggle-close-up">
+             <input type="checkbox" id="toggle-predicted-pos">
+             <input type="checkbox" id="toggle-covariance">
+             <input type="checkbox" id="toggle-confirmed-only">
+             <input type="checkbox" id="ttc-mode-default">
+             <input type="checkbox" id="ttc-mode-custom">
+        </div>
+        <div id="ego-speed-display"></div>
+        <div id="can-speed-display"></div>
+        <div id="debug-overlay"></div>
+        <input id="snr-min-input">
+        <input id="snr-max-input">
+        <button id="apply-snr-btn"></button>
+        <div id="auto-offset-indicator"></div>
+        <button id="clear-cache-btn"></button>
+        <div id="speed-graph-container"></div>
+        <div id="speed-graph-placeholder"></div>
+        <div id="modal-container"></div>
+        <div id="modal-overlay"></div>
+        <div id="modal-content"></div>
+        <div id="modal-text"></div>
+        <button id="modal-ok-btn"></button>
+        <button id="modal-cancel-btn"></button>
+        <div id="modal-progress-container"></div>
+        <div id="modal-progress-bar"></div>
+        <div id="modal-progress-text"></div>
+        <div id="timeline-tooltip"></div>
+        <div id="radar-info-overlay"></div>
+        <div id="video-info-overlay"></div>
+        <button id="save-session-btn"></button>
+        <button id="load-session-btn"></button>
+        <input id="session-file-input" type="file">
+        <div id="custom-ttc-panel"></div>
+        <input id="ttc-color-critical">
+        <input id="ttc-time-critical">
+        <input id="ttc-color-high">
+        <input id="ttc-time-high">
+        <input id="ttc-color-medium">
+        <input id="ttc-time-medium">
+        <input id="ttc-color-low">
+        <input id="ttc-time-low">
+        <div id="collapsible-menu"></div>
+        <button id="toggle-menu-btn"></button>
+        <button id="fullscreen-btn"></button>
+        <main></main>
+        <button id="close-menu-btn"></button>
+        <div id="fullscreen-enter-icon"></div>
+        <div id="fullscreen-exit-icon"></div>
+        <div id="menu-scrim"></div>
+        <button id="explorer-btn"></button>
+        <div id="zoom-canvas-container"></div>
+    </div>
 </body>
 </html>

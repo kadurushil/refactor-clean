@@ -55,14 +55,20 @@ export async function parseVisualizationJson(
       };
     }
 
+    // Calculate offset: (Radar Start - Video Start). Defaults to 0 if Video Start is unknown.
+    let offset = 0;
     if (videoStartDate && radarStartTimeMs) {
-      await processArrayInChunks(vizData.radarFrames, 5000, (chunk) => {
-        chunk.forEach((frame) => {
-          frame.timestampMs =
-            radarStartTimeMs + frame.timestamp - videoStartDate.getTime();
-        });
-      });
+        offset = radarStartTimeMs - videoStartDate.getTime();
     }
+
+    // Always populate timestampMs (Time relative to video start, in ms)
+    await processArrayInChunks(vizData.radarFrames, 5000, (chunk) => {
+    chunk.forEach((frame) => {
+        // frame.timestamp is assumed to be ms from the radar log start.
+        // We add the offset to align it with the video timeline.
+        frame.timestampMs = frame.timestamp + offset;
+    });
+    });
 
     let snrValues = [];
     let totalPoints = 0;
