@@ -28,7 +28,7 @@ export const speedGraphSketch = function (p) {
     b.fill(textColor);
     b.textSize(10);
 
-    for (let s = minSpeed; s <= maxSpeed; s += 10) {
+    for (let s = minSpeed; s <= maxSpeed; s += 5) {
       const y = b.map(s, minSpeed, maxSpeed, b.height - pad.bottom, pad.top);
       b.text(s, pad.left - 8, y);
       if (s === 0) {
@@ -43,7 +43,7 @@ export const speedGraphSketch = function (p) {
     }
 
     b.fill(textColor);
-    b.text("km/h", pad.left - 8, pad.top - 8);
+    b.text("km/h", pad.left - 8, pad.top - 12);
     b.textAlign(b.CENTER, b.TOP);
     b.noStroke();
     b.fill(isDark ? 180 : 150);
@@ -54,6 +54,16 @@ export const speedGraphSketch = function (p) {
       b.text(Math.round(t), x, b.height - pad.bottom + 5);
     }
     b.fill(textColor);
+
+    // Draw vertical grid lines for time
+    b.strokeWeight(1);
+    b.stroke(isDark ? 80 : 230);
+    for (let t = 10; t <= videoDuration; t += 10) {
+      const x = b.map(t, 0, videoDuration, pad.left, b.width - pad.right);
+      b.line(x, pad.top, x, b.height - pad.bottom);
+    }
+    b.noStroke();
+
     b.text("Time (s)", (pad.left + (b.width - pad.right)) / 2, b.height - pad.bottom + 18);
     b.pop();
 
@@ -65,7 +75,7 @@ export const speedGraphSketch = function (p) {
       b.beginShape();
       for (const frame of radarData.radarFrames) {
         if (frame.canVehSpeed_kmph === null || isNaN(frame.canVehSpeed_kmph)) continue;
-        const relTime = frame.timestampMs / 1000;
+        const relTime = frame.timestamp / 1000;
         if (relTime >= 0 && relTime <= videoDuration) {
           const x = b.map(relTime, 0, videoDuration, pad.left, b.width - pad.right);
           const y = b.map(frame.canVehSpeed_kmph, minSpeed, maxSpeed, b.height - pad.bottom, pad.top);
@@ -81,7 +91,7 @@ export const speedGraphSketch = function (p) {
       b.drawingContext.setLineDash([5, 5]);
       b.beginShape();
       for (const frame of radarData.radarFrames) {
-        const relTime = frame.timestampMs / 1000;
+        const relTime = frame.timestamp / 1000;
         if (relTime >= 0 && relTime <= videoDuration) {
           const x = b.map(relTime, 0, videoDuration, pad.left, b.width - pad.right);
           const egoSpeedKmh = frame.egoVelocity[1] * 3.6;
@@ -154,6 +164,11 @@ export const speedGraphSketch = function (p) {
 
   p.setData = function (radarData, duration) {
     if (!radarData || !radarData.radarFrames) return;
+
+    // Clear the old buffer to prevent showing stale graphs, especially if new data has no duration.
+    staticBuffer.clear();
+    p.background(document.documentElement.classList.contains("dark") ? [55, 65, 81] : 255);
+
     videoDuration = duration;
 
     let speeds = [];
@@ -172,18 +187,18 @@ export const speedGraphSketch = function (p) {
     if (maxSpeed <= 0) maxSpeed = 10;
     if (minSpeed >= 0) minSpeed = 0;
 
-    if (videoDuration > 0) {
+    if (videoDuration >= 0) {
       p.drawStaticGraphToBuffer(radarData);
     }
   };
 
   p.draw = function () {
-    if (!videoDuration || videoDuration <= 0) {
+    if (!staticBuffer || !videoDuration || videoDuration <= 0) {
       const isDark = document.documentElement.classList.contains("dark");
       p.background(isDark ? [55, 65, 81] : 255);
       p.fill(isDark ? 200 : 100);
       p.textAlign(p.CENTER, p.CENTER);
-      p.text("Waiting for video duration...", p.width / 2, p.height / 2);
+      p.text("No data to display", p.width / 2, p.height / 2);
       return;
     }
     p.image(staticBuffer, 0, 0);
@@ -203,7 +218,7 @@ export const speedGraphSketch = function (p) {
     const frameData = appState.vizData.radarFrames[appState.currentFrame];
     if (!frameData) return;
 
-    const currentTimeSec = frameData.timestampMs / 1000.0;
+    const currentTimeSec = frameData.timestamp / 1000.0;
     const x = p.map(currentTimeSec, 0, videoDuration, pad.left, p.width - pad.right);
 
     p.stroke(255, 0, 0, 150);

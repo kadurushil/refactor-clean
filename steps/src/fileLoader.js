@@ -180,6 +180,12 @@ function loadVideo(file, isRetry = false) {
     let metadataLoaded = false;
     let loadTimeout;
 
+    // Before creating a new URL, revoke the old one if it exists.
+    if (!isRetry && appState.videoObjectUrl) {
+      URL.revokeObjectURL(appState.videoObjectUrl);
+      appState.videoObjectUrl = null;
+    }
+
     const fileURL = isRetry ? videoPlayer.src : URL.createObjectURL(file);
 
     const cleanup = () => {
@@ -233,6 +239,7 @@ function loadVideo(file, isRetry = false) {
           // Revoke URL to free memory if we're giving up on it
           if (videoPlayer.src.startsWith('blob:')) {
             URL.revokeObjectURL(videoPlayer.src);
+            appState.videoObjectUrl = null; // Clear from state
           }
           videoPlayer.src = "";
           videoPlayer.classList.add("hidden");
@@ -267,6 +274,9 @@ function loadVideo(file, isRetry = false) {
 }
 
 function finalizeSetup() {
+  // CRITICAL FIX: Always reset the visualization state before redrawing.
+  // This pauses the video and resets the timeline, ensuring a clean slate for the new data.
+  resetVisualization();
   // 1. Manage Placeholders & Visibility
   // If we have data (vizData), we show the canvas container.
   if (appState.vizData) {
@@ -304,13 +314,31 @@ function finalizeSetup() {
       appState.speedGraphInstance = new p5(speedGraphSketch);
     }
     
-    // Important: Reset the visualization timeline to 0
-    resetVisualization();
-    
     // Update speed graph with new data + video duration
-    // Note: videoPlayer.duration might be NaN if video isn't loaded.
-    const duration = appState.videoMissing ? 0 : (videoPlayer.duration || 0);
-    appState.speedGraphInstance.setData(appState.vizData, duration);
+    // Determine the most appropriate duration for the graph's X-axis.
+    let finalDuration = 0;
+    let jsonDuration = 0;
+
+    // 1. Calculate duration from the JSON data itself as a reliable baseline.
+    if (appState.vizData.radarFrames && appState.vizData.radarFrames.length > 0) {
+      const lastFrame = appState.vizData.radarFrames[appState.vizData.radarFrames.length - 1];
+      jsonDuration = lastFrame.timestamp / 1000.0;
+    }
+
+    // 2. Get video duration, normalizing invalid values.
+    let videoDuration = appState.videoMissing ? 0 : (videoPlayer.duration || 0);
+    if (!videoDuration || isNaN(videoDuration) || videoDuration <= 0) {
+      videoDuration = 0;
+    }
+
+    // 3. Set the graph's duration. Prioritize JSON duration, but clip it
+    //    to the video's duration if a video is present and shorter.
+    finalDuration = jsonDuration;
+    if (videoDuration > 0 && jsonDuration > videoDuration) {
+      finalDuration = jsonDuration;
+    }
+
+    appState.speedGraphInstance.setData(appState.vizData, finalDuration);
     appState.speedGraphInstance.redraw();
   }
   
@@ -332,6 +360,11 @@ function setupVideoPlayer(fileURL) {
   videoPlayer.classList.remove("hidden");
   videoPlaceholder.classList.add("hidden");
   videoPlayer.playbackRate = parseFloat(speedSlider.value);
+
+  // Store the new object URL if it's a blob
+  if (fileURL.startsWith("blob:")) {
+    appState.videoObjectUrl = fileURL;
+  }
 }
 
 function calculateAndSetOffset() {  
