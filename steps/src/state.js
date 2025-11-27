@@ -4,6 +4,9 @@ export const appState = {
   zoomCountdownInterval: null, // The interval timer for the countdown
   fps: 0, // To store the calculated FPS for performance monitoring
   isRawOnlyMode: false, // <-- ADD THIS LINE
+  videoReadyByFallback: false, // True if video resolved via loadedmetadata timeout
+  videoMissing: false, // True if user opts to continue without a video
+
 
   // Stores the parsed visualization data (radar frames, tracks, etc.)
   vizData: null,

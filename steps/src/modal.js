@@ -11,10 +11,16 @@ import {
 } from "./dom.js";
 
 let modalResolve = null;
-export function showModal(message, isConfirm = false) {
+export function showModal(
+  message,
+  isConfirm = false,
+  buttonLabels = { ok: "OK", cancel: "Cancel" }
+) {
   return new Promise((resolve) => {
     modalText.textContent = message;
-    // This line correctly shows the "Cancel" button only when needed.
+    modalOkBtn.textContent = buttonLabels.ok || "OK";
+    modalCancelBtn.textContent = buttonLabels.cancel || "Cancel";
+
     modalCancelBtn.classList.toggle("hidden", !isConfirm);
     
     // --- THIS IS THE FIX ---
@@ -57,18 +63,21 @@ export function updateLoadingModal(percent, message) {
 }
 
 // The hideModal function now also resets the progress bar
-export function hideModal(value) {
-  modalOverlay.classList.add("opacity-0");
-  modalContent.classList.add("scale-95");
-  setTimeout(() => {
-    modalContainer.classList.add("hidden");
-    if (modalProgressContainer && modalProgressBar && modalProgressText) {
-      modalProgressContainer.classList.add("hidden");
-      modalProgressBar.style.width = "0%";
-      modalProgressText.textContent = "";
-    }
-    if (modalResolve) modalResolve(value);
-  }, 200);
+export function hideModal(value) { // This now returns a promise
+  return new Promise(resolve => {
+    modalOverlay.classList.add("opacity-0");
+    modalContent.classList.add("scale-95");
+    setTimeout(() => {
+      modalContainer.classList.add("hidden");
+      if (modalProgressContainer && modalProgressBar && modalProgressText) {
+        modalProgressContainer.classList.add("hidden");
+        modalProgressBar.style.width = "0%";
+        modalProgressText.textContent = "";
+      }
+      if (modalResolve) modalResolve(value);
+      resolve(); // Resolve the promise returned by hideModal itself
+    }, 200);
+  });
 }
 
 // Event listeners remain the same

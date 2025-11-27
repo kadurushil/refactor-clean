@@ -82,6 +82,9 @@ async function processFilePipeline(jsonFile, videoFile, fromCache) {
   if (videoFile) {
     appState.videoFilename = videoFile.name;
     localStorage.setItem("videoFilename", appState.videoFilename);
+    // CRITICAL FIX: Reset the videoMissing flag when a new video is being loaded.
+    appState.videoMissing = false;
+
     if (!fromCache) {
       const savePromise = saveFileWithMetadata("video", videoFile).catch((e) =>
         console.warn(`Non-blocking cache save failed for Video:`, e)
@@ -145,15 +148,21 @@ async function processFilePipeline(jsonFile, videoFile, fromCache) {
 
   // --- PART E: Load Video (if new) ---
   if (videoFile) {
-    await loadVideo(videoFile);
+    const videoLoaded = await loadVideo(videoFile);
+    if (!videoLoaded) {
+      appState.videoMissing = true;
+    }
   }
 
   // --- PART F: Finalize UI ---
   finalizeSetup();
 
-  // Hide modal
-  updateLoadingModal(100, "Complete!");
-  setTimeout(hideModal, 300);
+  // Hide modal only if the video didn't fail. If it failed, the video
+  // loader has already handled showing an error/choice modal.
+  if (!appState.videoMissing) {
+    updateLoadingModal(100, "Complete!");
+    setTimeout(hideModal, 300);
+  }
 
   // Log the results of the non-blocking cache operations once they complete.
   if (cachePromises.length > 0) {
@@ -165,50 +174,96 @@ async function processFilePipeline(jsonFile, videoFile, fromCache) {
 
 
 // Encapsulates the specific logic for loading a video file into the player
-function loadVideo(file) {
-    return new Promise((resolve, reject) => {
-        const fileURL = URL.createObjectURL(file);
-        
-        // Setup cleanup to remove listeners
-        const cleanup = () => {
-            clearInterval(spinnerInterval);
-            videoPlayer.removeEventListener("loadedmetadata", onMetadataLoaded);
-            videoPlayer.removeEventListener("canplaythrough", onCanPlayThrough);
-            videoPlayer.removeEventListener("error", onError);
-        };
+let retries = 0;
+function loadVideo(file, isRetry = false) {
+  return new Promise(async (resolve) => {
+    let metadataLoaded = false;
+    let loadTimeout;
 
-        const onMetadataLoaded = () => {
-            updateLoadingModal(95, "Finalizing visualization...");
-        };
+    const fileURL = isRetry ? videoPlayer.src : URL.createObjectURL(file);
 
-        const onCanPlayThrough = () => {
-            cleanup();
-            resolve(); 
-        };
+    const cleanup = () => {
+      clearTimeout(loadTimeout);
+      videoPlayer.removeEventListener("loadedmetadata", onMetadataLoaded);
+      videoPlayer.removeEventListener("canplaythrough", onCanPlayThrough);
+      videoPlayer.removeEventListener("error", onError);
+    };
 
-        const onError = (e) => {
-            console.error("Video loading error:", e);
-            cleanup();
-            reject(e);
-        };
+    const onMetadataLoaded = () => {
+      metadataLoaded = true;
+      updateLoadingModal(95, "Finalizing visualization...");
+    };
 
-        // Attach listeners
-        videoPlayer.addEventListener("loadedmetadata", onMetadataLoaded, { once: true });
-        videoPlayer.addEventListener("canplaythrough", onCanPlayThrough, { once: true });
-        videoPlayer.addEventListener("error", onError, { once: true });
+    const onCanPlayThrough = () => {
+      cleanup();
+      resolve(true);
+    };
 
-        // Spinner
-        const spinnerChars = ["|", "/", "-", "\\"];
-        let spinnerIndex = 0;
-        const spinnerInterval = setInterval(() => {
-            const spinnerText = spinnerChars[spinnerIndex % spinnerChars.length];
-            updateLoadingModal(85, `Loading video ${spinnerText}`);
-            spinnerIndex++;
-        }, 150);
+    const handleTimeout = async () => {
+      if (metadataLoaded) {
+        console.warn(
+          "Video 'canplaythrough' event timed out, but 'loadedmetadata' fired. Proceeding with playback."
+        );
+        appState.videoReadyByFallback = true;
+        cleanup();
+        resolve(true);
+      } else {
+        // Neither event fired, video is likely broken.
+        await hideModal(); // Hide the loading modal first and wait for it to finish.
+        const choice = await showModal(
+          "Video is taking too long to load. It might be corrupted.",
+          true, // isConfirm
+          { ok: "Retry", cancel: "Continue without Video" }
+        );
 
-        // Apply source
-        setupVideoPlayer(fileURL);
-    });
+        if (choice) { // Retry
+          if (retries < debugFlags.VIDEO_LOAD_RETRIES) {
+            retries++;
+            console.log(`Retrying video load... (Attempt ${retries})`);
+            showLoadingModal(`Retrying video load...`);
+            videoPlayer.load(); // Tell the video element to re-fetch
+            resolve(loadVideo(file, true)); // Recurse
+          } else {
+            await showModal("Video load failed after multiple retries.");
+            resolve(false); // Failed to load
+          }
+        } else { // Continue without video
+          console.warn("User opted to continue without video.");
+          cleanup();
+          // Revoke URL to free memory if we're giving up on it
+          if (videoPlayer.src.startsWith('blob:')) {
+            URL.revokeObjectURL(videoPlayer.src);
+          }
+          videoPlayer.src = "";
+          videoPlayer.classList.add("hidden");
+          videoPlaceholder.classList.remove("hidden");
+          resolve(false); // Signal that video is not loaded
+        }
+      }
+    };
+
+    const onError = async (e) => {
+      console.error("Video loading error:", e);
+      cleanup();
+      await hideModal(); // Await is CRITICAL to prevent a race condition with the next modal.
+      showModal("Error loading video file. It may be an unsupported format or corrupted.");
+      resolve(false);
+    };
+
+    // Attach listeners
+    videoPlayer.addEventListener("loadedmetadata", onMetadataLoaded, { once: true });
+    videoPlayer.addEventListener("canplaythrough", onCanPlayThrough, { once: true });
+    videoPlayer.addEventListener("error", onError, { once: true });
+
+    // Start the timeout
+    loadTimeout = setTimeout(handleTimeout, debugFlags.VIDEO_LOAD_TIMEOUT);
+
+    // Apply source only if it's not a retry
+    if (!isRetry) {
+      retries = 0; // Reset retry counter for new files
+      setupVideoPlayer(fileURL);
+    }
+  });
 }
 
 function finalizeSetup() {
@@ -218,6 +273,12 @@ function finalizeSetup() {
       canvasPlaceholder.style.display = "none";
       featureToggles.classList.remove("hidden");
   } else {
+      // If there's no viz data (e.g., video-only load), hide the canvas
+      canvasPlaceholder.style.display = ""; // Show placeholder
+      featureToggles.classList.add("hidden");
+      if (appState.p5_instance) {
+          appState.p5_instance.noLoop();
+      }
       // If we don't have data yet (video only), we might keep the placeholder or show an empty canvas?
       // Current behavior: keep placeholder until JSON loads.
   }
@@ -248,7 +309,7 @@ function finalizeSetup() {
     
     // Update speed graph with new data + video duration
     // Note: videoPlayer.duration might be NaN if video isn't loaded.
-    const duration = videoPlayer.duration || 0;
+    const duration = appState.videoMissing ? 0 : (videoPlayer.duration || 0);
     appState.speedGraphInstance.setData(appState.vizData, duration);
     appState.speedGraphInstance.redraw();
   }
