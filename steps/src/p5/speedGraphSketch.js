@@ -1,11 +1,41 @@
 // File: src/speedGraphSketch.js
 import { appState } from "../state.js";
-import { videoPlayer, speedGraphContainer } from "../dom.js";
+import { videoPlayer, speedGraphContainer, playPauseBtn } from "../dom.js";
+import { updateFrame, pausePlayback } from "../sync.js";
 
 export const speedGraphSketch = function (p) {
   let staticBuffer, minSpeed, maxSpeed, videoDuration;
   // Reserve more top space for legend and reduce the right padding so the plot can use more width.
   const pad = { top: 48, right: 20, bottom: 30, left: 50 };
+
+  // Hover state
+  let hoverX = null;
+  let hoverTimeSec = null;
+  let hoverFrameIndex = null;
+  let hoverCanSpeed = null;
+  let hoverEgoSpeed = null;
+  const tooltipPadding = 8;
+  let hoverTimeout = null; // To manage the hover-off delay
+  let isMouseOver = false; // To track if the mouse is on the canvas
+
+  function findNearestFrameIndexByTime(ms) {
+    if (!appState.vizData || !appState.vizData.radarFrames) return null;
+    const frames = appState.vizData.radarFrames;
+    let lo = 0, hi = frames.length - 1;
+    if (frames.length === 0) return null;
+    if (ms <= frames[0].timestamp) return 0;
+    if (ms >= frames[hi].timestamp) return hi;
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      const t = frames[mid].timestamp;
+      if (t === ms) return mid;
+      if (t < ms) lo = mid + 1; else hi = mid - 1;
+    }
+    // after loop, lo is the first index greater than ms; choose nearest of lo and lo-1
+    const idxA = Math.max(0, lo - 1);
+    const idxB = Math.min(frames.length - 1, lo);
+    return (Math.abs(frames[idxA].timestamp - ms) <= Math.abs(frames[idxB].timestamp - ms)) ? idxA : idxB;
+  }
 
   p.drawStaticGraphToBuffer = function (radarData) {
     const b = staticBuffer;
@@ -155,9 +185,112 @@ export const speedGraphSketch = function (p) {
     b.pop();
   };
 
+  let isDragging = false;
+
+  function updateHoverState(x) {
+    if (!appState.vizData || !appState.vizData.radarFrames || videoDuration === undefined) {
+      hoverX = null;
+      return;
+    }
+
+    // Clamp x to the valid plotting width for calculation
+    hoverX = Math.max(pad.left, Math.min(p.width - pad.right, x));
+
+    // map hoverX to time in seconds inside [0, videoDuration]
+    const dur = videoDuration > 0 ? videoDuration : Math.max(1, (appState.vizData.radarFrames[appState.vizData.radarFrames.length - 1].timestamp / 1000));
+    hoverTimeSec = p.map(hoverX, pad.left, p.width - pad.right, 0, dur);
+    
+    // Clamp time to [0, duration]
+    hoverTimeSec = Math.max(0, Math.min(dur, hoverTimeSec));
+    
+    const hoverTimeMs = Math.round(hoverTimeSec * 1000);
+    hoverFrameIndex = findNearestFrameIndexByTime(hoverTimeMs);
+    
+    if (hoverFrameIndex !== null) {
+      const f = appState.vizData.radarFrames[hoverFrameIndex];
+      hoverCanSpeed = (f.canVehSpeed_kmph !== null && !isNaN(f.canVehSpeed_kmph)) ? f.canVehSpeed_kmph : null;
+      hoverEgoSpeed = f.egoVelocity ? (f.egoVelocity[1] * 3.6) : null; // convert m/s to km/h
+    } else {
+      hoverCanSpeed = null;
+      hoverEgoSpeed = null;
+    }
+  }
+
   p.setup = function () {
     let canvas = p.createCanvas(speedGraphContainer.offsetWidth, speedGraphContainer.offsetHeight);
     canvas.parent("speed-graph-container");
+
+    // --- Pointer Events for Drag & Click ---
+    
+    canvas.elt.addEventListener('pointerdown', (e) => {
+      if (!appState.vizData) return;
+      isDragging = true;
+      canvas.elt.setPointerCapture(e.pointerId);
+      
+      if (appState.isPlaying) {
+        pausePlayback();
+        appState.isPlaying = false;
+        playPauseBtn.textContent = "Play";
+      }
+
+      // Instant seek on click
+      updateHoverState(e.offsetX);
+      if (hoverFrameIndex !== null) {
+        updateFrame(hoverFrameIndex, false);
+        if (appState.p5_instance) appState.p5_instance.redraw();
+        p.redraw();
+      }
+    });
+
+    canvas.elt.addEventListener('pointermove', (e) => {
+      if (!appState.vizData) return;
+      
+      if (isDragging) {
+        // When dragging, clamp X to canvas bounds and seek
+        const rect = canvas.elt.getBoundingClientRect();
+        // Calculate offsetX manually if needed, or trust e.offsetX with capture
+        // With setPointerCapture, e.offsetX is relative to the target (canvas).
+        updateHoverState(e.offsetX);
+        
+        if (hoverFrameIndex !== null) {
+           updateFrame(hoverFrameIndex, false);
+           if (appState.p5_instance) appState.p5_instance.redraw();
+        }
+        p.redraw();
+      } else {
+        // Normal Hover Behavior
+        if (hoverTimeout) {
+            clearTimeout(hoverTimeout);
+            hoverTimeout = null;
+        }
+        
+        // If we are hovering, e.offsetX is correct. 
+        updateHoverState(e.offsetX);
+        p.redraw();
+      }
+    });
+
+    canvas.elt.addEventListener('pointerup', (e) => {
+      if (isDragging) {
+        isDragging = false;
+        canvas.elt.releasePointerCapture(e.pointerId);
+        // Final precise seek (forces video sync)
+        updateFrame(appState.currentFrame, true);
+      }
+    });
+
+    // Clear hover state when mouse leaves the canvas (only if not dragging)
+    canvas.mouseOut(() => {
+      if (isDragging) return;
+      hoverTimeout = setTimeout(() => {
+        hoverX = null;
+        hoverFrameIndex = null;
+        hoverCanSpeed = null;
+        hoverEgoSpeed = null;
+        p.redraw();
+      }, 100);
+    });
+
     staticBuffer = p.createGraphics(p.width, p.height);
     p.noLoop();
   };
@@ -203,6 +336,56 @@ export const speedGraphSketch = function (p) {
     }
     p.image(staticBuffer, 0, 0);
     drawTimeIndicator();
+
+    // draw hover vertical line and tooltip if applicable
+    if (hoverX !== null && hoverFrameIndex !== null) {
+      p.push();
+      // Draw dashed vertical line
+      p.stroke(255, 0, 255, 200); // Fuschia
+      p.strokeWeight(1.2);
+      p.drawingContext.setLineDash([4, 4]);
+      p.line(hoverX, pad.top, hoverX, p.height - pad.bottom);
+      p.drawingContext.setLineDash([]); // Reset to solid
+      p.noStroke();
+
+      // Draw blue circle for CAN speed at hover point
+      if (hoverCanSpeed !== null) {
+        const y = p.map(hoverCanSpeed, minSpeed, maxSpeed, p.height - pad.bottom, pad.top);
+        p.fill(255, 0, 255); // Same blue color
+        p.noStroke();
+        p.ellipse(hoverX, y, 8, 8);
+      }
+
+      // Tooltip content
+      const canText = hoverCanSpeed !== null ? `CAN: ${hoverCanSpeed.toFixed(1)} km/h` : `CAN: N/A`;
+      const egoText = hoverEgoSpeed !== null ? `Ego: ${hoverEgoSpeed.toFixed(1)} km/h` : `Ego: N/A`;
+      const timeText = `t=${hoverTimeSec !== null ? hoverTimeSec.toFixed(2) + ' s' : ''}`;
+
+      const tooltipLines = [timeText, canText, egoText];
+      const textWidthMax = Math.max(...tooltipLines.map((t) => p.textWidth(t)));
+      const boxW = textWidthMax + tooltipPadding * 2;
+      const boxH = (tooltipLines.length * 14) + tooltipPadding * 2;
+
+      // compute box position (avoid overflowing right edge)
+      let boxX = hoverX + 12;
+      if (boxX + boxW > p.width) boxX = hoverX - 12 - boxW;
+      const boxY = pad.top + 6;
+
+      // Draw background box
+      p.fill(document.documentElement.classList.contains("dark") ? 40 : 255);
+      p.stroke(document.documentElement.classList.contains("dark") ? 180 : 80);
+      p.rect(boxX, boxY, boxW, boxH, 6);
+
+      p.noStroke();
+      p.fill(document.documentElement.classList.contains("dark") ? 220 : 30);
+      p.textSize(12);
+      p.textAlign(p.LEFT, p.TOP);
+      for (let i = 0; i < tooltipLines.length; i++) {
+        p.text(tooltipLines[i], boxX + tooltipPadding, boxY + tooltipPadding + i * 14);
+      }
+
+      p.pop();
+    }
   };
 
   function drawTimeIndicator() {
@@ -237,6 +420,7 @@ export const speedGraphSketch = function (p) {
   p.windowResized = function () {
     p.resizeCanvas(speedGraphContainer.offsetWidth, speedGraphContainer.offsetHeight);
     staticBuffer = p.createGraphics(p.width, p.height);
+    hoverX = null; // reset hover on resize
     if (appState.vizData && videoDuration > 0) {
       p.drawStaticGraphToBuffer(appState.vizData);
     }
