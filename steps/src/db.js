@@ -1,6 +1,7 @@
 let db;
 let dbReadyPromise;
 let dbReadyResolve;
+import { showModal } from "./modal.js";
 
 // Initialize the promise that tracks DB readiness
 dbReadyPromise = new Promise((resolve) => {
@@ -72,7 +73,7 @@ export function saveFileWithMetadata(key, file) {
     // Gracefully handle errors, especially quota limits
     transaction.onerror = (event) => {
         if (event.target.error.name === 'QuotaExceededError') {
-            alert("Could not cache file: Browser storage quota exceeded. The app will still work for this session.");
+            showModal("Could not cache file: Browser storage quota exceeded. The app will still work for this session, but files won't be saved for next time.");
             resolve(); // Resolve anyway to let the app continue without caching
         } else {
             console.error(`Error saving file '${key}':`, event.target.error);

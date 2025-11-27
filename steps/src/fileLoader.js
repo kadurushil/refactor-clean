@@ -1,4 +1,5 @@
 import { appState } from "./state.js";
+import { debugFlags } from "./debug.js";
 import { saveFileWithMetadata } from "./db.js";
 import { parseVisualizationJson } from "./fileParsers.js";
 import {
@@ -60,17 +61,33 @@ async function processFilePipeline(jsonFile, videoFile, fromCache) {
   // 1. Show the unified loading modal.
   showLoadingModal("Processing files...");
 
+  const cachePromises = [];
+
   // --- PART A: Setup Filenames & Cache (Moved Up) ---
   if (jsonFile) {
     appState.jsonFilename = jsonFile.name;
     localStorage.setItem("jsonFilename", appState.jsonFilename);
-    if (!fromCache) await saveFileWithMetadata("json", jsonFile);
+    if (!fromCache) {
+      const savePromise = saveFileWithMetadata("json", jsonFile).catch((e) =>
+        console.warn(`Non-blocking cache save failed for JSON:`, e)
+      );
+      if (debugFlags.CACHE_BLOCKING) {
+        await savePromise;
+      } else {
+        cachePromises.push(savePromise);
+      }
+    }
   }
 
   if (videoFile) {
     appState.videoFilename = videoFile.name;
     localStorage.setItem("videoFilename", appState.videoFilename);
-    if (!fromCache) await saveFileWithMetadata("video", videoFile);
+    if (!fromCache) {
+      const savePromise = saveFileWithMetadata("video", videoFile).catch((e) =>
+        console.warn(`Non-blocking cache save failed for Video:`, e)
+      );
+      cachePromises.push(savePromise);
+    }
   }
 
   // --- PART B: Calculate Offset (Moved Up) ---
@@ -137,6 +154,13 @@ async function processFilePipeline(jsonFile, videoFile, fromCache) {
   // Hide modal
   updateLoadingModal(100, "Complete!");
   setTimeout(hideModal, 300);
+
+  // Log the results of the non-blocking cache operations once they complete.
+  if (cachePromises.length > 0) {
+    Promise.allSettled(cachePromises).then((results) => {
+      console.log("Non-blocking cache operations finished:", results);
+    });
+  }
 }
 
 
