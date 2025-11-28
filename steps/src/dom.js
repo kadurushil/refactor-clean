@@ -252,6 +252,7 @@ function getCurrentColorMode() {
 
 // Cache for DOM elements to avoid querySelector/getElementById every frame
 let overlayCache = null;
+let videoOverlayCache = null;
 
 // Cache for conditional rendering
 let lastDrawnFrame = -1;
@@ -381,8 +382,10 @@ export function updatePersistentOverlays(currentMediaTime) {
 
         ctx.clearRect(0, 0, w, h);
 
-        // --- 1. Batching Phase ---
-        const batches = {};
+        // --- Optimization: Immediate Mode Drawing (No Allocations) ---
+        // Instead of batching into objects, we draw directly.
+        // We iterate through columns. To minimize state changes, we could pre-sort, 
+        // but simply drawing column-by-column is fast enough and avoids GC.
 
         for (let offset = -centerCol; offset < centerCol; offset++) {
           const targetFrameIndex = appState.currentFrame + offset;
@@ -396,30 +399,22 @@ export function updatePersistentOverlays(currentMediaTime) {
              const numBlocks = Math.min(10, Math.max(1, Math.round(ift / msPerBlock))); 
              const color = getTimingColor(ift);
 
-             if (!batches[color]) batches[color] = [];
-
+             ctx.fillStyle = color;
+             ctx.beginPath();
+             
              for (let d = 0; d < numBlocks; d++) {
                const y = h - (d * (blockSize + vGap)) - 3; 
-               batches[color].push({x, y});
+               ctx.rect(x, y, blockSize, blockSize);
              }
+             ctx.fill();
           } else {
              // Placeholder blocks
-             const color = "rgba(255, 255, 255, 0.1)";
-             if (!batches[color]) batches[color] = [];
+             ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+             ctx.beginPath();
              const y = h - 3;
-             batches[color].push({x, y});
+             ctx.rect(x, y, blockSize, blockSize);
+             ctx.fill();
           }
-        }
-
-        // --- 2. Drawing Phase ---
-        // Draw all blocks of the same color in one pass
-        for (const [color, points] of Object.entries(batches)) {
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          for (const p of points) {
-            ctx.rect(p.x, p.y, blockSize, blockSize);
-          }
-          ctx.fill();
         }
 
         // Draw Center Indicator (Triangle at column 60)
@@ -447,11 +442,25 @@ export function updatePersistentOverlays(currentMediaTime) {
       timeDisplay += ` / ${videoPlayer.duration.toFixed(2)}s`;
   }
 
-  videoInfoOverlay.innerHTML = `
-        Frame: ${videoFrame}
-        | ${timeDisplay}
-        | Abs Time: ${formatUTCTime(absVideoTime)}
-    `;
+  // --- OPTIMIZATION: Video Overlay Caching ---
+  if (!videoOverlayCache) {
+      videoInfoOverlay.innerHTML = `
+          Frame: <span id="ov-vid-frame"></span>
+          | <span id="ov-vid-time"></span>
+          | Abs Time: <span id="ov-vid-abs"></span>
+      `;
+      videoOverlayCache = {
+          frame: document.getElementById("ov-vid-frame"),
+          time: document.getElementById("ov-vid-time"),
+          abs: document.getElementById("ov-vid-abs")
+      };
+  }
+
+  if (videoOverlayCache) {
+      videoOverlayCache.frame.textContent = videoFrame;
+      videoOverlayCache.time.textContent = timeDisplay;
+      videoOverlayCache.abs.textContent = formatUTCTime(absVideoTime);
+  }
 }
 
 const customTtcInputs = [

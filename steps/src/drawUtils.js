@@ -437,18 +437,18 @@ export function drawTrackMarkers(p, plotScales) {
   const localStationaryColor = stationaryColor(p);
   const localMovingColor = movingColor(p);
 
+  // Optimization: Batch drawing commands
+  // We collect all text labels to draw them in a single pass at the end.
+  // This avoids switching between stroke/fill and push/pop for every track.
+  const textLabels = [];
+
+  p.push();
+  p.strokeWeight(2);
+
   for (const track of appState.vizData.tracks) {
-    // --- START: Add the Same Safeguard Here ---
-    // This robust check ensures the track and its historyLog are valid before use.
-    if (toggleConfirmedOnly.checked && track.isConfirmed === false) {
-      continue;
-    }
-    if (!track || !track.historyLog || !Array.isArray(track.historyLog)) {
-      // We don't need to log a warning here again, as drawTrajectories already did.
-      // We can just safely skip this malformed track.
-      continue;
-    }
-    // --- END: Add the Same Safeguard Here ---
+    if (toggleConfirmedOnly.checked && track.isConfirmed === false) continue;
+    // Robust check for malformed tracks (same as drawTrajectories)
+    if (!track || !track.historyLog || !Array.isArray(track.historyLog)) continue;
 
     const log = track.historyLog.find(
       (log) => log.frameIdx === appState.currentFrame
@@ -460,62 +460,78 @@ export function drawTrackMarkers(p, plotScales) {
         const size = 5;
         const x = pos[0] * plotScales.plotScaleX;
         const y = pos[1] * plotScales.plotScaleY;
-        let velocityColor = p.color(255, 0, 255, 200);
-
-        p.push();
-        p.strokeWeight(2);
+        
+        // --- Draw Marker Shape ---
         if (useStationary && log.isStationary === true) {
           p.stroke(localStationaryColor);
           p.noFill();
           p.rectMode(p.CENTER);
           p.square(x, y, size * 1.5);
-          velocityColor = localStationaryColor;
         } else {
           let markerColor = p.color(0, 0, 255);
           if (useStationary && log.isStationary === false) {
             markerColor = localMovingColor;
-            velocityColor = localMovingColor;
           }
           p.stroke(markerColor);
           p.line(x - size, y, x + size, y);
           p.line(x, y - size, x, y + size);
         }
-        p.pop();
 
+        // --- Draw Velocity Vector & Collect Text ---
         if (
           showDetails &&
           log.predictedVelocity &&
           log.predictedVelocity[0] !== null
         ) {
           const [vx, vy] = log.predictedVelocity;
+          
+          // Draw velocity line immediately (shares stroke context)
           if (log.isStationary === false) {
-            p.push();
-            p.stroke(velocityColor);
-            p.strokeWeight(2);
-            p.line(
+             // Determine color again (optimization: could be refactored to avoid recalc)
+             let velocityColor = p.color(255, 0, 255, 200); 
+             if (useStationary) velocityColor = localMovingColor;
+             
+             p.stroke(velocityColor);
+             p.line(
               x,
               y,
               (pos[0] + vx) * plotScales.plotScaleX,
               (pos[1] + vy) * plotScales.plotScaleY
             );
-            p.pop();
           }
-          const speed = (p.sqrt(vx * vx + vy * vy) * 3.6).toFixed(1);
+
+          // Defer Text Drawing
+          const speed = (Math.sqrt(vx * vx + vy * vy) * 3.6).toFixed(1);
           const ttc =
             log.ttc !== null && isFinite(log.ttc) && log.ttc < 100
               ? `TTC: ${log.ttc.toFixed(1)}s`
               : "";
           const text = `ID: ${track.id} | ${speed} km/h\n${ttc}`;
-          p.push();
-          p.fill(textColor);
-          p.noStroke();
-          p.scale(1, -1);
-          p.textSize(12);
-          p.text(text, x + 10, -y);
-          p.pop();
+          
+          textLabels.push({ x, y, text });
         }
       }
     }
+  }
+  p.pop(); // End shape drawing context
+
+  // --- Batch Draw Text ---
+  if (textLabels.length > 0) {
+      p.push();
+      p.fill(textColor);
+      p.noStroke();
+      p.textSize(12);
+      // Set alignment once
+      // Note: we handle the flip manually
+      
+      for (const label of textLabels) {
+          p.push();
+          p.translate(label.x + 10, label.y);
+          p.scale(1, -1); // Flip text back up
+          p.text(label.text, 0, 0);
+          p.pop();
+      }
+      p.pop();
   }
 }
 
