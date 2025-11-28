@@ -22,7 +22,7 @@ Uses a binary search (utils.js::findRadarFrameIndexForTime) to efficiently find 
 
 Periodically checks for drift (>150ms) between the master clock's calculated time and videoPlayer.currentTime, forcing a video seek if needed to maintain sync.
 
-Unified File Loading (main.js):
+Unified File Loading (fileLoader.js):
 
 Handles loading JSON (radar data) and Video files through both button clicks (loadJsonBtn, loadVideoBtn) and drag-and-drop onto the main content area (<main>).
 
@@ -30,7 +30,7 @@ The handleFiles function identifies file types (.json, video/*) and triggers the
 
 Note: Dedicated CAN log loading (loadCanBtn, canFileInput) has been removed. CAN speed data (canVehSpeed_kmph) is now expected within the JSON structure, associated with each radarFrame.
 
-Efficient JSON Parsing (parser.worker.js, main.js, fileParsers.js):
+Efficient JSON Parsing (parser.worker.js, fileLoader.js, fileParsers.js):
 
 The processFilePipeline function initiates a Web Worker (parser.worker.js).
 
@@ -116,15 +116,15 @@ SNR range inputs (snrMinInput, snrMaxInput) update appState.globalMinSnr/MaxSnr 
 
 TTC coloring mode (ttcModeDefault, ttcModeCustom) and custom inputs (ttcColorCritical, ttcTimeCritical, etc.) update appState.useCustomTtcScheme and appState.customTtcScheme respectively (dom.js event listeners). drawUtils.js::drawTrajectories uses this state to color tracks.
 
-Playback Controls & Navigation (main.js, dom.js):
+Playback Controls & Navigation (sync.js, main.js, dom.js):
 
 Standard buttons (playPauseBtn, stopBtn) modify appState.isPlaying and call videoPlayer.play/pause/currentTime.
 
 timelineSlider input event updates appState.currentFrame and calls dom.js::updateFrame(frame, true) (forcing video seek). Throttled for performance during drag, debounced for final sync on release.
 
-timelineSlider wheel event calculates scroll speed and dynamically seeks frames, also debounced for final sync (main.js).
+timelineSlider wheel event calculates scroll speed and dynamically seeks frames, also debounced for final sync (sync.js).
 
-timelineSlider mousemove event calculates hover position to display frame/time in #timeline-tooltip (main.js).
+timelineSlider mousemove event calculates hover position to display frame/time in #timeline-tooltip (sync.js).
 
 speedSlider updates videoPlayer.playbackRate (main.js).
 
@@ -148,7 +148,7 @@ saveSessionBtn gathers current state (appState filenames, offsetInput.value, tog
 
 loadSessionBtn reads a chosen session JSON file. It verifies that the files mentioned in the session currently exist and are valid in IndexedDB using loadFreshFileFromDB before applying settings to localStorage and reloading the page (main.js).
 
-Keyboard Shortcuts (main.js):
+Keyboard Shortcuts (keyboard.js):
 
 A comprehensive keydown listener intercepts keys (Space, Arrows, 1-4, S, T, D, G, P, A, M, Q, R, C, I).
 
@@ -180,10 +180,13 @@ Project Structure
     ├── constants.js                 # Shared constants (radar bounds, FPS)
     ├── dataExplorer.js              # NEW: Logic for the Data Explorer panel
     ├── db.js                        # IndexedDB logic for caching files
+    ├── debug.js                     # Debug logging flags
     ├── dom.js                       # DOM element references and UI update functions
     ├── drawUtils.js                 # p5.js drawing helpers (points, tracks, axes, legends)
+    ├── fileLoader.js                # File handling pipeline (Dropzone, Inputs, Worker trigger)
     ├── fileParsers.js               # Post-processing logic for parsed JSON
-    ├── main.js                      # Main application entry point, event wiring, initialization
+    ├── keyboard.js                  # Keyboard shortcut handler
+    ├── main.js                      # Main application entry point, initialization
     ├── modal.js                     # Logic for pop-up modal dialogs & progress bar
     ├── parser.worker.js             # Web Worker for background JSON parsing (uses Clarinet.js)
     ├── state.js                     # Centralized application state management object (appState)
@@ -195,9 +198,10 @@ Project Structure
         ├── speedGraphSketch.js      # p5.js sketch for the speed graph
         └── zoomSketch.js            # p5.js sketch for the magnified zoom window ("GOD MODE")
 ├── tests/                           # Simple unit tests (optional)
+│   ├── fileLoader.test.js
+│   ├── fileParsers.test.js
 │   ├── test-runner.html
-│   ├── utils.test.js
-│   └── fileParsers.test.js
+│   └── utils.test.js
 └── context.md                       # Detailed technical overview for AI assistance
 
 

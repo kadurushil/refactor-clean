@@ -148,7 +148,13 @@ export function updateDebugOverlay(currentMediaTime) {
     if (appState.videoStartDate) {
       const videoAbsoluteTimeMs =
         appState.videoStartDate.getTime() + currentMediaTime * 1000;
-      content.push(`Media Time (s): ${currentMediaTime.toFixed(3)}`);
+      
+      let timeString = `Media Time (s): ${currentMediaTime.toFixed(2)}`; // Two decimal places
+      if (videoPlayer && !isNaN(videoPlayer.duration) && videoPlayer.duration > 0) {
+          timeString += ` / ${videoPlayer.duration.toFixed(2)}`; // Add total duration with two decimal places
+      }
+      content.push(timeString);
+
       content.push(`Video Frame: ${Math.floor(currentMediaTime * VIDEO_FPS)}`);
       content.push(
         `Vid Abs Time: ${new Date(videoAbsoluteTimeMs)
@@ -274,10 +280,15 @@ export function updatePersistentOverlays(currentMediaTime) {
     appState.videoStartDate.getTime() + currentMediaTime * 1000
   );
   const videoFrame = Math.floor(currentMediaTime * VIDEO_FPS);
-  //console.warn('Could not load radarframes ', appState.vizData.radarFrames) console warning for reference
+  
+  let timeDisplay = `Elapsed Time: ${currentMediaTime.toFixed(2)}s`;
+  if (videoPlayer && !isNaN(videoPlayer.duration) && videoPlayer.duration > 0) {
+      timeDisplay += ` / ${videoPlayer.duration.toFixed(2)}s`;
+  }
 
   videoInfoOverlay.innerHTML = `
         Frame: ${videoFrame}
+        | ${timeDisplay}
         | Abs Time: ${formatUTCTime(absVideoTime)}
     `;
 }

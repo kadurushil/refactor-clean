@@ -10,7 +10,7 @@ Context Document: Radar and Video Synchronizer Application
 - **Visualization**: `p5.js` for the main radar plot, a zoomed-in "god mode" view, and a time-series speed graph.
 - **Data Handling**:
   - **Web Workers** (`parser.worker.js`) with the `Clarinet.js` streaming library to parse large JSON files off the main thread, preventing UI freezes.
-  - `Oboe.js` is also loaded but the primary implementation uses the worker.
+  - `Oboe.js` is included in vendor files but `Clarinet.js` is the active parser.
 - **Data Exploration**: `AG-Grid` for tabular data view and `Chart.js` for plotting data from the grid.
 - **Persistence**: `IndexedDB` for caching large files (JSON, Video) and `localStorage` for user settings (UI state, theme, file references).
 
@@ -20,65 +20,96 @@ The application uses a modular ES6 structure. All source code resides in the `/s
 
 - **`index.html`**: The main HTML shell. Defines the DOM structure, including the main layout, collapsible sidebar, data explorer panel, and modal dialogs. It loads all necessary CDN libraries and the main JS module.
 
-- **`/src/main.js`**: **The Orchestrator**. This is the application's entry point. It initializes all modules, wires up all event listeners (clicks, drag-drop, keydown), and manages the file loading pipeline and application lifecycle.
+- **`/src/main.js`**: **The Orchestrator**. This is the application's entry point. It initializes the database, theme, and data explorer. It sets up the initial event listeners for the UI and delegates specialized tasks to other modules (`fileLoader.js`, `keyboard.js`, `sync.js`).
 
 - **`/src/state.js`**: **The Single Source of Truth**. Exports a single global `appState` object that holds all dynamic data (e.g., `vizData`, `isPlaying`, `currentFrame`). All modules import from this file.
 
-- **`/src/dom.js`**: **The UI Abstraction Layer**. Exports constants for every key DOM element and contains functions that directly manipulate the DOM, such as `updateFrame()`, `resetUIForNewLoad()`, and `updatePersistentOverlays()`.
+- **`/src/fileLoader.js`**: **File Management**. Handles the file loading pipeline. It manages drag-and-drop interactions, file input changes, and the unified processing of JSON and Video files. It handles caching logic (saving/loading from `IndexedDB`) and triggers the parsing worker.
 
-- **`/src/sync.js`**: **The Heartbeat/Clock**. Contains the `animationLoop()` function. It uses `performance.now()` to create a high-precision clock, calculates the current media time, finds the corresponding radar frame, and handles resynchronization with the video element.
+- **`/src/keyboard.js`**: **Input Handling**. Manages all keyboard shortcuts. It creates a centralized `keydown` listener that triggers UI actions (play/pause, seeking, toggles) and prevents interference with input fields.
+
+- **`/src/sync.js`**: **The Heartbeat & Controller**. Contains the core logic for playback and synchronization.
+  - `animationLoop()`: The main render loop that keeps the UI updated.
+  - `videoFrameCallback()`: The high-precision video timing loop.
+  - `updateFrame()`: The central function that updates the current frame index, synchronizes the video (handling drift), and updates UI elements (sliders, counters, overlays).
+  - `resetVisualization()`: Resets the playback state.
+  - Handles timeline interactions (input, scroll wheel) and video panel scrolling.
+
+- **`/src/dom.js`**: **The UI Interface**. Exports constants for every key DOM element. It contains functions to update specific UI components like persistent overlays (`updatePersistentOverlays`), debug overlays (`updateDebugOverlay`), and custom TTC scheme inputs. *Note: Core playback-driven UI updates have moved to `sync.js`.*
 
 - **`/src/fileParsers.js`**: **The Data Processor**. Contains `parseVisualizationJson()`, which takes the raw parsed JSON object and enriches it with calculated `timestampMs` values relative to the video start time and determines global SNR ranges.
 
-- **`/src/parser.worker.js`**: **The Heavy Lifter**. A Web Worker that uses `Clarinet.js` to stream-parse the JSON file, preventing the main thread from freezing. It posts progress updates and the final parsed object back to `main.js`.
+- **`/src/parser.worker.js`**: **The Heavy Lifter**. A Web Worker that uses `Clarinet.js` to stream-parse the JSON file, preventing the main thread from freezing. It posts progress updates and the final parsed object back to `main.js` (via `fileLoader.js`).
 
 - **`/src/db.js`**: **The Caching Layer**. Manages all interactions with `IndexedDB` to save and load file blobs and their metadata, enabling fast session reloads.
 
-- **`/src/dataExplorer.js`**: **The Inspector**. Manages the "Data Explorer" panel. It uses AG-Grid to display data in a table and Chart.js to plot selected columns.
+- **`/src/dataExplorer.js`**: **The Inspector**. Manages the "Data Explorer" panel. It uses AG-Grid to display data in a table and Chart.js to plot selected columns. It includes `throttledUpdateExplorer` to efficiently update the view during playback.
 
-- **`/src/p5/radarSketch.js`**: The p5.js sketch for the main radar visualization (point cloud, tracks, axes, ego vehicle).
+- **`/src/debug.js`**: **Debug Configuration**. Exports `debugFlags` to toggle logging for various subsystems (sync, drawing, file loading) and configure constants like video load timeouts.
 
-- **`/src/p5/speedGraphSketch.js`**: The p5.js sketch for the time-series speed graph.
+- **`/src/utils.js`**: **Toolbox**. A collection of pure, reusable helper functions (e.g., `findRadarFrameIndexForTime` (binary search), timestamp parsers, `throttle`, `precomputeRadarVideoSync`).
 
-- **`/src/p5/zoomSketch.js`**: The p5.js sketch for the "GOD MODE" magnified view that follows the mouse.
+- **`/src/modal.js`**: **User Feedback**. Manages the logic for pop-up modal dialogs, including notifications, confirmations, and loading progress bars.
+
+- **`/src/theme.js`**: **Styling**. Handles the dark/light mode theme switching.
+
+- **`/src/constants.js`**: **Configuration**. Stores shared, static values like `VIDEO_FPS` and radar plot boundaries.
+
+- **`/src/p5/`**: **Visualization Modules**.
+  - **`radarSketch.js`**: The main radar visualization (point cloud, tracks, axes, ego vehicle).
+  - **`speedGraphSketch.js`**: The time-series speed graph.
+  - **`zoomSketch.js`**: The "GOD MODE" magnified view.
 
 - **`/src/drawUtils.js`**: **The Artist's Toolkit**. Contains pure drawing functions called by the p5 sketches (e.g., `drawPointCloud`, `drawTrajectories`). This is where the visual appearance of radar objects is defined.
 
-- **`/src/utils.js`**: A collection of pure, reusable helper functions (e.g., `findRadarFrameIndexForTime` (binary search), timestamp parsers, `throttle`).
-
-- **`/src/modal.js`**: Manages the logic for pop-up modal dialogs, including notifications, confirmations, and loading progress bars.
-
-- **`/src/theme.js`**: Handles the dark/light mode theme switching.
-
-- **`/src/constants.js`**: Stores shared, static values like `VIDEO_FPS` and radar plot boundaries.
-
 ### 3. Data Flow & State Management
 
-**File Loading Pipeline (`main.js`):**
-1.  **User Action**: User drops files or uses "Load" buttons. The `handleFiles()` function is triggered.
-2.  **UI Reset**: `resetUIForNewLoad()` is called to clear the previous state.
-3.  **Pipeline Start**: `processFilePipeline()` begins. A loading modal is shown.
-4.  **JSON Parsing**: If a JSON file exists, it's sent to `parser.worker.js`. The worker streams the file, posts progress updates, and finally returns the complete parsed object.
-5.  **JSON Processing**: The parsed object is processed by `parseVisualizationJson()` to calculate relative timestamps and SNR ranges. The result is stored in `appState.vizData`.
-6.  **Video Loading (Two-Stage)**:
-    - **Stage A (Metadata)**: An event listener waits for `loadedmetadata`. When this fires, the video's `duration` is known. The `finalizeSetup()` function is called, which creates the p5 sketches and sets up the speed graph.
-    - **Stage B (Buffering)**: A separate listener waits for `canplaythrough`. When this fires, it signals that the video is ready for smooth playback, and the loading modal is hidden.
-7.  **Finalization**: `finalizeSetup()` creates the p5 instances and `resetVisualization()` is called to display the first frame.
+**File Loading Pipeline (`fileLoader.js`):**
+1.  **Input**: User drops files or clicks load buttons. `handleFiles()` identifies the file types.
+2.  **Processing (`processFilePipeline`)**: A loading modal is shown.
+3.  **Caching**: Files are saved to `IndexedDB` (non-blocking).
+4.  **Offset**: Timestamp offset is calculated from filenames.
+5.  **JSON Parsing**: JSON is sent to `parser.worker.js`. The worker streams the file and returns the object.
+6.  **Post-Processing**: `parseVisualizationJson()` (in `fileParsers.js`) enriches the data. `precomputeRadarVideoSync()` (in `utils.js`) bakes sync times.
+7.  **Video Loading**: The video is loaded into the player.
+8.  **Finalization**: `finalizeSetup()` (in `fileLoader.js`) resets the visualization, creates/updates p5 sketches, and updates the UI.
+
+**Playback & Synchronization (`sync.js`):**
+-   **Video Master**: The video element's time is the source of truth when playing.
+-   **`videoFrameCallback`**: Runs on every video frame, finds the corresponding radar frame index, and updates `appState.currentFrame`.
+-   **`animationLoop`**: Runs on `requestAnimationFrame` (~60Hz). It calls `updateFrame()` to reflect the state on the screen.
+-   **`updateFrame()`**:
+    -   Updates UI (slider, counter).
+    -   Updates overlays (Ego speed, CAN speed).
+    -   Calls `throttledUpdateExplorer`.
+    -   Handles Video Seek: If `forceVideoSeek` is true (e.g., user scrubbed the timeline), it sets `videoPlayer.currentTime`.
+-   **Drift Correction**: If the video drifts significantly from the target radar frame time, `updateFrame` forces a seek to resync.
 
 **State Management (`appState`):**
 The `appState` object in `state.js` is the central hub. Key properties include:
 - `vizData`: The large object containing all radar frames and track data.
-- `isPlaying`: A boolean that controls the `animationLoop`.
-- `currentFrame`: The integer index of the currently displayed radar frame.
-- `videoStartDate`, `radarStartTimeMs`: Date objects used to calculate the time offset.
-- `p5_instance`, `speedGraphInstance`, `zoomSketchInstance`: References to the active p5.js sketches.
+- `isPlaying`: Boolean controlling the loop.
+- `currentFrame`: Integer index of the currently displayed radar frame.
+- `offset`: Manual or auto-calculated time offset (ms).
+- `videoStartDate`, `radarStartTimeMs`: Timestamps for absolute time calculation.
+- `p5_instance`, `speedGraphInstance`: References to active sketches.
+- `videoMissing`: Flag for JSON-only mode.
 
-### 4. Key Logic and Interaction Flows
+### 4. Key Interaction Flows
 
-**Playback Synchronization (`sync.js`)**: The `animationLoop` is the core. It uses `performance.now()` to create a high-resolution timer independent of the video's `timeupdate` event. It calculates what the video's `currentTime` *should* be, finds the corresponding radar frame using a binary search (`findRadarFrameIndexForTime` in `utils.js`), and periodically corrects the video's `currentTime` if it drifts.
+**Timeline Scrubbing (`sync.js`)**:
+-   **Drag**: `handleTimelineInput` updates the UI immediately for responsiveness but debounces the expensive video seek until the user stops dragging.
+-   **Scroll Wheel**: `handleTimelineWheel` allows frame-by-frame or accelerated seeking. It also updates UI immediately and debounces the video seek.
 
-**UI Updates (`dom.js`)**: The `updateFrame(frame, forceVideoSeek)` function is the primary entry point for changing what's on screen. It updates the frame counter, seeks the video if `forceVideoSeek` is true, and calls the `.redraw()` methods on the p5 sketches. It's called by both the `animationLoop` (for smooth playback) and by UI event listeners like the timeline slider (for seeking).
+**Data Explorer (`dataExplorer.js`)**:
+-   Activated by `I` key or canvas click.
+-   Shows Tree, Grid, and Plot views.
+-   Updates are throttled to prevent performance degradation during playback.
 
-**Session Persistence (`main.js` & `db.js`)**: On `DOMContentLoaded`, the app checks `localStorage` for saved filenames. It then calls `loadFreshFileFromDB()` to attempt to load the corresponding blobs from `IndexedDB`. If successful, `handleFiles()` is called with the cached blobs, bypassing the need for user file selection.
+**Session Management (`main.js` & `db.js`)**:
+-   `saveSessionBtn` saves current filenames, offset, and toggles to a JSON file.
+-   `loadSessionBtn` reads the session file. It verifies that the referenced files exist in `IndexedDB` (via `loadFreshFileFromDB`) before applying settings and reloading the page.
 
-**Keyboard Shortcuts (`main.js`)**: A single `keydown` event listener on the document handles all shortcuts. It programmatically triggers `.click()` events on the corresponding DOM elements (e.g., Spacebar clicks `playPauseBtn`). It includes a check to prevent shortcuts from firing when the user is typing in an input field.
+**Keyboard Shortcuts (`keyboard.js`)**:
+-   Centralized handler for `Play/Pause` (Space), `Seek` (Arrows), `Toggle Views` (1-4, T, D, G, P, C), `Debug` (A), `Theme` (Q).
+-   Smartly ignores shortcuts when input fields are focused.
