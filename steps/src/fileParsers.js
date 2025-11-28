@@ -70,6 +70,36 @@ export async function parseVisualizationJson(
     });
     });
 
+    // Calculate interFrameTime for each frame
+    const radarFrames = vizData.radarFrames;
+    for (let i = 0; i < radarFrames.length; i++) {
+        if (i < radarFrames.length - 1) {
+            radarFrames[i].interFrameTime = radarFrames[i + 1].timestampMs - radarFrames[i].timestampMs;
+        } else {
+            // Last frame edge case: set its interFrameTime equal to the previous frame's interFrameTime
+            if (radarFrames.length > 1) {
+                radarFrames[i].interFrameTime = radarFrames[i - 1].interFrameTime;
+            } else {
+                radarFrames[i].interFrameTime = 0; // Only one frame, so interFrameTime is 0
+            }
+        }
+    }
+
+    // --- Pre-calculate Max Window IFT for Smart Zoom (Sliding Window) ---
+    // This eliminates the need for real-time lookahead scanning in the render loop.
+    const lookahead = 80; 
+    for (let i = 0; i < radarFrames.length; i++) {
+        let localMax = 0;
+        const start = Math.max(0, i - lookahead);
+        const end = Math.min(radarFrames.length - 1, i + lookahead);
+        
+        for (let j = start; j <= end; j++) {
+             const val = radarFrames[j].interFrameTime || 0;
+             if (val > localMax) localMax = val;
+        }
+        radarFrames[i].maxWindowIFT = localMax;
+    }
+
     let snrValues = [];
     let totalPoints = 0;
     await processArrayInChunks(vizData.radarFrames, 5000, (chunk) => {

@@ -2,6 +2,25 @@
 import { appState } from "./state.js";
 import { formatUTCTime } from "./utils.js";
 import { VIDEO_FPS } from "./constants.js";
+
+function getTimingColor(diffMs) {
+  if (diffMs >= 48 && diffMs <= 52) {
+    return "#00FF00"; // Bright Green (Perfect)
+  } else if (diffMs >= 40 && diffMs <= 60) {
+    return "#98FB98"; // Pale Green (Good)
+  } else if ((diffMs >= 30 && diffMs < 40) || (diffMs > 60 && diffMs <= 70)) {
+    return "#FFEB3B"; // Yellow (Noticeable)
+  } else if ((diffMs >= 20 && diffMs < 30) || (diffMs > 70 && diffMs <= 100)) {
+    return "#FFA500"; // Orange (Warning)
+  } else if (diffMs > 300) {
+    return "#c339ffff"; // Dark Violet (Extreme > 300ms)
+  } else if (diffMs > 150) {
+    return "#8B0000"; // Dark Red (Severe > 150ms)
+  } else {
+    return "#FF4500"; // Red (Critical 100-150ms or < 20ms)
+  }
+}
+
 // --- DOM Element References --- //
 
 export const themeToggleBtn = document.getElementById("theme-toggle");
@@ -231,6 +250,10 @@ function getCurrentColorMode() {
   return "Default"; // The default mode when no specific color toggle is checked
 }
 
+// Cache for conditional rendering
+let lastDrawnFrame = -1;
+let lastDrawnScale = -1;
+
 export function updatePersistentOverlays(currentMediaTime) {
   // If the advanced debug overlay is visible, hide the persistent overlays and exit.
   if (toggleDebug2Overlay.checked) {
@@ -263,12 +286,127 @@ export function updatePersistentOverlays(currentMediaTime) {
     const fps = appState.fps;
     const fpsColor = fps >= 58 && fps <= 62 ? "#98FB98" : "#FF6347"; // Pale Green or Tomato
 
-    radarInfoOverlay.innerHTML = `
+    const interFrameTime = currentRadarFrame.interFrameTime;
+    const iftColor = getTimingColor(interFrameTime);
+
+    // --- OPTIMIZATION: One-time DOM Setup ---
+    if (!document.getElementById("ift-dot-matrix")) {
+        radarInfoOverlay.innerHTML = `
+            <div id="radar-text-content"></div>
+            <canvas id="ift-dot-matrix" width="700" height="40" style="display:block; margin-top:5px; background:rgba(0,0,0,0.5); border:1px solid #555;"></canvas>
+        `;
+    }
+
+    // --- 1. Smart Smooth Zoom Logic ---
+    // Use pre-calculated maxWindowIFT (computed in fileParsers.js) for O(1) performance.
+    const maxWindowIFT = currentRadarFrame.maxWindowIFT || 0;
+    
+    // Calculate Target Scale
+    // Base: 10ms. If max > 100ms, scale up.
+    // Cap: 40ms (3-4x zoom).
+    let targetMsPerBlock = 10;
+    if (maxWindowIFT > 100) {
+       // Example: 900ms spike -> 900/10 = 90. Clamped to 40.
+       targetMsPerBlock = Math.min(40, Math.max(10, maxWindowIFT / 10));
+    }
+
+    // Smooth Interpolation (Lerp)
+    // Move current scale 10% of the way to the target per frame.
+    const smoothingFactor = 0.1;
+    appState.currentGraphScale += (targetMsPerBlock - appState.currentGraphScale) * smoothingFactor;
+    
+    // Use the smoothed value for drawing
+    const msPerBlock = appState.currentGraphScale;
+
+    // --- Update Text Content Efficiently ---
+    const textContainer = document.getElementById("radar-text-content");
+    if (textContainer) {
+        textContainer.innerHTML = `
             Frame: ${appState.currentFrame + 1}
             | Motion State: ${motionState}
             | FPS: <b style="color: ${fpsColor};">${fps.toFixed(1)}</b>
             | Color Mode: <b>${colorMode}</b>
-            | Drift: <b style="color: ${driftColor};">${driftMs.toFixed(0)}ms</b>`;
+            | Drift: <b style="color: ${driftColor};">${driftMs.toFixed(0)}ms</b>
+            | Δt: <b style="color: ${iftColor};">${interFrameTime.toFixed(0)}ms</b>`;
+    }
+
+    // --- Draw Optimized Square Block Matrix Graph ---
+    // CONDITIONAL RENDER: Only redraw if frame changed or scale changed significantly
+    if (appState.currentFrame !== lastDrawnFrame || Math.abs(msPerBlock - lastDrawnScale) > 0.01) {
+      
+      const dotCanvas = document.getElementById("ift-dot-matrix");
+      if (dotCanvas) {
+        const ctx = dotCanvas.getContext("2d");
+        const w = dotCanvas.width;
+        const h = dotCanvas.height;
+        
+        const blockSize = 3;
+        const vGap = 1;
+        const hGap = 2;
+        const stride = blockSize + hGap;
+        // msPerBlock is already set above
+        
+        // Calculate columns: 600px / 5px = 120 columns.
+        const totalCols = 140;
+        const centerCol = 70;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // --- 1. Batching Phase ---
+        const batches = {};
+
+        for (let offset = -centerCol; offset < centerCol; offset++) {
+          const targetFrameIndex = appState.currentFrame + offset;
+          const colIndex = offset + centerCol; 
+          const x = colIndex * stride + 2; 
+
+          if (targetFrameIndex >= 0 && targetFrameIndex < appState.vizData.radarFrames.length) {
+             const ift = appState.vizData.radarFrames[targetFrameIndex].interFrameTime || 0;
+             
+             // Use the SMOOTHED dynamic scale here
+             const numBlocks = Math.min(10, Math.max(1, Math.round(ift / msPerBlock))); 
+             const color = getTimingColor(ift);
+
+             if (!batches[color]) batches[color] = [];
+
+             for (let d = 0; d < numBlocks; d++) {
+               const y = h - (d * (blockSize + vGap)) - 3; 
+               batches[color].push({x, y});
+             }
+          } else {
+             // Placeholder blocks
+             const color = "rgba(255, 255, 255, 0.1)";
+             if (!batches[color]) batches[color] = [];
+             const y = h - 3;
+             batches[color].push({x, y});
+          }
+        }
+
+        // --- 2. Drawing Phase ---
+        // Draw all blocks of the same color in one pass
+        for (const [color, points] of Object.entries(batches)) {
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          for (const p of points) {
+            ctx.rect(p.x, p.y, blockSize, blockSize);
+          }
+          ctx.fill();
+        }
+
+        // Draw Center Indicator (Triangle at column 60)
+        const centerX = centerCol * stride + 2;
+        ctx.fillStyle = "#FFFFFF";
+        ctx.beginPath();
+        ctx.moveTo(centerX - 4, h);
+        ctx.lineTo(centerX + 4, h);
+        ctx.lineTo(centerX, h - 6);
+        ctx.fill();
+      }
+      
+      // Update cache
+      lastDrawnFrame = appState.currentFrame;
+      lastDrawnScale = msPerBlock;
+    }
   }
 
   // --- Update Video Persistent Overlay ---
