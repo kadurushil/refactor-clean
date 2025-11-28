@@ -13,6 +13,8 @@ export const appState = {
   zoomSketchInstance: null, // Add this line
   // Stores the processed CAN bus data (speed, time)
   offset: 0, // The calculated or manually set offset in milliseconds.
+  
+  currentGraphScale: 10, // Current ms per block for the IFT graph (smooth zooming)
 
   videoStartDate: null,
   // The timestamp (in milliseconds) of the first radar frame, extracted from the JSON filename
