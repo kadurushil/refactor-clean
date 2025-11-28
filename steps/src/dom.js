@@ -225,7 +225,7 @@ export function updateDebugOverlay(currentMediaTime) {
 // This function checks the state of the color toggles and returns the active mode.
 function getCurrentColorMode() {
   if (toggleSnrColor.checked) return "Color by SNR (1)";
-  if (toggleClusterColor.checked) return "Color by Cluster (2)";
+  if (toggleClusterColor.checked) return "Cluster Mode (2)";
   if (toggleInlierColor.checked) return "Color by Inlier (3)";
   if (toggleStationaryColor.checked) return "Color by Stationary (4)";
   return "Default"; // The default mode when no specific color toggle is checked
@@ -249,7 +249,7 @@ export function updatePersistentOverlays(currentMediaTime) {
   radarInfoOverlay.classList.remove("hidden");
   videoInfoOverlay.classList.remove("hidden");
 
-  // --- Update Radar Overlay ---
+  // --- Update Radar Persistent Overlay ---
   const currentRadarFrame = appState.vizData.radarFrames[appState.currentFrame];
   const frameData = appState.vizData.radarFrames[appState.currentFrame];
   const motionState = frameData.motionState;
@@ -265,20 +265,14 @@ export function updatePersistentOverlays(currentMediaTime) {
 
     radarInfoOverlay.innerHTML = `
             Frame: ${appState.currentFrame + 1}
-            Motion State: ${motionState}
+            | Motion State: ${motionState}
             | FPS: <b style="color: ${fpsColor};">${fps.toFixed(1)}</b>
-            | Abs Time: ${formatUTCTime(absRadarTime)}
             | Color Mode: <b>${colorMode}</b>
-            | Drift: <b style="color: ${driftColor};">${driftMs.toFixed(
-      0
-    )}ms  </b>
-        `;
+            | Drift: <b style="color: ${driftColor};">${driftMs.toFixed(0)}ms</b>`;
   }
 
-  // --- Update Video Overlay ---
-  const absVideoTime = new Date(
-    appState.videoStartDate.getTime() + currentMediaTime * 1000
-  );
+  // --- Update Video Persistent Overlay ---
+  const absVideoTime = new Date(appState.videoStartDate.getTime() + currentMediaTime * 1000);
   const videoFrame = Math.floor(currentMediaTime * VIDEO_FPS);
   
   let timeDisplay = `Elapsed Time: ${currentMediaTime.toFixed(2)}s`;
