@@ -15,7 +15,7 @@ import {
 } from "./dom.js";
 import { VIDEO_FPS } from "./constants.js";
 import { findRadarFrameIndexForTime, precomputeRadarVideoSync } from "./utils.js";
-import { throttledUpdateExplorer } from "./dataExplorer.js";
+import { throttledUpdateExplorer, isExplorerOpen } from "./dataExplorer.js";
 import { debugFlags } from "./debug.js";
 
 // --- [START] MOVED FROM DOM.JS ---
@@ -137,7 +137,9 @@ export function updateFrame(frame, forceVideoSeek = false, overrideTime = null) 
   // We no longer call redraw() from here.
 
   // --- NEW: Centralized Explorer Update ---
-  throttledUpdateExplorer();
+  if (isExplorerOpen) {
+      throttledUpdateExplorer();
+  }
   // --- END: Centralized Explorer Update ---
   const endTime = performance.now();
   appState.lastFrameRenderTime = endTime - startTime; // <-- End timer and update state

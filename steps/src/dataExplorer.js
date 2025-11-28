@@ -31,6 +31,9 @@ let trackGridApi = null;
 let chartInstance = null;
 let currentGridData = null;
 
+// --- EXPORTED STATE for Optimization ---
+export let isExplorerOpen = false;
+
 // --- AG Grid Configuration ---
 const gridOptions = {
     rowData: [],
@@ -102,11 +105,13 @@ function createChart(data, label) {
 
 function showExplorer() {
     panel.classList.remove('hidden');
+    isExplorerOpen = true; // Update state
     updateExplorer();
 }
 
 function hideExplorer() {
     panel.classList.add('hidden');
+    isExplorerOpen = false; // Update state
 }
 
 function switchTab(targetTab) {
