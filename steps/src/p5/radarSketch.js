@@ -169,9 +169,11 @@ export const radarSketch = function (p) {
 
     // Recalculate plot scales (important for window resizing)
     calculatePlotScales();
-    // Draw coordinate axes
-    drawAxes(p, plotScales);
-    drawEgoVehicle(p, plotScales);
+    
+    // --- OPTIMIZATION: Axes and Ego Vehicle are now in staticBackgroundBuffer ---
+    // drawAxes(p, plotScales);
+    // drawEgoVehicle(p, plotScales);
+    
     // Get current frame data
     const frameData = appState.vizData.radarFrames[appState.currentFrame];
     if (frameData) {

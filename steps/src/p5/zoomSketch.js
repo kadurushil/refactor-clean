@@ -260,8 +260,11 @@ export const zoomSketch = function (p) {
     p.scale(1, -1);
 
     const frameData = appState.vizData.radarFrames[appState.currentFrame];
-    drawAxes(p, plotScales);
-    drawEgoVehicle(p, plotScales);
+    
+    // --- OPTIMIZATION: Axes and Ego Vehicle are already in the static background image ---
+    // drawAxes(p, plotScales);
+    // drawEgoVehicle(p, plotScales);
+    
     if (frameData) {
       drawTrackMarkers(p, plotScales);
       drawRegionsOfInterest(p, frameData, plotScales);

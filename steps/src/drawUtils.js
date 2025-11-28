@@ -73,41 +73,60 @@ export const stationaryColor = (p) => p.color(218, 165, 32); // Goldenrod
 export const movingColor = (p) => p.color(255, 0, 255); // Magenta
 
 /**
- * Draws the static radar region lines to a buffer.
+ * Draws the static radar region lines, axes, and ego vehicle to a buffer.
+ * @param {p5} p - The main p5 instance (used for constants/colors if needed).
  * @param {p5.Graphics} b - The p5.Graphics buffer to draw on.
  * @param {object} plotScales - The calculated scales for plotting.
  */
 export function drawStaticRegionsToBuffer(p, b, plotScales) {
   b.clear();
+  
+  // 1. Draw Axes (Grid)
+  // We pass 'b' as the p5 instance so it draws to the buffer.
+  // Note: drawAxes applies its own coordinate transformations (translate/scale) internally
+  // but it expects to start from the top-left relative to the canvas.
+  // However, inside drawAxes it does: p.translate(5, y * scale)...
+  // AND logic for flipping. 
+  
+  // Let's look at how drawAxes is implemented. It pushes/pops and assumes 
+  // it's drawing in SCREEN coordinates (pixels), but then uses plotScales.
+  // The main draw loop applies: p.translate(width/2, height*0.95); p.scale(1, -1);
+  // BEFORE calling drawAxes.
+  
+  // So 'b' needs to be in that state before we call drawAxes/drawEgoVehicle.
+  
   b.push();
-  // Translate to the bottom center of the buffer.
   b.translate(b.width / 2, b.height * 0.95);
-  // Flip the Y-axis to match radar coordinates (Y increases upwards).
   b.scale(1, -1);
-  // Set stroke properties for the static region lines.
+  
+  // Draw Axes
+  drawAxes(b, plotScales); // Pass 'b' as the drawing context
+  
+  // Draw Ego Vehicle
+  drawEgoVehicle(b, plotScales); // Pass 'b' as the drawing context
+
+  // 2. Draw Static Regions (Original Logic)
   b.stroke(100, 100, 100, 150);
   b.strokeWeight(1);
-  // Set dashed line pattern.
   b.drawingContext.setLineDash([8, 8]);
-  // Define angles for the radar beams.
-  const a1 = p.radians(30),
-    a2 = p.radians(150);
+  
+  const a1 = p.radians(30); // Use 'p' for math constants if 'b' lacks them (b usually has them too)
+  const a2 = p.radians(150);
   const len = 70;
-  // Draw the first static region line.
+  
   b.line(
     0,
     0,
-    len * p.cos(a1) * plotScales.plotScaleX,
-    len * p.sin(a1) * plotScales.plotScaleY
+    len * Math.cos(a1) * plotScales.plotScaleX,
+    len * Math.sin(a1) * plotScales.plotScaleY
   );
-  // Draw the second static region line.
   b.line(
     0,
     0,
-    len * p.cos(a2) * plotScales.plotScaleX,
-    len * p.sin(a2) * plotScales.plotScaleY
+    len * Math.cos(a2) * plotScales.plotScaleX,
+    len * Math.sin(a2) * plotScales.plotScaleY
   );
-  // Reset line dash pattern.
+  
   b.drawingContext.setLineDash([]);
   b.pop();
 }
