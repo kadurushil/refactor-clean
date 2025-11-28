@@ -250,6 +250,9 @@ function getCurrentColorMode() {
   return "Default"; // The default mode when no specific color toggle is checked
 }
 
+// Cache for DOM elements to avoid querySelector/getElementById every frame
+let overlayCache = null;
+
 // Cache for conditional rendering
 let lastDrawnFrame = -1;
 let lastDrawnScale = -1;
@@ -289,12 +292,31 @@ export function updatePersistentOverlays(currentMediaTime) {
     const interFrameTime = currentRadarFrame.interFrameTime;
     const iftColor = getTimingColor(interFrameTime);
 
-    // --- OPTIMIZATION: One-time DOM Setup ---
-    if (!document.getElementById("ift-dot-matrix")) {
+    // --- OPTIMIZATION: One-time DOM Setup & Caching ---
+    if (!overlayCache) {
         radarInfoOverlay.innerHTML = `
-            <div id="radar-text-content"></div>
+            <div id="radar-text-content" style="line-height: 1.5;">
+                Frame: <span id="ov-frame"></span>
+                | Motion State: <span id="ov-motion"></span>
+                | FPS: <b id="ov-fps"></b>
+                | Color Mode: <b id="ov-mode"></b>
+                | Drift: <b id="ov-drift"></b>
+                | Δt: <b id="ov-ift"></b>
+                | Scale: <b id="ov-scale"></b>
+            </div>
             <canvas id="ift-dot-matrix" width="700" height="40" style="display:block; margin-top:5px; background:rgba(0,0,0,0.5); border:1px solid #555;"></canvas>
         `;
+        
+        overlayCache = {
+            frame: document.getElementById("ov-frame"),
+            motion: document.getElementById("ov-motion"),
+            fps: document.getElementById("ov-fps"),
+            mode: document.getElementById("ov-mode"),
+            drift: document.getElementById("ov-drift"),
+            ift: document.getElementById("ov-ift"),
+            scale: document.getElementById("ov-scale"),
+            dotCanvas: document.getElementById("ift-dot-matrix") // Cache canvas too
+        };
     }
 
     // --- 1. Smart Smooth Zoom Logic ---
@@ -318,23 +340,30 @@ export function updatePersistentOverlays(currentMediaTime) {
     // Use the smoothed value for drawing
     const msPerBlock = appState.currentGraphScale;
 
-    // --- Update Text Content Efficiently ---
-    const textContainer = document.getElementById("radar-text-content");
-    if (textContainer) {
-        textContainer.innerHTML = `
-            Frame: ${appState.currentFrame + 1}
-            | Motion State: ${motionState}
-            | FPS: <b style="color: ${fpsColor};">${fps.toFixed(1)}</b>
-            | Color Mode: <b>${colorMode}</b>
-            | Drift: <b style="color: ${driftColor};">${driftMs.toFixed(0)}ms</b>
-            | Δt: <b style="color: ${iftColor};">${interFrameTime.toFixed(0)}ms</b>`;
+    // --- Update Text Content Efficiently (Zero Garbage) ---
+    if (overlayCache) {
+        overlayCache.frame.textContent = appState.currentFrame + 1;
+        overlayCache.motion.textContent = motionState;
+        
+        overlayCache.fps.textContent = fps.toFixed(1);
+        overlayCache.fps.style.color = fpsColor;
+        
+        overlayCache.mode.textContent = colorMode;
+        
+        overlayCache.drift.textContent = driftMs.toFixed(0) + "ms";
+        overlayCache.drift.style.color = driftColor;
+        
+        overlayCache.ift.textContent = interFrameTime.toFixed(0) + "ms";
+        overlayCache.ift.style.color = iftColor;
+        
+        overlayCache.scale.textContent = "1:" + msPerBlock.toFixed(1) + "ms";
     }
 
     // --- Draw Optimized Square Block Matrix Graph ---
     // CONDITIONAL RENDER: Only redraw if frame changed or scale changed significantly
     if (appState.currentFrame !== lastDrawnFrame || Math.abs(msPerBlock - lastDrawnScale) > 0.01) {
       
-      const dotCanvas = document.getElementById("ift-dot-matrix");
+      const dotCanvas = overlayCache.dotCanvas; // Use cached reference
       if (dotCanvas) {
         const ctx = dotCanvas.getContext("2d");
         const w = dotCanvas.width;
