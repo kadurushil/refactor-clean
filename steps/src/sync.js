@@ -86,17 +86,29 @@ export function updateFrame(frame, forceVideoSeek = false, overrideTime = null) 
     return; // Exit if no visualization data or invalid frame
   appState.currentFrame = frame;
   timelineSlider.value = appState.currentFrame;
-  frameCounter.textContent = `Frame: ${appState.currentFrame + 1} / ${
-    appState.vizData.radarFrames.length
-  }`;
+  
+  // --- Optimization: Guarded Text Updates ---
+  const newFrameText = `Frame: ${appState.currentFrame + 1} / ${appState.vizData.radarFrames.length}`;
+  if (frameCounter.textContent !== newFrameText) {
+      frameCounter.textContent = newFrameText;
+  }
+
   const frameData = appState.vizData.radarFrames[appState.currentFrame];
   if (toggleEgoSpeed.checked && frameData) {
     // Update ego speed display if enabled.
     const egoVy_kmh = (frameData.egoVelocity[1] * 3.6).toFixed(1); // Convert m/s to km/h and format
-    egoSpeedDisplay.textContent = `Ego: ${egoVy_kmh} km/h`;
-    egoSpeedDisplay.classList.remove("hidden");
+    const newEgoText = `Ego: ${egoVy_kmh} km/h`;
+    
+    if (egoSpeedDisplay.textContent !== newEgoText) {
+        egoSpeedDisplay.textContent = newEgoText;
+    }
+    if (egoSpeedDisplay.classList.contains("hidden")) {
+        egoSpeedDisplay.classList.remove("hidden");
+    }
   } else {
-    egoSpeedDisplay.classList.add("hidden"); // Hide ego speed display.
+    if (!egoSpeedDisplay.classList.contains("hidden")) {
+        egoSpeedDisplay.classList.add("hidden"); // Hide ego speed display.
+    }
   }
 
   // --- ADD THIS NEW BLOCK ---
@@ -105,12 +117,17 @@ export function updateFrame(frame, forceVideoSeek = false, overrideTime = null) 
     frameData.canVehSpeed_kmph !== null &&
     !isNaN(frameData.canVehSpeed_kmph)
   ) {
-    canSpeedDisplay.textContent = `CAN: ${frameData.canVehSpeed_kmph.toFixed(
-      1
-    )} km/h`;
-    canSpeedDisplay.classList.remove("hidden");
+    const newCanText = `CAN: ${frameData.canVehSpeed_kmph.toFixed(1)} km/h`;
+    if (canSpeedDisplay.textContent !== newCanText) {
+        canSpeedDisplay.textContent = newCanText;
+    }
+    if (canSpeedDisplay.classList.contains("hidden")) {
+        canSpeedDisplay.classList.remove("hidden");
+    }
   } else {
-    canSpeedDisplay.classList.add("hidden");
+    if (!canSpeedDisplay.classList.contains("hidden")) {
+        canSpeedDisplay.classList.add("hidden");
+    }
   }
   // --- END OF NEW BLOCK ---
   
