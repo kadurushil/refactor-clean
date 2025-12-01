@@ -496,9 +496,11 @@ document.addEventListener("DOMContentLoaded", () => {
   initializeDataExplorer(); 
   initKeyboardShortcuts();
   initSyncUIHandlers();
-  initDB(async () => {
+  
+  // Await the database initialization before attempting to load any files.
+  // This resolves the race condition on initial load.
+  initDB().then(async () => {
     console.log("Database initialized. Checking for cached session...");
-
     // Load filenames and the last known offset from localStorage
     appState.jsonFilename = localStorage.getItem("jsonFilename");
     appState.videoFilename = localStorage.getItem("videoFilename");

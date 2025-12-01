@@ -9,8 +9,8 @@ dbReadyPromise = new Promise((resolve) => {
 });
 
 // Initializes the IndexedDB database.
-export function initDB(callback) {
-  const request = indexedDB.open("visualizerDB", 2); // Increment version to 2
+export function initDB() {
+  const request = indexedDB.open("visualizerDB", 2);
 
   request.onupgradeneeded = function (event) {
     const db = event.target.result;
@@ -27,15 +27,15 @@ export function initDB(callback) {
     db = event.target.result;
     console.log("Database initialized");
     dbReadyResolve(db); // Signal that DB is ready
-    if (callback) callback();
   };
 
   request.onerror = function (event) {
     console.error("IndexedDB error:", event.target.errorCode);
     // If DB fails, we resolve with null so operations can proceed (gracefully failing to cache)
     dbReadyResolve(null);
-    if (callback) callback(); 
   };
+
+  return dbReadyPromise;
 }
 
 // Ensure DB is ready before returning it
