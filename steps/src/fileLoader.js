@@ -1,6 +1,6 @@
 import { appState } from "./state.js";
 import { debugFlags } from "./debug.js";
-import { saveFileWithMetadata } from "./db.js";
+import { saveFileWithMetadata, loadManualOffset, deleteManualOffset } from "./db.js";
 import { parseVisualizationJson } from "./fileParsers.js";
 import {
   showLoadingModal,
@@ -33,6 +33,7 @@ import {
   resetUIForNewLoad,
 } from "./dom.js";
 
+import { forceResyncWithOffset } from "./sync.js";
 /**
  * This is the main handler for both manual clicks and drag-and-drop.
  * It identifies the files and triggers the unified processing pipeline.
@@ -101,7 +102,7 @@ async function processFilePipeline(jsonFile, videoFile, fromCache) {
 
   // --- PART B: Calculate Offset (Moved Up) ---
   // Critical: This must run BEFORE JSON parsing so valid start times are available.
-  calculateAndSetOffset();
+  await calculateAndSetOffset();
 
   // --- PART C: Handle JSON Parsing ---
   if (jsonFile) {
@@ -374,7 +375,7 @@ function setupVideoPlayer(fileURL) {
   }
 }
 
-function calculateAndSetOffset() {  
+async function calculateAndSetOffset() {  
   const jsonTimestampInfo = extractTimestampInfo(appState.jsonFilename);
   const videoTimestampInfo = extractTimestampInfo(appState.videoFilename);
 
@@ -395,6 +396,30 @@ function calculateAndSetOffset() {
     );
   }
 
+  // 1. Try to load a manually saved offset for this specific file pair.
+  // We use the JSON filename as the primary key, but ideally, it should be a combo.
+  // For now, sticking to the user request: "if the user uploads a similarly named file".
+  // We'll use the JSON filename as the key.
+  const savedOffset = await loadManualOffset(appState.jsonFilename);
+
+  if (savedOffset !== null) {
+    console.log(`Applying saved manual offset: ${savedOffset}ms`);
+    appState.offset = savedOffset;
+    if (jsonDate) {
+         appState.radarStartTimeMs = jsonDate.getTime();
+    }
+    // Update UI
+    offsetInput.value = appState.offset;
+    
+    // Show "Manual" indicator
+    autoOffsetIndicator.textContent = "Manual";
+    autoOffsetIndicator.className = "text-xs font-bold ml-2 text-gray-500"; // Gray for manual
+    autoOffsetIndicator.classList.remove("hidden");
+    
+    localStorage.setItem("visualizerOffset", appState.offset);
+    return; // Exit early, skipping auto-calc
+  }
+
   let calculatedOffset = 0;
   // We need both dates to calculate an offset.
   if (jsonDate && videoDate) {
@@ -404,17 +429,78 @@ function calculateAndSetOffset() {
     if (isNaN(offset) || Math.abs(offset) > 30000) {
       console.warn(`Calculated offset of ${offset}ms is invalid or exceeds 30s threshold. Defaulting to 0.`);
       calculatedOffset = 0;
+      
+      // Show "Default" or "Out of Range" indicator
+      autoOffsetIndicator.textContent = isNaN(offset) ? "Default" : "Out of Range";
+      autoOffsetIndicator.className = "text-xs font-bold ml-2 text-yellow-600"; // Dark Yellow
+      autoOffsetIndicator.classList.remove("hidden");
+      
     } else {
       calculatedOffset = offset;
+      
+      // Show "Auto" indicator
+      autoOffsetIndicator.textContent = "Auto";
+      autoOffsetIndicator.className = "text-xs font-bold ml-2 text-green-500"; // Green
       autoOffsetIndicator.classList.remove("hidden");
+      
       console.log(`Auto-calculated offset: ${calculatedOffset} ms`);
     }
   } else if (jsonDate) {
       // If we have JSON but no video, we set start time but offset is 0
       appState.radarStartTimeMs = jsonDate.getTime();
+      // No specific indicator needed for JSON-only default 0, or could show "Default"
+      autoOffsetIndicator.classList.add("hidden"); 
   }
 
   appState.offset = calculatedOffset;
   offsetInput.value = appState.offset;
   localStorage.setItem("visualizerOffset", appState.offset);
+}
+
+/**
+ * Re-calculates and applies the automatic offset based on filenames.
+ * This function is triggered by user actions like clicking the 'Manual' indicator
+ * or using a keyboard shortcut to revert a manual offset.
+ */
+export function revertToAutoOffset() {
+  // 1. Calculate the automatic offset.
+  const jsonTimestampInfo = extractTimestampInfo(appState.jsonFilename);
+  const videoTimestampInfo = extractTimestampInfo(appState.videoFilename);
+
+  let calculatedOffset = 0;
+  let indicatorText = "Default";
+  let indicatorClass = "text-xs font-bold ml-2 text-yellow-600"; // Default to yellow
+
+  if (jsonTimestampInfo && videoTimestampInfo) {
+    const jsonDate = parseTimestamp(jsonTimestampInfo.timestampStr, jsonTimestampInfo.format);
+    const videoDate = parseTimestamp(videoTimestampInfo.timestampStr, videoTimestampInfo.format);
+
+    if (jsonDate && videoDate) {
+      const offset = jsonDate.getTime() - videoDate.getTime();
+      if (isNaN(offset) || Math.abs(offset) > 30000) {
+        calculatedOffset = 0;
+        indicatorText = "Out of Range";
+      } else {
+        calculatedOffset = offset;
+        indicatorText = "Auto";
+        indicatorClass = "text-xs font-bold ml-2 text-green-500";
+      }
+    }
+  }
+
+  // 2. Update the input box with the new value.
+  offsetInput.value = calculatedOffset;
+
+  // 3. Delete any saved manual offset so future loads default to "Auto" logic.
+  if (appState.jsonFilename) {
+      deleteManualOffset(appState.jsonFilename);
+  }
+
+  // 4. Call the resync function with saveToDb = false.
+  forceResyncWithOffset(false);
+
+  // 5. After resyncing, set the correct indicator text and style.
+  autoOffsetIndicator.textContent = indicatorText;
+  autoOffsetIndicator.className = indicatorClass;
+  autoOffsetIndicator.classList.remove("hidden");
 }

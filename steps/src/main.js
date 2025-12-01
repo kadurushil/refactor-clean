@@ -86,9 +86,9 @@ import {
 
 import { initializeTheme } from "./theme.js";
 
-import { initDB, loadFreshFileFromDB } from "./db.js";
+import { initDB, loadFreshFileFromDB, saveManualOffset } from "./db.js";
 import { initKeyboardShortcuts } from "./keyboard.js";
-import { handleFiles } from "./fileLoader.js";
+import { handleFiles, revertToAutoOffset } from "./fileLoader.js";
 
 // Wire up the manual file inputs to the new handler
 jsonFileInput.addEventListener("change", (event) =>
@@ -480,6 +480,15 @@ offsetInput.addEventListener("keydown", (event) => {
     forceResyncWithOffset();
   }
 });
+
+// --- [START] NEW: Revert to Auto-Offset Logic ---
+autoOffsetIndicator.addEventListener("click", () => {
+  // Only allow reverting if the indicator shows "Manual".
+  if (autoOffsetIndicator.textContent === "Manual") {
+    revertToAutoOffset();
+  }
+});
+// --- [END] NEW: Revert to Auto-Offset Logic ---
 
 // --- [START] CORRECTED INITIALIZATION LOGIC ---
 document.addEventListener("DOMContentLoaded", () => {

@@ -10,12 +10,16 @@ dbReadyPromise = new Promise((resolve) => {
 
 // Initializes the IndexedDB database.
 export function initDB(callback) {
-  const request = indexedDB.open("visualizerDB", 1);
+  const request = indexedDB.open("visualizerDB", 2); // Increment version to 2
 
   request.onupgradeneeded = function (event) {
     const db = event.target.result;
     if (!db.objectStoreNames.contains("files")) {
       db.createObjectStore("files");
+    }
+    // Create the new store for manual offsets
+    if (!db.objectStoreNames.contains("manualOffsets")) {
+      db.createObjectStore("manualOffsets");
     }
   };
 
@@ -83,6 +87,79 @@ export function saveFileWithMetadata(key, file) {
   });
 }
 
+
+// Saves a manual offset for a specific filename.
+export function saveManualOffset(filename, offset) {
+  return new Promise(async (resolve, reject) => {
+    const database = await getDB();
+    if (!database) {
+      resolve(); // Fail silently if DB is not available
+      return;
+    }
+    const transaction = database.transaction(["manualOffsets"], "readwrite");
+    const store = transaction.objectStore("manualOffsets");
+    const request = store.put(offset, filename); // Key is filename, value is offset
+
+    request.onsuccess = () => {
+      console.log(`Manual offset ${offset}ms saved for '${filename}'.`);
+      resolve();
+    };
+    request.onerror = (e) => {
+      console.warn("Failed to save manual offset:", e);
+      resolve(); // Resolve anyway to prevent blocking
+    };
+  });
+}
+
+// Loads a manual offset for a specific filename.
+export function loadManualOffset(filename) {
+  return new Promise(async (resolve) => {
+    const database = await getDB();
+    if (!database) {
+      resolve(null);
+      return;
+    }
+    const transaction = database.transaction(["manualOffsets"], "readonly");
+    const store = transaction.objectStore("manualOffsets");
+    const request = store.get(filename);
+
+    request.onsuccess = () => {
+      const result = request.result;
+      if (result !== undefined) {
+        console.log(`Found saved manual offset for '${filename}': ${result}ms`);
+        resolve(result);
+      } else {
+        resolve(null);
+      }
+    };
+    request.onerror = () => {
+      resolve(null);
+    };
+  });
+}
+
+// Deletes a manual offset for a specific filename.
+export function deleteManualOffset(filename) {
+  return new Promise(async (resolve) => {
+    const database = await getDB();
+    if (!database) {
+      resolve();
+      return;
+    }
+    const transaction = database.transaction(["manualOffsets"], "readwrite");
+    const store = transaction.objectStore("manualOffsets");
+    const request = store.delete(filename);
+
+    request.onsuccess = () => {
+      console.log(`Manual offset for '${filename}' deleted.`);
+      resolve();
+    };
+    request.onerror = (e) => {
+      console.warn("Failed to delete manual offset:", e);
+      resolve();
+    };
+  });
+}
 
 // Loads a file from IndexedDB, performing checks for filename and size to ensure data integrity.
 export function loadFreshFileFromDB(key, expectedFilename) {

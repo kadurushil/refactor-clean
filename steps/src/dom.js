@@ -135,6 +135,11 @@ export function resetUIForNewLoad(isNewVideo = true) {
     // Always hide radar overlay initially
     radarInfoOverlay.classList.add('hidden');
     
+    // Reset offset indicator state
+    autoOffsetIndicator.classList.add("hidden");
+    autoOffsetIndicator.textContent = "";
+    autoOffsetIndicator.className = "text-xs font-bold ml-2 hidden"; // Reset classes
+
     // Remove the p5 sketches completely
     if (appState.p5_instance) {
         appState.p5_instance.remove();

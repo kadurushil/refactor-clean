@@ -12,11 +12,13 @@ import {
   toggleEgoSpeed,
   egoSpeedDisplay,
   canSpeedDisplay,
+  autoOffsetIndicator,
 } from "./dom.js";
 import { VIDEO_FPS } from "./constants.js";
 import { findRadarFrameIndexForTime, precomputeRadarVideoSync } from "./utils.js";
 import { throttledUpdateExplorer, isExplorerOpen } from "./dataExplorer.js";
 import { debugFlags } from "./debug.js";
+import { saveManualOffset } from "./db.js";
 
 // --- [START] MOVED FROM DOM.JS ---
 
@@ -47,17 +49,26 @@ export function pausePlayback() {
   }
 }
 
-export function forceResyncWithOffset() {
+export function forceResyncWithOffset(saveToDb = true) {
   // Make sure visualization data is loaded before proceeding
   if (!appState.vizData) return;
 
   const newOffset = parseFloat(offsetInput.value) || 0;
   appState.offset = newOffset; // Update the central state
-  localStorage.setItem("visualizerOffset", newOffset); // Persist it
+  
+  // Persist the manual offset to IndexedDB for this specific file
+  if (saveToDb && appState.jsonFilename) {
+      saveManualOffset(appState.jsonFilename, newOffset);
+  }
 
   // Re-Bake: Overwrite the pre-calculated sync times with the new offset.
   precomputeRadarVideoSync(appState.vizData, appState.offset);
 
+  // --- START: Manual Offset UI Update ---
+  // When the user manually sets an offset, we need to update the UI immediately.
+  autoOffsetIndicator.textContent = "Manual"; // Set text
+  autoOffsetIndicator.className = "text-xs font-bold ml-2 text-gray-500"; // Use consistent gray styling
+  // --- END: Manual Offset UI Update ---
   console.log(`Forcing resync with new offset: ${appState.offset}ms`);
   
   // If the video is playing, pause it to allow for precise frame tuning.
