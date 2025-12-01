@@ -48,6 +48,7 @@ export const radarSketch = function (p) {
 
   // --- START: FPS Calculation Variables ---
   let lastFrameTime = 0;
+  let framesDrawn = 0;
   // --- END: FPS Calculation Variables ---
 
   // Helper function to allow other sketches to access the static background
@@ -126,6 +127,10 @@ export const radarSketch = function (p) {
     p.drawTrackLegendToBuffer(); // Call the new function to draw the legend
 
     drawStaticRegionsToBuffer(p, staticBackgroundBuffer, plotScales);
+    
+    // Reset FPS state to prevent stale values from previous sessions
+    appState.fps = 0; 
+    
     p.noLoop();
     // Disable continuous looping, redraw will be called manually
   };
@@ -136,18 +141,28 @@ export const radarSketch = function (p) {
     }
 
     // --- START: FPS Calculation & Display ---
+    framesDrawn++;
     const currentTime = p.millis();
-    if (lastFrameTime > 0) {
+    
+    // Skip FPS calculation during the first few frames to avoid initialization spikes.
+    // This prevents the "300+ FPS" bug caused by the race between auto-draw and first redraw.
+    if (framesDrawn < 10) {
+      lastFrameTime = currentTime;
+    } else {
       const delta = currentTime - lastFrameTime;
       if (delta > 0) {
         const currentFps = 1000 / delta;
-        // Use exponential moving average for smoothing
-        const smoothingFactor = 0.95;
-        appState.fps =
-          appState.fps * smoothingFactor + currentFps * (1 - smoothingFactor);
+        // On the first valid calculation, snap to the current FPS to avoid slow ramp-up.
+        // Otherwise, use exponential moving average for smoothing.
+        if (framesDrawn === 10 || appState.fps === 0) {
+          appState.fps = currentFps;
+        } else {
+          const smoothingFactor = 0.95;
+          appState.fps = appState.fps * smoothingFactor + currentFps * (1 - smoothingFactor);
+        }
       }
+      lastFrameTime = currentTime;
     }
-    lastFrameTime = currentTime;
     // --- END: FPS Calculation & Display ---
 
     // Set background color based on current theme (dark/light)

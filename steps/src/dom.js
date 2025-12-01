@@ -103,22 +103,37 @@ export const explorerBtn = document.getElementById("explorer-btn");
 
 
 //----------------------Reset UI for New file Load----------------------//
-// Resets the UI to make sure everything is clean before new files load. 
-export function resetUIForNewLoad() {
-    console.log("Resetting UI for new file load.");
+// Resets the UI to make sure everything is clean before new files load.
+// @param {boolean} isNewVideo - If true, the video player will be reset. If false, existing video is preserved.
+export function resetUIForNewLoad(isNewVideo = true) {
+    console.log(`Resetting UI for new file load. New Video: ${isNewVideo}`);
 
     // Hide feature toggles
     featureToggles.classList.add("hidden");
 
-    // Show placeholders
-    canvasPlaceholder.style.display = 'flex';
-    videoPlaceholder.classList.remove('hidden');
+    // Reset the FPS counter state to prevent incorrect calculations on reload
+    appState.fps = 0;
 
-    // Hide video player and overlays
-    videoPlayer.classList.add('hidden');
-    videoPlayer.src = ''; // Clear the video source
+    // --- Conditional Video Reset ---
+    if (isNewVideo || !videoPlayer.src) {
+        // Reset video UI: Show placeholder, hide player, clear source
+        videoPlaceholder.classList.remove('hidden');
+        videoPlayer.classList.add('hidden');
+        videoPlayer.src = ''; // Clear the video source
+        videoInfoOverlay.classList.add('hidden');
+    } else {
+        // Preserve video UI: Ensure player is visible, placeholder hidden
+        videoPlaceholder.classList.add('hidden');
+        videoPlayer.classList.remove('hidden');
+        // Do NOT clear videoPlayer.src
+        videoInfoOverlay.classList.remove('hidden');
+    }
+
+    // Show canvas placeholder (will be hidden later if data loads)
+    canvasPlaceholder.style.display = 'flex';
+    
+    // Always hide radar overlay initially
     radarInfoOverlay.classList.add('hidden');
-    videoInfoOverlay.classList.add('hidden');
     
     // Remove the p5 sketches completely
     if (appState.p5_instance) {

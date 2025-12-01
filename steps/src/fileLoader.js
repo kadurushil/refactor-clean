@@ -30,6 +30,7 @@ import {
   speedSlider,
   updatePersistentOverlays,
   updateDebugOverlay,
+  resetUIForNewLoad,
 } from "./dom.js";
 
 /**
@@ -58,6 +59,11 @@ export function handleFiles(files, fromCache = false) {
 }
 
 async function processFilePipeline(jsonFile, videoFile, fromCache) {
+  // 0. Reset the UI to a clean state before processing anything.
+  // Pass 'true' if a new video is present, 'false' if we should try to keep the old one.
+  const isNewVideo = !!videoFile;
+  resetUIForNewLoad(isNewVideo);
+
   // 1. Show the unified loading modal.
   showLoadingModal("Processing files...");
 
@@ -298,8 +304,9 @@ function finalizeSetup() {
   if (!appState.p5_instance) {
     appState.p5_instance = new p5(radarSketch);
   } else {
-    // If it existed, ensure it's looping/active
-     appState.p5_instance.loop();
+    // If it existed, ensure it's up to date. 
+    // CRITICAL: Do NOT call .loop(). The app uses a custom animationLoop in sync.js.
+    appState.p5_instance.redraw();
   }
 
   if (!appState.zoomSketchInstance) {
