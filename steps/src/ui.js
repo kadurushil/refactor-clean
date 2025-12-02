@@ -31,6 +31,12 @@ import {
   menuScrim,
   fullscreenBtn,
   toggleConfirmedOnly,
+  shortcutsBtn,
+  shortcutsModal,
+  shortcutsModalCloseBtn,
+  userManualBtn,
+  guideModal,
+  guideModalCloseBtn,
 } from "./dom.js";
 
 function toggleMenu(show) {
@@ -40,6 +46,22 @@ function toggleMenu(show) {
   } else {
     collapsibleMenu.classList.add("-translate-x-full");
     menuScrim.classList.add("hidden");
+  }
+}
+
+function toggleShortcutsModal(show) {
+  if (show) {
+    shortcutsModal.classList.remove("hidden");
+  } else {
+    shortcutsModal.classList.add("hidden");
+  }
+}
+
+function toggleGuideModal(show) {
+  if (show) {
+    guideModal.classList.remove("hidden");
+  } else {
+    guideModal.classList.add("hidden");
   }
 }
 
@@ -60,6 +82,48 @@ function handleColorToggles(e) {
 }
 
 export function initUIEventListeners() {
+  // --- Shortcuts Modal ---
+  shortcutsBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      toggleShortcutsModal(true);
+  });
+  shortcutsModalCloseBtn.addEventListener("click", () => toggleShortcutsModal(false));
+  shortcutsModal.addEventListener("click", (e) => {
+      // Close if clicking the background overlay (self), but not children
+      if (e.target === shortcutsModal) {
+          toggleShortcutsModal(false);
+      }
+  });
+
+  // --- Guide Modal ---
+  userManualBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    toggleGuideModal(true);
+  });
+  guideModalCloseBtn.addEventListener("click", () => toggleGuideModal(false));
+  guideModal.addEventListener("click", (e) => {
+    if (e.target === guideModal) {
+        toggleGuideModal(false);
+    }
+  });
+  
+  // Global Key Listener for 'k' and 'ESC'
+  document.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === "k") {
+      // Toggle visibility
+      const isHidden = shortcutsModal.classList.contains("hidden");
+      toggleShortcutsModal(isHidden);
+    }
+    // Prioritize closing the guide modal if open, then shortcuts modal
+    if (e.key === "Escape") {
+        if (!guideModal.classList.contains("hidden")) {
+            toggleGuideModal(false);
+        } else if (!shortcutsModal.classList.contains("hidden")) {
+            toggleShortcutsModal(false);
+        }
+    }
+  });
+
   // --- Menu and Fullscreen ---
   toggleMenuBtn.addEventListener("click", () => toggleMenu(true));
   closeMenuBtn.addEventListener("click", () => toggleMenu(false));

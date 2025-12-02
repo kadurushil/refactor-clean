@@ -177,6 +177,48 @@
     }
 
     /* --- END: CSS for Resizable/Draggable Panel --- */
+
+    /* --- Keyboard Shortcuts Modal Styling --- */
+    kbd {
+      background-color: #e2e8f0;
+      /* slate-200 */
+      border: 1px solid #cbd5e1;
+      /* slate-300 */
+      border-bottom-width: 2px;
+      color: #334155;
+      /* slate-700 */
+      border-radius: 0.375rem;
+      padding: 0.125rem 0.5rem;
+      font-family: monospace;
+      font-size: 0.75rem;
+      line-height: 1rem;
+      font-weight: 600;
+      display: inline-block;
+      margin: 0 0.125rem;
+    }
+
+    /* Dark mode support for kbd */
+    .dark kbd {
+      background-color: #475569;
+      /* slate-600 */
+      border-color: #64748b;
+      /* slate-500 */
+      color: #f1f5f9;
+      /* slate-100 */
+    }
+
+    .feature-card {
+      /* Inherits bg-white/dark:bg-gray-800 from parent or class */
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .dark .feature-card {
+      border-color: #4b5563;
+      /* gray-600 */
+      box-shadow: none;
+    }
   </style>
 </head>
 
@@ -203,11 +245,15 @@
           (i)
         </span>
       </button>
-      <a href="User_Manual.html" target="_blank" id="user-manual-btn"
-        class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 shadow-sm hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95 active:shadow-inner font-medium rounded-lg text-xs px-4 py-2 transition-all text-center">
+      <button id="user-manual-btn" type="button"
+        class="bg-green-100 dark:bg-green-700 text-green-800 dark:text-green-100 border border-green-300 dark:border-green-600 shadow-sm hover:bg-green-200 dark:hover:bg-green-600 active:scale-95 active:shadow-inner font-medium rounded-lg text-xs px-4 py-2 transition-all text-center">
         Quick-Start<br>Guide
-      </a>
-      <button id="theme-toggle" type="button" class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 shadow-sm hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95 active:shadow-inner flex flex-row items-center gap-2 rounded-lg text-sm p-2.5 transition-all">
+      </button>
+      <button id="shortcuts-btn" type="button"
+        class="bg-blue-100 dark:bg-blue-700 text-blue-800 dark:text-blue-100 border border-blue-300 dark:border-blue-600 shadow-sm hover:bg-blue-200 dark:hover:bg-blue-600 active:scale-95 active:shadow-inner font-medium rounded-lg text-xs px-4 py-2 transition-all text-center">
+        Keyboard<br>Shortcuts
+      </button>
+      <button id="theme-toggle" type="button" class="bg-amber-100 dark:bg-indigo-900 text-amber-800 dark:text-indigo-100 border border-amber-300 dark:border-indigo-700 shadow-sm hover:bg-amber-200 dark:hover:bg-indigo-800 active:scale-95 active:shadow-inner flex flex-row items-center gap-2 rounded-lg text-xs px-4 py-3.5 transition-all">
         <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
           <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
         </svg>
@@ -217,7 +263,7 @@
             fill-rule="evenodd" clip-rule="evenodd"></path>
         </svg>
         <span
-          class="text-xs font-mono bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-1.5 py-0.5 rounded">
+          class="text-xs font-mono bg-amber-200 dark:bg-indigo-800 text-amber-900 dark:text-indigo-200 px-1.5 py-0.5 rounded">
           (q)
         </span>
       </button>
@@ -483,6 +529,80 @@
     </div>
   </footer>
 
+  <!-- SHORTCUTS MODAL -->
+  <div id="shortcuts-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-80 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto relative flex flex-col">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-900 z-10">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">⌨️</span>
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Keyboard Shortcuts</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Press <kbd>ESC</kbd> or click outside to close</p>
+          </div>
+        </div>
+        <button id="shortcuts-modal-close-btn" class="text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full p-2 transition-colors">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Content Grid -->
+      <div class="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        <!-- Playback -->
+        <div class="feature-card p-6 bg-gray-50 dark:bg-gray-800">
+          <h3 class="mb-4 text-lg font-bold text-blue-600 dark:text-blue-400 border-b pb-2 border-gray-200 dark:border-gray-700">Playback & Navigation</h3>
+          <ul class="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+            <li class="flex justify-between items-center"><span>Play / Pause</span> <kbd>Space</kbd></li>
+            <li class="flex justify-between items-center"><span>Next Frame</span> <kbd>→</kbd></li>
+            <li class="flex justify-between items-center"><span>Prev Frame</span> <kbd>←</kbd></li>
+            <li class="flex justify-between items-center"><span>Video Frame Step</span> <kbd>↑</kbd> / <kbd>↓</kbd></li>
+            <li class="flex justify-between items-center"><span>Scroll Seek</span> <kbd>Mouse Wheel</kbd></li>
+            <li class="flex justify-between items-center"><span>Reset Frame 0</span> <kbd>R</kbd></li>
+          </ul>
+        </div>
+
+        <!-- View & Toggles -->
+        <div class="feature-card p-6 bg-gray-50 dark:bg-gray-800">
+          <h3 class="mb-4 text-lg font-bold text-emerald-600 dark:text-emerald-400 border-b pb-2 border-gray-200 dark:border-gray-700">View & UI Toggles</h3>
+          <ul class="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+            <li class="flex justify-between items-center"><span>Sidebar Menu</span> <kbd>M</kbd></li>
+            <li class="flex justify-between items-center"><span>Data Explorer</span> <kbd>I</kbd></li>
+            <li class="flex justify-between items-center"><span>GOD MODE Zoom</span> <kbd>G</kbd></li>
+            <li class="flex justify-between items-center"><span>Dark/Light Theme</span> <kbd>Q</kbd></li>
+            <li class="flex justify-between items-center"><span>Adv. Debug Info</span> <kbd>A</kbd></li>
+            <li class="flex justify-between items-center"><span>Fullscreen</span> <kbd>F11</kbd></li>
+          </ul>
+        </div>
+
+        <!-- Data Display -->
+        <div class="feature-card p-6 bg-gray-50 dark:bg-gray-800">
+          <h3 class="mb-4 text-lg font-bold text-pink-600 dark:text-pink-400 border-b pb-2 border-gray-200 dark:border-gray-700">Data Visualization</h3>
+          <ul class="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+            <li class="flex justify-between items-center"><span>Toggle Tracks</span> <kbd>T</kbd></li>
+            <li class="flex justify-between items-center"><span>Object Details</span> <kbd>D</kbd></li>
+            <li class="flex justify-between items-center"><span>Predicted Pos</span> <kbd>P</kbd></li>
+            <li class="flex justify-between items-center"><span>Confirmed Only</span> <kbd>C</kbd></li>
+            <li class="flex justify-between items-center"><span>Color by SNR</span> <kbd>1</kbd></li>
+            <li class="flex justify-between items-center"><span>Color by Cluster</span> <kbd>2</kbd></li>
+            <li class="flex justify-between items-center"><span>Color by Inlier</span> <kbd>3</kbd></li>
+            <li class="flex justify-between items-center"><span>Color by Stationary</span> <kbd>4</kbd></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Footer Tip -->
+      <div class="p-6 bg-gray-50 dark:bg-gray-800 text-center border-t border-gray-200 dark:border-gray-700 rounded-b-2xl">
+        <p class="text-sm text-gray-500">Pro Tip: You can also press <kbd>K</kbd> anytime to toggle this screen.</p>
+      </div>
+
+    </div>
+  </div>
+
   <div id="modal-container" class="fixed inset-0 z-50 flex items-center justify-center hidden">
     <div id="modal-overlay" class="absolute inset-0 bg-black bg-opacity-50"></div>
     <div id="modal-content"
@@ -499,6 +619,31 @@
         <button id="modal-ok-btn"
           class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-semibold">OK</button>
       </div>
+    </div>
+  </div>
+
+  <!-- USER GUIDE MODAL -->
+  <div id="guide-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-80 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full h-full mx-8 my-4 relative flex flex-col">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-900 z-10 rounded-t-2xl">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">📚</span>
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">User Manual</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Quick-Start Guide & Reference</p>
+          </div>
+        </div>
+        <button id="guide-modal-close-btn" class="text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full p-2 transition-colors">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Iframe Content -->
+      <iframe id="user-manual-iframe" src="User_Manual.html" class="flex-grow w-full border-0 rounded-b-2xl" style="min-height: 400px;"></iframe>
     </div>
   </div>
 

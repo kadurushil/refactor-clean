@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keyboard Shortcuts - Radar & Video Synchronizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f8fafc; /* slate-50 */
+            color: #1e293b; /* slate-800 */
+        }
+        .font-mono { font-family: 'Roboto Mono', monospace; }
+        
+        /* Infographic Palette */
+        :root {
+            --c-primary: #0284c7; /* sky-600 */
+            --c-primary-light: #f0f9ff; /* sky-50 */
+            --c-secondary: #059669; /* emerald-600 */
+            --c-accent: #db2777; /* pink-600 */
+            --c-dark: #334155; /* slate-700 */
+            --c-light: #f1f5f9; /* slate-100 */
+            --c-text: #374151; /* gray-700 */
+            --c-text-light: #64748b; /* slate-500 */
+        }
+
+        h1, h2, h3 { font-weight: 700; letter-spacing: -0.025em; color: var(--c-dark); }
+        h1 { font-size: 2.25rem; line-height: 2.5rem; font-weight: 800; }
+        h2 { font-size: 1.875rem; line-height: 2.25rem; border-bottom: 2px solid var(--c-light); padding-bottom: 0.5rem; }
+        h3 { font-size: 1.25rem; line-height: 1.75rem; color: var(--c-primary); }
+
+        .section-icon {
+            font-size: 2rem;
+            line-height: 1;
+            background-color: var(--c-primary-light);
+            color: var(--c-primary);
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card {
+            background-color: white;
+            border: 1px solid #e2e8f0; /* slate-200 */
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
+            transition: all 0.2s ease-in-out;
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.07), 0 4px 6px -2px rgba(0,0,0,0.05);
+            border-color: var(--c-primary);
+        }
+
+        /* Keyboard Shortcut Styling */
+        kbd {
+            background-color: #e2e8f0; /* slate-200 */
+            border: 1px solid #cbd5e1; /* slate-300 */
+            border-bottom-width: 2px;
+            color: #334155; /* slate-700 */
+            border-radius: 0.375rem;
+            padding: 0.125rem 0.5rem;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            font-weight: 500;
+            display: inline-block;
+            margin: 0 0.125rem;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto px-4 py-12 max-w-6xl space-y-16">
+
+        <section class="text-center">
+            <div class="section-icon">⌨️</div>
+            <h1 class="text-4xl md:text-5xl">Keyboard Shortcuts</h1>
+            <p class="text-xl text-slate-600 max-w-3xl mx-auto mt-4">
+                Quick reference guide for controlling the Radar & Video Synchronizer.
+            </p>
+        </section>
+
+        <section>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Playback -->
+                <div class="feature-card p-6">
+                    <h3 class="mb-3">Playback & Navigation</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><kbd>Spacebar</kbd> - Play / Pause</li>
+                        <li><kbd>ArrowRight</kbd> - Next Frame (pauses)</li>
+                        <li><kbd>ArrowLeft</kbd> - Previous Frame (pauses)</li>
+                        <li><kbd>R</kbd> - Reset to Frame 0</li>
+                    </ul>
+                </div>
+                <!-- View & Toggles -->
+                <div class="feature-card p-6">
+                    <h3 class="mb-3">View & UI Toggles</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><kbd>M</kbd> - Toggle Sidebar Menu</li>
+                        <li><kbd>I</kbd> - Toggle Data Explorer</li>
+                        <li><kbd>G</kbd> - Toggle "GOD MODE" Zoom</li>
+                        <li><kbd>Q</kbd> - Toggle Dark/Light Theme</li>
+                        <li><kbd>A</kbd> - Toggle Advanced Debug Info</li>
+                        <li><kbd>F11</kbd> - Toggle Fullscreen</li>
+                    </ul>
+                </div>
+                <!-- Data Display -->
+                <div class="feature-card p-6">
+                    <h3 class="mb-3">Data Display Toggles</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><kbd>T</kbd> - Toggle Tracks</li>
+                        <li><kbd>D</kbd> - Toggle Object Details</li>
+                        <li><kbd>P</kbd> - Toggle Predicted Position</li>
+                        <li><kbd>C</kbd> - Toggle Confirmed Tracks Only</li>
+                        <li><kbd>1</kbd> / <kbd>S</kbd> - Color by SNR</li>
+                        <li><kbd>2</kbd> - Color by Cluster</li>
+                        <li><kbd>3</kbd> - Color by Inlier</li>
+                        <li><kbd>4</kbd> - Color by Stationary</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center mt-12 text-slate-500 text-sm">
+            <p>Pro Tip: Keep this tab open for quick reference while using the visualizer.</p>
+        </footer>
+
+    </div>
+
+</body>
+</html>

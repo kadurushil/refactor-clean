@@ -100,6 +100,13 @@ export const fullscreenExitIcon = document.getElementById("fullscreen-exit-icon"
 export const menuScrim = document.getElementById("menu-scrim");
 export const toggleConfirmedOnly = document.getElementById("toggle-confirmed-only");
 export const explorerBtn = document.getElementById("explorer-btn");
+export const shortcutsBtn = document.getElementById("shortcuts-btn");
+export const shortcutsModal = document.getElementById("shortcuts-modal");
+export const shortcutsModalCloseBtn = document.getElementById("shortcuts-modal-close-btn");
+export const userManualBtn = document.getElementById("user-manual-btn");
+export const guideModal = document.getElementById("guide-modal");
+export const guideModalCloseBtn = document.getElementById("guide-modal-close-btn");
+
 
 
 //----------------------Reset UI for New file Load----------------------//
