@@ -603,6 +603,31 @@
     </div>
   </div>
 
+  <!-- USER GUIDE MODAL -->
+  <div id="guide-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-80 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full h-full mx-8 my-4 relative flex flex-col">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-900 z-10 rounded-t-2xl">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">📚</span>
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">User Manual</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Quick-Start Guide & Reference</p>
+          </div>
+        </div>
+        <button id="guide-modal-close-btn" class="text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full p-2 transition-colors">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Iframe Content -->
+      <iframe id="user-manual-iframe" src="User_Manual.html" class="flex-grow w-full border-0 rounded-b-2xl" style="min-height: 400px;"></iframe>
+    </div>
+  </div>
+
   <div id="modal-container" class="fixed inset-0 z-50 flex items-center justify-center hidden">
     <div id="modal-overlay" class="absolute inset-0 bg-black bg-opacity-50"></div>
     <div id="modal-content"
