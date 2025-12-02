@@ -13,6 +13,7 @@ import {
   egoSpeedDisplay,
   canSpeedDisplay,
   autoOffsetIndicator,
+  speedGraphContainer
 } from "./dom.js";
 import { VIDEO_FPS } from "./constants.js";
 import { findRadarFrameIndexForTime, precomputeRadarVideoSync } from "./utils.js";
@@ -408,6 +409,10 @@ export function initSyncUIHandlers() {
   });
   // Use the video player for video frame seeking
   videoPlayer.addEventListener("wheel", handleVideoPanelWheel, {
+    passive: false,
+  });
+  // Use the speed graph container for radar frame seeking
+  speedGraphContainer.addEventListener("wheel", handleTimelineWheel, {
     passive: false,
   });
 }
