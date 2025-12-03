@@ -330,7 +330,7 @@ export function updatePersistentOverlays(currentMediaTime) {
                 | Color Mode: <b id="ov-mode"></b>
                 | Drift: <b id="ov-drift"></b>
                 | Δt: <b id="ov-ift"></b>
-                | Scale: <b id="ov-scale"></b>
+                <!-- | Scale: <b id="ov-scale"></b> -->
             </div>
             <canvas id="ift-dot-matrix" width="700" height="40" style="display:block; margin-top:5px; background:rgba(0,0,0,0.5); border:1px solid #555;"></canvas>
         `;
@@ -342,7 +342,7 @@ export function updatePersistentOverlays(currentMediaTime) {
             mode: document.getElementById("ov-mode"),
             drift: document.getElementById("ov-drift"),
             ift: document.getElementById("ov-ift"),
-            scale: document.getElementById("ov-scale"),
+            // scale: document.getElementById("ov-scale"), // Commented out as requested
             dotCanvas: document.getElementById("ift-dot-matrix") // Cache canvas too
         };
     }
@@ -384,7 +384,7 @@ export function updatePersistentOverlays(currentMediaTime) {
         overlayCache.ift.textContent = interFrameTime.toFixed(0) + "ms";
         overlayCache.ift.style.color = iftColor;
         
-        overlayCache.scale.textContent = "1:" + msPerBlock.toFixed(1) + "ms";
+        // overlayCache.scale.textContent = "1:" + msPerBlock.toFixed(1) + "ms"; // Commented out as requested
     }
 
     // --- Draw Optimized Square Block Matrix Graph ---
