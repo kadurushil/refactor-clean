@@ -23,7 +23,6 @@ export function showModal(
 
     modalCancelBtn.classList.toggle("hidden", !isConfirm);
     
-    // --- THIS IS THE FIX ---
     // This ensures the "OK" button is always visible for this modal.
     modalOkBtn.classList.remove("hidden"); 
     
@@ -37,11 +36,12 @@ export function showModal(
     modalResolve = resolve;
   });
 }
+
 // A new function specifically for the loading modal
 export function showLoadingModal(message) {
     modalText.textContent = message;
-    modalOkBtn.classList.add('hidden');
-    modalCancelBtn.classList.add('hidden');
+    modalOkBtn.classList.add('hidden'); // Hide OK button for loading
+    modalCancelBtn.classList.add('hidden'); // Initially hide cancel button
     modalProgressContainer.classList.remove('hidden');
     modalProgressBar.style.width = '0%';
     modalProgressText.textContent = 'Initializing...';
@@ -61,6 +61,44 @@ export function updateLoadingModal(percent, message) {
     modalProgressText.textContent = message;
   }
 }
+
+export function runStartupLoader(durationMs = 10000) {
+    return new Promise((resolve, reject) => {
+        showLoadingModal("Opening Quick Start Guide...");
+        modalCancelBtn.textContent = "Skip Guide";
+        modalCancelBtn.classList.remove("hidden"); // Show cancel button for startup loader
+
+        const startTime = Date.now();
+        const intervalMs = 100; // Update frequency
+        let timerId = null;
+
+        const cleanup = () => {
+            clearInterval(timerId);
+            hideModal(false); // Use hideModal to clear the progress bar and hide the modal
+        };
+
+        const onCancel = () => {
+            cleanup();
+            reject('cancelled');
+        };
+
+        modalCancelBtn.onclick = onCancel; // Use the existing modalCancelBtn
+
+        timerId = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const remaining = Math.max(0, durationMs - elapsed);
+            const percent = Math.min(100, (elapsed / durationMs) * 100);
+
+            updateLoadingModal(percent, `${(remaining / 1000).toFixed(1)}s remaining`);
+
+            if (elapsed >= durationMs) {
+                cleanup();
+                resolve();
+            }
+        }, intervalMs);
+    });
+}
+
 
 // The hideModal function now also resets the progress bar
 export function hideModal(value) { // This now returns a promise

@@ -22,6 +22,7 @@ import { initializeDataExplorer } from "./dataExplorer.js";
 import {
   showModal,
   hideModal,
+  runStartupLoader,
 } from "./modal.js"; 
 import {
   initSyncUIHandlers,
@@ -49,6 +50,9 @@ import {
   autoOffsetIndicator,
   clearCacheBtn,
   guideModal,
+  shortcutsModal,
+  shortcutsModalCloseBtn,
+  guideModalCloseBtn,
 } from "./dom.js";
 
 import { initializeTheme } from "./theme.js";
@@ -158,8 +162,34 @@ document.addEventListener("DOMContentLoaded", () => {
   // Check if the user has seen the guide
   const isFirstRun = !sessionStorage.getItem("hasSeenUserGuide");
   if (isFirstRun) {
-    guideModal.classList.remove("hidden");
-    sessionStorage.setItem("hasSeenUserGuide", "true");
+    runStartupLoader(10000)
+      .then(() => {
+        // 1. Show User Guide
+        guideModal.classList.remove("hidden");
+        
+        // 2. Setup chaining for Guide -> Shortcuts
+        // We use { once: true } to ensure this specific flow logic only runs once.
+        // The default event listeners in ui.js simply toggle visibility, which works fine 
+        // with this as long as we trigger the next step.
+        const onGuideClose = () => {
+             shortcutsModal.classList.remove("hidden");
+        };
+        guideModalCloseBtn.addEventListener("click", onGuideClose, { once: true });
+        
+        // 3. Setup chaining for Shortcuts -> App
+        const onShortcutsClose = () => {
+            // Flow complete
+             sessionStorage.setItem("hasSeenUserGuide", "true");
+        };
+        shortcutsModalCloseBtn.addEventListener("click", onShortcutsClose, { once: true });
+      })
+      .catch(() => {
+        console.log("Startup loader skipped/cancelled by user.");
+        sessionStorage.setItem("hasSeenUserGuide", "true");
+      });
+  } else {
+      // Ensure the flag is set if it wasn't first run (defensive)
+      sessionStorage.setItem("hasSeenUserGuide", "true");
   }
 
   // Await the database initialization before attempting to load any files.
