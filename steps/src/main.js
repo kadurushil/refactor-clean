@@ -48,6 +48,7 @@ import {
   offsetInput,
   autoOffsetIndicator,
   clearCacheBtn,
+  guideModal,
 } from "./dom.js";
 
 import { initializeTheme } from "./theme.js";
@@ -154,9 +155,22 @@ document.addEventListener("DOMContentLoaded", () => {
   initKeyboardShortcuts();
   initSyncUIHandlers();
 
+  // Check if the user has seen the guide
+  const isFirstRun = !sessionStorage.getItem("hasSeenUserGuide");
+  if (isFirstRun) {
+    guideModal.classList.remove("hidden");
+    sessionStorage.setItem("hasSeenUserGuide", "true");
+  }
+
   // Await the database initialization before attempting to load any files.
   // This resolves the race condition on initial load.
   initDB().then(async () => {
+    // If this is the first run, do not attempt to auto-load files.
+    if (isFirstRun) {
+      console.log("First run detected. Skipping auto-load of cached session.");
+      return;
+    }
+
     console.log("Database initialized. Checking for cached session...");
     // Load filenames and the last known offset from localStorage
     appState.jsonFilename = localStorage.getItem("jsonFilename");
