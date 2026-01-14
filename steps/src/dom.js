@@ -325,14 +325,14 @@ export function updatePersistentOverlays(currentMediaTime) {
         radarInfoOverlay.innerHTML = `
             <div id="radar-text-content" style="line-height: 1.5;">
                 Frame: <span id="ov-frame"></span>
-                | Motion State: <span id="ov-motion"></span>
+                | EGO State: <span id="ov-motion"></span>
                 | FPS: <b id="ov-fps"></b>
-                | Color Mode: <b id="ov-mode"></b>
+                | Color mode: <b id="ov-mode"></b>
                 | Drift: <b id="ov-drift"></b>
                 | Δt: <b id="ov-ift"></b>
                 <!-- | Scale: <b id="ov-scale"></b> -->
             </div>
-            <canvas id="ift-dot-matrix" width="700" height="40" style="display:block; margin-top:5px; background:rgba(0,0,0,0.5); border:1px solid #555;"></canvas>
+            <canvas id="ift-dot-matrix" height="40" style="display:block; margin-top:5px; background:rgba(0,0,0,0.5); border:1px solid #555; width: 100%;"></canvas>
         `;
         
         overlayCache = {
@@ -389,9 +389,19 @@ export function updatePersistentOverlays(currentMediaTime) {
 
     // --- Draw Optimized Square Block Matrix Graph ---
     // CONDITIONAL RENDER: Only redraw if frame changed or scale changed significantly
-    if (appState.currentFrame !== lastDrawnFrame || Math.abs(msPerBlock - lastDrawnScale) > 0.01) {
+    const dotCanvas = overlayCache.dotCanvas;
+    let isResized = false;
+
+    if (dotCanvas) {
+        const clientWidth = dotCanvas.clientWidth;
+        if (dotCanvas.width !== clientWidth) {
+            dotCanvas.width = clientWidth;
+            isResized = true;
+        }
+    }
+
+    if (appState.currentFrame !== lastDrawnFrame || Math.abs(msPerBlock - lastDrawnScale) > 0.01 || isResized) {
       
-      const dotCanvas = overlayCache.dotCanvas; // Use cached reference
       if (dotCanvas) {
         const ctx = dotCanvas.getContext("2d");
         const w = dotCanvas.width;
@@ -403,9 +413,9 @@ export function updatePersistentOverlays(currentMediaTime) {
         const stride = blockSize + hGap;
         // msPerBlock is already set above
         
-        // Calculate columns: 600px / 5px = 120 columns.
-        const totalCols = 140;
-        const centerCol = 70;
+        // Calculate columns dynamically based on width
+        const totalCols = Math.floor(w / stride);
+        const centerCol = Math.floor(totalCols / 2);
 
         ctx.clearRect(0, 0, w, h);
 
@@ -444,7 +454,7 @@ export function updatePersistentOverlays(currentMediaTime) {
           }
         }
 
-        // Draw Center Indicator (Triangle at column 60)
+        // Draw Center Indicator (Triangle at center column)
         const centerX = centerCol * stride + 2;
         ctx.fillStyle = "#FFFFFF";
         ctx.beginPath();
