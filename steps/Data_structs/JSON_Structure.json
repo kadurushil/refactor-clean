@@ -1,0 +1,69 @@
+{
+  "radarFrames": [
+    {
+      "timestamp": "Number (Timestamp in seconds or ms)",
+      "frameIdx": "Number (Index of the frame)",
+      "motionState": "Number (Enum/State identifier)",
+      "egoVelocity": ["Number (Vx)", "Number (Vy)"],
+      "canVehSpeed_kmph": "Number",
+      "correctedEgoSpeed_mps": "Number",
+      "shaftTorque_Nm": "Number",
+      "engagedGear": "Number",
+      "estimatedAcceleration_mps2": "Number",
+      "iirFilteredVx_ransac": "Number",
+      "iirFilteredVy_ransac": "Number",
+      "filtered_barrier_x": ["Number (Left)", "Number (Right)"],
+      "clusters": [
+        {
+          "id": "Number (Original Cluster ID)",
+          "x": "Number",
+          "y": "Number",
+          "radialSpeed": "Number",
+          "vx": "Number",
+          "vy": "Number",
+          "azimuth": "Number",
+          "isOutlier": "Boolean",
+          "isStationaryInBox": "Boolean"
+        }
+      ],
+      "pointCloud": [
+        {
+          "x": "Number",
+          "y": "Number",
+          "velocity": "Number",
+          "snr": "Number",
+          "clusterNumber": "Number",
+          "isOutlier": "Boolean"
+        }
+      ]
+    }
+  ],
+  "tracks": [
+    {
+      "id": "Number (Track ID)",
+      "isConfirmed": "Boolean",
+      "historyLog": [
+        {
+          "frameIdx": "Number",
+          "predictedPosition": ["Number (X)", "Number (Y)"],
+          "predictedVelocity": ["Number (Vx)", "Number (Vy)"],
+          "correctedPosition": ["Number (X)", "Number (Y)"],
+          "ttc": "Number (Time To Collision)",
+          "isStationary": "Boolean",
+          "covarianceP": [
+            ["Number", "Number"],
+            ["Number", "Number"]
+          ],
+          "ellipseRadii": ["Number (Major)", "Number (Minor)"],
+          "ellipseAngle": "Number (Orientation)"
+        }
+      ],
+      "ttcCategoryTimeline": [
+        {
+          "frameIdx": "Number",
+          "ttcCategory": "String or Number (Category identifier)"
+        }
+      ]
+    }
+  ]
+}

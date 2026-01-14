@@ -1,0 +1,85 @@
+{
+  "metadata": {
+    "version": "2.0",
+    "source": "TI_AWRL1432",
+    "notes": "Full data retention, ROS-ready structure"
+  },
+  "frames": [
+    {
+      "header": {
+        "seq": 101,                         // formerly frameIdx
+        "stamp": 123456789.0                // formerly timestamp
+      },
+      "ego": {
+        "motionState": 1,                   // enum
+        "gear": 2,                          // formerly engagedGear
+        "torque": 150.5,                    // formerly shaftTorque_Nm
+        "velocity": {                       // Grouping vectors is cleaner
+          "x": 10.5,                        // egoVelocity[0]
+          "y": 0.1                          // egoVelocity[1]
+        },
+        "speed": {
+          "can_kmph": 38.0,                 // formerly canVehSpeed_kmph
+          "corrected_mps": 10.5             // formerly correctedEgoSpeed_mps
+        },
+        "accel_mps2": 1.2,                  // formerly estimatedAcceleration_mps2
+        "ransac": {                         // Grouped RANSAC fields
+          "vx": 10.4,                       // iirFilteredVx_ransac
+          "vy": 0.0                         // iirFilteredVy_ransac
+        },
+        "barriers": {                       // formerly filtered_barrier_x
+          "left": -2.5,
+          "right": 3.5
+        }
+      },
+      
+      // OPTIMIZATION: Structure of Arrays (SoA) matches ROS PointCloud2 logic
+      "points": {
+        "x": [1.2, 3.4, ...],
+        "y": [-0.5, 2.1, ...],
+        "v": [10.0, 11.2, ...],             // velocity
+        "snr": [100, 95, ...],
+        "clusterId": [1, 1, ...],           // clusterNumber
+        "isOutlier": [0, 0, ...]            // Boolean as 0/1 for efficiency
+      },
+
+      // Clusters as list of objects (Object Array is fine here, low count)
+      "clusters": [
+        {
+          "id": 5,
+          "pos": { "x": 10.0, "y": 2.0 },
+          "vel": { "vx": 10.0, "vy": 0.5, "radial": 10.1 },
+          "azimuth": 0.1,
+          "flags": {                        // Group booleans
+            "outlier": false,               // isOutlier
+            "staticInBox": true             // isStationaryInBox
+          }
+        }
+      ],
+
+      // Tracks: SNAPSHOT of the track at this specific frame
+      "tracks": [
+        {
+          "id": 10,
+          "confirmed": true,                // isConfirmed
+          "isStationary": false,
+          "ttc": 4.5,
+          "ttcCategory": "warning",         // from ttcCategoryTimeline
+          "pos": {                          // correctedPosition
+            "x": 12.0, 
+            "y": 1.5 
+          },
+          "vel": {                          // predictedVelocity (or corrected if preferred)
+            "vx": 12.0, 
+            "vy": 0.0 
+          },
+          "cov": [0.5, 0, 0, 0.5],          // covarianceP (flattened 2x2 matrix)
+          "shape": {
+            "radii": [2.5, 1.2],            // ellipseRadii
+            "angle": 0.1                    // ellipseAngle
+          }
+        }
+      ]
+    }
+  ]
+}

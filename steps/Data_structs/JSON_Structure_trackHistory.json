@@ -1,0 +1,67 @@
+{
+  "radarFrames": [
+    {
+      "timestamp": "Number",
+      "frameIdx": "Number",
+      "motionState": "Number",
+      "egoVelocity": ["Number (Vx)","Number (Vy)"],
+      "canVehSpeed_kmph": "Number",
+      "correctedEgoSpeed_mps": "Number",
+      "shaftTorque_Nm": "Number",
+      "engagedGear": "Number",
+      "estimatedAcceleration_mps2": "Number",
+      "iirFilteredVx_ransac": "Number",
+      "iirFilteredVy_ransac": "Number",
+      "filtered_barrier_x": ["Number (min)","Number (max)"],
+      "clusters": [
+        {
+          "id": "Number",
+          "x": "Number",
+          "y": "Number",
+          "radialSpeed": "Number",
+          "vx": "Number",
+          "vy": "Number",
+          "azimuth": "Number",
+          "isOutlier": "Boolean",
+          "isStationaryInBox": "Boolean"
+        }
+      ],
+      "pointCloud": [
+        {
+          "x": "Number",
+          "y": "Number",
+          "velocity": "Number",
+          "snr": "Number",
+          "clusterNumber": "Number",
+          "isOutlier": "Boolean"
+        }
+      ]
+    }
+  ],
+  "tracks": [
+    {
+      "id": "Number",
+      "historyLog": [
+        {
+          "frameIdx": "Number",
+          "state": "Number",
+          "predictedPosition": ["Number (x)", "Number (y)"],
+          "predictedVelocity": ["Number (vx)", "Number (vy)"],
+          "correctedPosition": ["Number (x)", "Number (y)"],
+          "ttc": "Number",
+          "risk": "Number",
+          "tti": "Number",
+          "accel": ["Number (ax)", "Number (ay)"],
+          "omega": "Number",
+          "modelProbabilities": ["Number", "Number", "Number"],
+          "isStationary": "Boolean",
+          "covarianceP": [["Number", "Number", "Number", "Number", "Number", "Number", "Number"]],
+          "ellipseRadii": ["Number", "Number"],
+          "ellipseAngle": "Number",
+          "objectExtentRadii": ["Number", "Number"],
+          "objectExtentAngle": "Number"
+        }
+      ]
+    }
+  ]
+}

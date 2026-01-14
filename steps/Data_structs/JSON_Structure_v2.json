@@ -1,0 +1,89 @@
+{
+  "metadata": {
+    "version": "2.0",
+    "description": "Radar visualization data structure",
+    "generatedAt": "ISO-8601 Timestamp"
+  },
+  "radarFrames": [
+    {
+      "frameId": "Number (Unique Frame Index)",
+      "timestamp": "Number (Seconds/ms)",
+      "timestampIso": "String (ISO-8601 for human readability)",
+      "egoState": {
+        "velocity": { "x": "Number", "y": "Number" },
+        "speedKmph": "Number",
+        "correctedSpeedMps": "Number",
+        "accelerationMps2": "Number",
+        "yawRate": "Number",
+        "motionState": "String (e.g., 'MOVING', 'STATIONARY')"
+      },
+      "vehicleData": {
+        "shaftTorqueNm": "Number",
+        "engagedGear": "Number"
+      },
+      "environment": {
+        "barrierLimitsX": { "min": "Number", "max": "Number" }
+      },
+      "sensing": {
+        "iirFilteredVelocity": { "x": "Number", "y": "Number" }
+      },
+      "activeTrackIds": ["Number (List of Track IDs visible in this frame)"],
+      "clusters": [
+        {
+          "id": "Number",
+          "position": { "x": "Number", "y": "Number" },
+          "velocity": { "radial": "Number", "x": "Number", "y": "Number" },
+          "azimuth": "Number",
+          "flags": {
+            "isOutlier": "Boolean",
+            "isStationaryInBox": "Boolean"
+          }
+        }
+      ],
+      "pointCloud": [
+        {
+          "position": { "x": "Number", "y": "Number" },
+          "velocity": "Number",
+          "signal": { "snr": "Number", "clusterId": "Number" },
+          "flags": { "isOutlier": "Boolean" }
+        }
+      ]
+    }
+  ],
+  "tracks": [
+    {
+      "trackId": "Number",
+      "status": {
+        "isConfirmed": "Boolean",
+        "classification": "String (e.g., 'VEHICLE', 'PEDESTRIAN')"
+      },
+      "historyLog": [
+        {
+          "frameId": "Number",
+          "state": {
+            "position": { "x": "Number", "y": "Number" },
+            "velocity": { "x": "Number", "y": "Number" },
+            "covariance": { "xx": "Number", "xy": "Number", "yx": "Number", "yy": "Number" },
+            "isStationary": "Boolean"
+          },
+          "prediction": {
+            "position": { "x": "Number", "y": "Number" },
+            "velocity": { "x": "Number", "y": "Number" }
+          },
+          "shape": {
+            "ellipse": { "major": "Number", "minor": "Number", "angle": "Number" }
+          },
+          "safety": {
+            "ttc": "Number",
+            "ttcCategory": "String (e.g., 'CRITICAL', 'HIGH')"
+          }
+        }
+      ],
+      "derivedData": {
+        "ttcCategoryTimeline": [
+          { "frameId": "Number", "category": "String" }
+        ]
+      }
+    }
+  ]
+}
