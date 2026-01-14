@@ -522,11 +522,14 @@ export function drawTrackMarkers(p, plotScales) {
 
             // Defer Text Drawing
             const speed = (Math.sqrt(vx * vx + vy * vy) * 3.6).toFixed(1);
-            const ttc =
+            let ttcText =
               log.ttc !== null && isFinite(log.ttc) && log.ttc < 100
                 ? `TTC: ${log.ttc.toFixed(1)}s`
                 : "";
-            const text = `ID: ${track.id} | ${speed} km/h\n${ttc}`;
+            if (log.state !== undefined && log.state !== null) {
+              ttcText += ttcText ? ` | st: ${log.state}` : `st: ${log.state}`;
+            }
+            const text = `ID: ${track.id} | ${speed} km/h\n${ttcText}`;
             
             textLabels.push({ x, y, text });
           }
