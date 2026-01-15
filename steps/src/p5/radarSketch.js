@@ -14,6 +14,7 @@ import {
   togglePredictedPos,
   toggleCovariance,
   toggleVelocity,
+  toggleVehicleDimensions,
   toggleClusterColor,
 } from "../dom.js";
 import {
@@ -26,6 +27,7 @@ import {
   snrColors,
   handleCloseUpDisplay,
   drawCovarianceEllipse,
+  drawObjectDimensions,
   ttcColors,
   drawRegionsOfInterest,
   drawClusterCentroids,
@@ -203,15 +205,13 @@ export const radarSketch = function (p) {
         // }
         if (togglePredictedPos.checked) {
           for (const track of appState.vizData.tracks) {
-            const log = track.historyLog.find(
-              (log) => log.frameIdx === appState.currentFrame
-            );
+            const log = track.historyLog.find((log) => log.frameIdx === appState.currentFrame);
             if (
               log &&
               log.predictedPosition &&
               log.predictedPosition[0] !== null
             ) {
-              const pos = log.predictedPosition;
+              const pos = log.predictedPosition;  //using predicted position from data 
               const x = pos[0] * plotScales.plotScaleX;
               const y = pos[1] * plotScales.plotScaleY;
 
@@ -230,8 +230,7 @@ export const radarSketch = function (p) {
           if (toggleCovariance.checked) {
             for (const track of appState.vizData.tracks) {
               const log = track.historyLog.find(
-                (log) => log.frameIdx === appState.currentFrame + 1
-              );
+                (log) => log.frameIdx === appState.currentFrame);
               if (
                 log &&
                 log.ellipseRadii &&
@@ -244,6 +243,29 @@ export const radarSketch = function (p) {
                     pos,
                     log.ellipseRadii,
                     log.ellipseAngle,
+                    plotScales,
+                    log.isStationary
+                  );
+                }
+              }
+            }
+          }
+          if (toggleVehicleDimensions.checked) {
+            for (const track of appState.vizData.tracks) {
+              const log = track.historyLog.find(
+                (log) => log.frameIdx === appState.currentFrame);
+              if (
+                log &&
+                log.objectExtentRadii &&
+                typeof log.objectExtentAngle !== "undefined"
+              ) {
+                const pos = log.correctedPosition;
+                if (pos && pos[0] !== null) {
+                  drawObjectDimensions(
+                    p,
+                    pos,
+                    log.objectExtentRadii,
+                    log.objectExtentAngle,
                     plotScales,
                     log.isStationary
                   );

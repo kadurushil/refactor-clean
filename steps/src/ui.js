@@ -18,6 +18,8 @@ import {
   toggleDebugOverlay,
   toggleDebug2Overlay,
   toggleCloseUp,
+  toggleCovariance,
+  toggleVehicleDimensions,
   snrMinInput,
   snrMaxInput,
   applySnrBtn,
@@ -185,7 +187,7 @@ export function initUIEventListeners() {
     t.addEventListener("change", handleColorToggles);
   });
 
-  [toggleVelocity, toggleEgoSpeed, toggleFrameNorm, toggleTracks, toggleDebugOverlay, toggleDebug2Overlay].forEach((t) => {
+  [toggleVelocity, toggleEgoSpeed, toggleFrameNorm, toggleTracks, toggleDebugOverlay, toggleDebug2Overlay, toggleCovariance, toggleVehicleDimensions].forEach((t) => {
     t.addEventListener("change", () => {
       if (appState.p5_instance) appState.p5_instance.redraw();
       if (t === toggleDebugOverlay || t === toggleDebug2Overlay) {

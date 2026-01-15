@@ -332,12 +332,12 @@ export function drawTrajectories(p, plotScales) {
       }
 
       const logs = track.historyLog.filter(
-        (log) => log.frameIdx <= appState.currentFrame + 1
+        (log) => log.frameIdx <= appState.currentFrame
       );
       if (logs.length < 2) continue;
 
       const lastLog = logs[logs.length - 1];
-      if (appState.currentFrame + 1 - lastLog.frameIdx > MAX_TRAJECTORY_LENGTH)
+      if (appState.currentFrame - lastLog.frameIdx > MAX_TRAJECTORY_LENGTH)
         continue;
 
       const isCurrentlyStationary = lastLog.isStationary;
@@ -388,34 +388,52 @@ export function drawTrajectories(p, plotScales) {
         } else {
           // MODE 2: DEFAULT TTC SCHEME (Use pre-calculated category from JSON)
 
-          // FIND the TTC category from the new timeline
-          let ttcCategory = null;
-          if (track.ttcCategoryTimeline) {
-            const ttcEntry = track.ttcCategoryTimeline.find(
-              (entry) => entry.frameIdx === lastLog.frameIdx
-            );
-            ttcCategory = ttcEntry ? ttcEntry.ttcCategory : null; // Get the category if found
-          }
+          // 1. Check for 'risk' property (New Logic)
+          if (lastLog.risk !== undefined && lastLog.risk !== null) {
+            switch (lastLog.risk) {
+              case 2: // High Risk
+                trajectoryColor = p.color(localTtcColors.critical); // Red
+                break;
+              case 1: // Medium Risk
+                trajectoryColor = p.color(localTtcColors.high); // Orange
+                break;
+              case 0: // Low Risk
+                trajectoryColor = p.color(localTtcColors.away); // Blue
+                break;
+              default:
+                trajectoryColor = p.color(localTtcColors.default); // Gray
+                break;
+            }
+          } else {
+            // 2. Fallback to 'ttcCategoryTimeline' (Old Logic)
+            let ttcCategory = null;
+            if (track.ttcCategoryTimeline) {
+              const ttcEntry = track.ttcCategoryTimeline.find(
+                (entry) => entry.frameIdx === lastLog.frameIdx
+              );
+              ttcCategory = ttcEntry ? ttcEntry.ttcCategory : null; // Get the category if found
+            }
 
-          switch (ttcCategory) {
-            case 3:
-              trajectoryColor = p.color(localTtcColors.critical);
-              break;
-            case 2:
-              trajectoryColor = p.color(localTtcColors.high);
-              break;
-            case 1:
-              trajectoryColor = p.color(localTtcColors.medium);
-              break;
-            case 0:
-              trajectoryColor = p.color(localTtcColors.low);
-              break;
-            case -1:
-              trajectoryColor = p.color(localTtcColors.away);
-              break;
-            default:
-              trajectoryColor = p.color(localTtcColors.default);
-              break;
+            switch (ttcCategory) {
+              case 3:
+                trajectoryColor = p.color(localTtcColors.critical);
+                break;
+              case 2:
+                trajectoryColor = p.color(localTtcColors.high);
+                break;
+              case 1:
+                trajectoryColor = p.color(localTtcColors.medium);
+                break;
+              case 0:
+                trajectoryColor = p.color(localTtcColors.low);
+                break;
+              case -1:
+                trajectoryColor = p.color(localTtcColors.away);
+                break;
+              default:
+                trajectoryColor = p.color(localTtcColors.default);
+                break;
+            }
           }
         }
 
@@ -522,10 +540,15 @@ export function drawTrackMarkers(p, plotScales) {
 
             // Defer Text Drawing
             const speed = (Math.sqrt(vx * vx + vy * vy) * 3.6).toFixed(1);
-            let ttcText =
-              log.ttc !== null && isFinite(log.ttc) && log.ttc < 100
-                ? `TTC: ${log.ttc.toFixed(1)}s`
-                : "";
+            let ttcText = "";
+            if ("tti" in log) {
+              const tti = log.tti;
+              if (typeof tti === "number" && isFinite(tti)) {
+                ttcText = `TTI: ${tti.toFixed(1)}s`;
+              }
+            } else if (log.ttc !== null && isFinite(log.ttc) && log.ttc < 100) {
+              ttcText = `TTC: ${log.ttc.toFixed(1)}s`;
+            }
             if (log.state !== undefined && log.state !== null) {
               ttcText += ttcText ? ` | st: ${log.state}` : `st: ${log.state}`;
             }
@@ -883,6 +906,40 @@ export function drawCovarianceEllipse(
     p.pop();
   } catch (error) {
     console.error("Error in drawCovarianceEllipse:", error);
+  }
+}
+
+export function drawObjectDimensions(
+  p,
+  position,
+  dims,
+  angle,
+  plotScales,
+  isStationary
+) {
+  try {
+    if (isStationary) return;
+    const [dimA, dimB] = dims;
+    const angledegrees = 90 + angle;
+    p.push();
+    p.noFill();
+    p.stroke(128, 0, 128, 150); // Purple
+    p.strokeWeight(1);
+    p.translate(
+      position[0] * plotScales.plotScaleX,
+      position[1] * plotScales.plotScaleY
+    );
+    p.rotate(p.radians(angledegrees));
+    p.rectMode(p.CENTER);
+    p.rect(
+      0,
+      0,
+      dimA * 2 * plotScales.plotScaleX,
+      dimB * 2 * plotScales.plotScaleY
+    );
+    p.pop();
+  } catch (error) {
+    console.error("Error in drawObjectDimensions:", error);
   }
 }
 
