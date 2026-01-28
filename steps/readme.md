@@ -38,7 +38,7 @@ The worker receives the JSON File object.
 
 It uses the File.stream() API and TextDecoder to read the file chunk by chunk.
 
-Clarinet.js (clarinet.min.js via CDN import in worker) parses the incoming JSON stream event-by-event (onopenobject, onkey, onvalue, etc.), reconstructing the full JavaScript object in memory off the main thread.
+Clarinet.js (clarinet.min.js loaded locally via importScripts in the worker) parses the incoming JSON stream event-by-event (onopenobject, onkey, onvalue, etc.), reconstructing the full JavaScript object in memory off the main thread.
 
 Progress updates (percent) are sent back to the main thread via postMessage.
 
@@ -92,13 +92,17 @@ A dedicated panel (#data-explorer-panel) for inspecting raw data of the current 
 
 Activated by pressing the <kbd>I</kbd> key or clicking on the main radar canvas (#canvas-container).
 
-Features three views selectable via tabs:
+Features four views selectable via tabs:
 
 Tree View (#tab-panel-tree): Displays the current frame's data structure as a formatted JSON string.
 
 Grid View (#tab-panel-grid): Uses AG Grid (ag-grid-community.min.js) to display array data (e.g., pointCloud) in a sortable, filterable table. Populated via displayInGrid(data, title).
 
+Track Grid View (#tab-panel-track-grid): Displays object tracking data for the current frame in a dedicated grid.
+
 Plot View (#tab-panel-plot): Uses Chart.js (chart.js CDN) to generate a line plot of the numeric data from a column selected in the Grid View (by clicking the column header).
+
+Panel Features: The Data Explorer panel is **draggable** (via the header) and **resizable** (via edges/corners).
 
 Allows users to directly examine the underlying numerical values being visualized.
 
@@ -128,31 +132,37 @@ timelineSlider mousemove event calculates hover position to display frame/time i
 
 speedSlider updates videoPlayer.playbackRate (main.js).
 
-UI Enhancements (main.js, theme.js, dom.js, index.html):
+UI Enhancements (ui.js, main.js, theme.js, dom.js, index.html):
 
-Sidebar (#collapsible-menu) visibility toggled by toggleMenuBtn, closeMenuBtn, and clicks on the #menu-scrim overlay (main.js::toggleMenu).
+Sidebar (#collapsible-menu) visibility toggled by toggleMenuBtn, closeMenuBtn, and clicks on the #menu-scrim overlay (ui.js).
 
-Fullscreen toggled via fullscreenBtn and monitored using the fullscreenchange event (main.js).
+Fullscreen toggled via fullscreenBtn and monitored using the fullscreenchange event (ui.js).
 
 Persistent overlays (#radar-info-overlay, #video-info-overlay) updated by dom.js::updatePersistentOverlays with frame index, absolute time, color mode, and sync drift.
 
 Dark/Light theme managed by theme.js::setTheme, saving preference to localStorage, and triggering redraws in p5 sketches.
 
-Session Management (main.js, db.js):
+**Startup Guide & Shortcuts**:
+*   Includes a "First Run" experience with a loading screen and Quick Start Guide modal (ui.js).
+*   A "Shortcuts" modal (toggle with <kbd>K</kbd> or via the UI) provides a reference for all keyboard interactions (ui.js).
+
+Session Management (session.js, main.js, db.js):
 
 Files are cached in IndexedDB using db.js::saveFileWithMetadata upon loading. Metadata (filename, size) is stored alongside the blob.
 
 On DOMContentLoaded, main.js retrieves expected filenames from localStorage and attempts to load corresponding blobs using db.js::loadFreshFileFromDB. This function verifies filename and size match before returning the blob, ensuring cache validity.
 
-saveSessionBtn gathers current state (appState filenames, offsetInput.value, toggle states) into a JSON object and triggers a browser download (main.js).
+saveSessionBtn (handled in session.js) gathers current state (appState filenames, offsetInput.value, toggle states) into a JSON object and triggers a browser download.
 
-loadSessionBtn reads a chosen session JSON file. It verifies that the files mentioned in the session currently exist and are valid in IndexedDB using loadFreshFileFromDB before applying settings to localStorage and reloading the page (main.js).
+loadSessionBtn (handled in session.js) reads a chosen session JSON file. It verifies that the files mentioned in the session currently exist and are valid in IndexedDB using loadFreshFileFromDB before applying settings to localStorage and reloading the page.
 
 Keyboard Shortcuts (keyboard.js):
 
 A comprehensive keydown listener intercepts keys (Space, Arrows, 1-4, S, T, D, G, P, A, M, Q, R, C, I).
 
 It programmatically triggers .click() events on corresponding buttons or directly updates appState/calls functions (like showExplorer/hideExplorer).
+
+Note: <kbd>K</kbd> (Shortcuts) and <kbd>Esc</kbd> (Close Modals) are handled globally in `ui.js`.
 
 Includes a check to prevent shortcuts firing when focus is on text/number inputs (offsetInput, snrMinInput, etc.).
 
@@ -172,37 +182,52 @@ Project Structure
 
 ├── index.html                       # Main HTML shell
 ├── README.md                        # This documentation
+├── User_Manual.html                 # Content for the Quick Start Guide (loaded via iframe)
+├── code-base-overview.html          # Technical overview of the codebase (infographic style)
+├── shortcuts.html                   # Reference for keyboard shortcuts (legacy/static)
 ├── Visualization_Start.bat          # Script to start the local server
 ├── python_check.bat                 # Script to check Python installation
-├── Visualizer_quick_start_Guide.html # Separate HTML quick start guide
 ├── favicon.png                      # Browser tab icon
-└── src/
+├── context.md                       # Detailed technical overview for AI assistance
+├── Improvements.txt                 # Log of planned and completed improvements
+├── package-lock.json                # NPM lockfile
+├── src/
     ├── constants.js                 # Shared constants (radar bounds, FPS)
-    ├── dataExplorer.js              # NEW: Logic for the Data Explorer panel
+    ├── dataExplorer.js              # Logic for the Data Explorer panel (AG Grid, Chart.js)
     ├── db.js                        # IndexedDB logic for caching files
-    ├── debug.js                     # Debug logging flags
-    ├── dom.js                       # DOM element references and UI update functions
+    ├── debug.js                     # Debug logging flags and console exposure
+    ├── dom.js                       # Centralized DOM element references
     ├── drawUtils.js                 # p5.js drawing helpers (points, tracks, axes, legends)
     ├── fileLoader.js                # File handling pipeline (Dropzone, Inputs, Worker trigger)
     ├── fileParsers.js               # Post-processing logic for parsed JSON
     ├── keyboard.js                  # Keyboard shortcut handler
-    ├── main.js                      # Main application entry point, initialization
+    ├── main.js                      # Main application entry point, initialization logic
     ├── modal.js                     # Logic for pop-up modal dialogs & progress bar
     ├── parser.worker.js             # Web Worker for background JSON parsing (uses Clarinet.js)
+    ├── session.js                   # NEW: Logic for saving and loading session state
     ├── state.js                     # Centralized application state management object (appState)
     ├── sync.js                      # Core animation loop and playback synchronization logic
     ├── theme.js                     # Dark/Light mode theme switching logic
-    ├── utils.js                     # General utility functions (binary search, timestamp parsing, formatting)
+    ├── ui.js                        # NEW: General UI event listeners (menus, modals, toggles)
+    ├── utils.js                     # General utility functions (binary search, formatting)
     └── p5/
         ├── radarSketch.js           # p5.js sketch for the main radar visualization
         ├── speedGraphSketch.js      # p5.js sketch for the speed graph
         └── zoomSketch.js            # p5.js sketch for the magnified zoom window ("GOD MODE")
-├── tests/                           # Simple unit tests (optional)
+├── vendor/                          # Local copies of external libraries
+│   ├── ag-grid-community.min.js
+│   ├── chart.min.js
+│   ├── clarinet.min.js
+│   ├── oboe.min.js
+│   ├── p5.js
+│   └── tailwind-cdn.js
+├── tests/                           # Unit tests
 │   ├── fileLoader.test.js
 │   ├── fileParsers.test.js
 │   ├── test-runner.html
 │   └── utils.test.js
-└── context.md                       # Detailed technical overview for AI assistance
+├── Data_structs/                    # Documentation of JSON and ROS2 data structures
+└── Console_logs/                    # Example logs for debugging synchronization
 
 
 How to Use the Application
@@ -231,4 +256,4 @@ In Grid View, click a column header, then click "Plot Selected Column" to see a 
 
 Session Management: Use "Save/Load Session", "Clear Cache". Load requires files in cache.
 
-Other Shortcuts: Theme <kbd>Q</kbd>, Reset <kbd>R</kbd>.
+Other Shortcuts: Theme <kbd>Q</kbd>, Reset <kbd>R</kbd>, Shortcuts List <kbd>K</kbd>.
