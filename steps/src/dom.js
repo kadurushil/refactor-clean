@@ -107,6 +107,9 @@ export const shortcutsModalCloseBtn = document.getElementById("shortcuts-modal-c
 export const userManualBtn = document.getElementById("user-manual-btn");
 export const guideModal = document.getElementById("guide-modal");
 export const guideModalCloseBtn = document.getElementById("guide-modal-close-btn");
+export const codebaseBtn = document.getElementById("codebase-btn");
+export const codebaseModal = document.getElementById("codebase-modal");
+export const codebaseModalCloseBtn = document.getElementById("codebase-modal-close-btn");
 
 
 

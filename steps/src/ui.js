@@ -39,6 +39,9 @@ import {
   userManualBtn,
   guideModal,
   guideModalCloseBtn,
+  codebaseBtn,
+  codebaseModal,
+  codebaseModalCloseBtn,
 } from "./dom.js";
 
 function toggleMenu(show) {
@@ -64,6 +67,19 @@ function toggleGuideModal(show) {
     guideModal.classList.remove("hidden");
   } else {
     guideModal.classList.add("hidden");
+  }
+}
+
+function toggleCodebaseModal(show) {
+  if (show) {
+    codebaseModal.classList.remove("hidden");
+    // Reset iframe to ensure it starts at the top
+    const iframe = codebaseModal.querySelector("iframe");
+    if (iframe) {
+        iframe.src = iframe.src;
+    }
+  } else {
+    codebaseModal.classList.add("hidden");
   }
 }
 
@@ -108,6 +124,18 @@ export function initUIEventListeners() {
         toggleGuideModal(false);
     }
   });
+
+  // --- Codebase Modal ---
+  codebaseBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    toggleCodebaseModal(true);
+  });
+  codebaseModalCloseBtn.addEventListener("click", () => toggleCodebaseModal(false));
+  codebaseModal.addEventListener("click", (e) => {
+    if (e.target === codebaseModal) {
+        toggleCodebaseModal(false);
+    }
+  });
   
   // Global Key Listener for 'k' and 'ESC'
   document.addEventListener("keydown", (e) => {
@@ -116,10 +144,12 @@ export function initUIEventListeners() {
       const isHidden = shortcutsModal.classList.contains("hidden");
       toggleShortcutsModal(isHidden);
     }
-    // Prioritize closing the guide modal if open, then shortcuts modal
+    // Prioritize closing the guide modal if open, then codebase, then shortcuts
     if (e.key === "Escape") {
         if (!guideModal.classList.contains("hidden")) {
             toggleGuideModal(false);
+        } else if (!codebaseModal.classList.contains("hidden")) {
+            toggleCodebaseModal(false);
         } else if (!shortcutsModal.classList.contains("hidden")) {
             toggleShortcutsModal(false);
         }
