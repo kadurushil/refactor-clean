@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codebase Overview - Radar & Video Synchronizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Prism.js for Syntax Highlighting (Local Okaidia Theme) -->
+    <link href="vendor/prism.css" rel="stylesheet" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=Roboto+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            /* slate-50 */
+            color: #1e293b;
+            /* slate-800 */
+        }
+
+        .font-mono {
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+
+        /* Card Styling */
+        .file-card {
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease-in-out;
+            padding: 1.25rem;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .file-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px -3px rgba(0, 0, 0, 0.07);
+            border-color: #94a3b8;
+        }
+
+        .file-card::after {
+            content: "View Code ↗";
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.2s;
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+
+        .file-card:hover::after {
+            opacity: 1;
+        }
+
+        .file-name {
+            font-family: 'Roboto Mono', monospace;
+            font-weight: 700;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.85rem;
+            display: inline-block;
+        }
+
+        .core-badge {
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: white;
+        }
+
+        .file-desc {
+            font-size: 0.9rem;
+            color: #475569;
+            line-height: 1.5;
+            margin-top: 0.75rem;
+            flex-grow: 1;
+        }
+
+        .file-desc ul {
+            list-style-type: none;
+            padding-left: 0.25rem;
+            margin: 0;
+        }
+
+        .file-desc li {
+            position: relative;
+            padding-left: 1rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .file-desc li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+            opacity: 0.8;
+        }
+
+        .file-link {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 1rem;
+            padding-top: 0.75rem;
+            border-top: 1px dashed #e2e8f0;
+        }
+
+        /* Sticky Nav Styling */
+        .nav-link {
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .nav-link:hover {
+            background-color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+
+        section {
+            scroll-margin-top: 140px;
+        }
+
+        /* Modal Styling */
+        #code-modal {
+            transition: opacity 0.3s ease;
+        }
+
+        /* Modal Source Code Area */
+        .code-container {
+            background-color: #1e1e1e !important;
+            color: #d4d4d4 !important;
+            /* VS Code light gray fallback */
+        }
+
+        pre[class*="language-"] {
+            margin: 0 !important;
+            padding: 1.5rem !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5 !important;
+        }
+
+        code[class*="language-"] {
+            font-family: 'Roboto Mono', monospace !important;
+            text-shadow: none !important;
+        }
+
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #333333;
+            border: 3px solid #1e1e1e;
+            border-radius: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #444444;
+        }
+
+        /* --- Interactive Wireframe Styles --- */
+        #visual-nav-wrapper {
+            position: sticky;
+            top: 72px;
+            z-index: 40;
+            background: rgba(248, 250, 252, 0.95);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid #e2e8f0;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: top center;
+            /* Default origin for normal state */
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            pointer-events: auto;
+
+            /* Sizing for centering */
+            width: 100%;
+            max-width: 100%;
+            border-radius: 0.75rem;
+        }
+
+                /* The Minimized (Corner) State */
+
+                #visual-nav-wrapper.shrunk {
+
+                    position: fixed; /* Detach from flow */
+
+                    top: 85px;       /* Distance from top */
+
+                    right: 20px;     /* Dock to right */
+
+                    left: auto;      /* Release left centering */
+
+                    
+
+                    width: 900px;    /* Ideal width */
+
+                    max-width: 95vw; /* Responsive cap */
+
+                    
+
+                    transform: scale(0.3); /* Tiny by default */
+
+                    transform-origin: top right; /* Shrink into corner */
+
+                    
+
+                    opacity: 0.8;
+
+                    border: 1px solid #cbd5e1;
+
+                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+
+                    border-radius: 1rem;
+
+                    cursor: pointer;
+
+                }
+
+        /* Hover Interaction for Minimized State */
+        #visual-nav-wrapper.shrunk:hover {
+            transform: scale(0.85);
+            /* Expand to readable size (not quite full to save space) */
+            opacity: 1;
+            z-index: 50;
+            /* Ensure it pops over everything */
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        /* Hide the header text when shrunk to make it cleaner? Optional. */
+        #visual-nav-wrapper.shrunk h2 {
+            /* opacity: 0; transition: opacity 0.2s; */
+        }
+
+        #visual-nav-wrapper.shrunk:hover h2 {
+            /* opacity: 1; */
+        }
+
+        /* The scaling container for the actual grid content */
+        #visual-nav-content {
+            transition: transform 0.3s ease;
+            transform-origin: top center;
+        }
+
+        /* Core Architecture Wrapper Style */
+        .core-wrapper {
+            position: relative;
+            border: 2px solid #d8b4fe;
+            /* purple-300 */
+            background-color: rgba(250, 245, 255, 0.8);
+            /* purple-50 */
+            border-radius: 0.75rem;
+            padding: 1rem;
+            padding-top: 2rem;
+            /* Space for label */
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .core-wrapper:hover {
+            border-color: #a855f7;
+            /* purple-500 */
+            background-color: rgba(250, 245, 255, 1);
+            box-shadow: 0 4px 6px -1px rgba(168, 85, 247, 0.1);
+        }
+
+                .core-wrapper::before {
+
+                    content: "Core Architecture (main.js, state.js)";
+
+                    position: absolute;
+
+                    top: 0.5rem;
+
+                    left: 1rem;
+
+                    font-size: 0.7rem;
+
+                    font-weight: 800;
+
+                    text-transform: uppercase;
+
+                    color: #9333ea; /* purple-600 */
+
+                    letter-spacing: 0.05em;
+
+                }
+
+        
+
+                        /* Database/Storage Unit Style - Refined Cylinder */
+
+        
+
+                        .database-unit {
+
+        
+
+                            background: linear-gradient(90deg, #dbeafe 0%, #f0f9ff 50%, #dbeafe 100%);
+
+        
+
+                            border-left: 2px solid #3b82f6;
+
+        
+
+                            border-right: 2px solid #3b82f6;
+
+        
+
+                            border-bottom: 2px solid #3b82f6;
+
+        
+
+                            border-radius: 0 0 20px 20px / 0 0 10px 10px;
+
+        
+
+                            position: relative;
+
+        
+
+                            cursor: pointer;
+
+        
+
+                            transition: all 0.3s ease;
+
+        
+
+                            margin-top: 12px; /* Space for the top cap */
+
+        
+
+                        }
+
+        
+
+                        .database-unit:hover {
+
+        
+
+                            transform: translateY(-2px);
+
+        
+
+                            filter: brightness(1.02);
+
+        
+
+                            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2);
+
+        
+
+                        }
+
+        
+
+                        /* Top Cap */
+
+        
+
+                        .database-unit::before {
+
+        
+
+                            content: "";
+
+        
+
+                            position: absolute;
+
+        
+
+                            top: -13px;
+
+        
+
+                            left: -2px;
+
+        
+
+                            right: -2px;
+
+        
+
+                            height: 26px;
+
+        
+
+                            background: #eff6ff;
+
+        
+
+                            border: 2px solid #3b82f6;
+
+        
+
+                            border-radius: 50%;
+
+        
+
+                            z-index: 2;
+
+        
+
+                            box-shadow: inset 0 -2px 5px rgba(59, 130, 246, 0.1);
+
+        
+
+                        }
+
+        
+
+                        /* Disc Stack Lines */
+
+        
+
+                        .database-unit::after {
+
+        
+
+                            content: "";
+
+        
+
+                            position: absolute;
+
+        
+
+                            inset: 0;
+
+        
+
+                            background-image: repeating-linear-gradient(
+
+        
+
+                                180deg,
+
+        
+
+                                transparent,
+
+        
+
+                                transparent 39px,
+
+        
+
+                                rgba(59, 130, 246, 0.2) 40px,
+
+        
+
+                                rgba(59, 130, 246, 0.2) 41px
+
+        
+
+                            );
+
+        
+
+                            pointer-events: none;
+
+        
+
+                            z-index: 1;
+
+        
+
+                        }
+
+        
+
+                .wireframe-box {
+            background-color: #f1f5f9;
+            /* slate-100 */
+            border: 2px dashed #94a3b8;
+            /* slate-400 */
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            /* slate-500 */
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            text-align: center;
+            user-select: none;
+        }
+
+        .wireframe-box:hover {
+            background-color: white;
+            border-color: #6366f1;
+            /* indigo-500 */
+            color: #4338ca;
+            /* indigo-700 */
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.15);
+            z-index: 10;
+        }
+
+        .wireframe-box::after {
+            content: "Jump to Code ⬇";
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #6366f1;
+            opacity: 0;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+            font-weight: bold;
+        }
+
+        .wireframe-box:hover::after {
+            opacity: 1;
+            bottom: -24px;
+        }
+    </style>
+</head>
+
+<body class="antialiased pb-20">
+    <!-- Header -->
+    <header class="bg-white/90 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200 shadow-sm py-4">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col xl:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">🛠️</span>
+                    <div>
+                        <h1 class="text-xl md:text-2xl text-slate-800 m-0 leading-tight">Codebase Overview</h1>
+                        <p class="text-xs text-slate-500 hidden md:block">Interactive Architecture Map</p>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <nav
+                    class="flex flex-wrap justify-center gap-2 md:gap-3 text-[11px] md:text-xs font-bold uppercase tracking-wider">
+                    <a href="#architecture"
+                        class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-50 text-purple-700 border-purple-200 hover:border-purple-300">
+                        <span class="w-2 h-2 bg-purple-500 rounded-full"></span> Architecture
+                    </a>
+                    <a href="#pipeline"
+                        class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 border-blue-200 hover:border-blue-300">
+                        <span class="w-2 h-2 bg-blue-500 rounded-full"></span> Data Pipeline & Storage
+                    </a>
+                    <a href="#sync"
+                        class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 text-red-700 border-red-200 hover:border-red-300">
+                        <span class="w-2 h-2 bg-red-500 rounded-full"></span> Sync
+                    </a>
+                    <a href="#visualization"
+                        class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 border-emerald-200 hover:border-emerald-300">
+                        <span class="w-2 h-2 bg-emerald-500 rounded-full"></span> Visualization
+                    </a>
+                    <a href="#ui"
+                        class="nav-link flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 text-amber-700 border-amber-200 hover:border-amber-300">
+                        <span class="w-2 h-2 bg-amber-500 rounded-full"></span> UI & Logic
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 space-y-12 mt-8">
+
+
+
+        <!-- INTERACTIVE VISUAL MAP -->
+
+        <div id="visual-nav-placeholder">
+
+            <div id="visual-nav-wrapper" class="rounded-xl p-4 md:p-6 mb-8">
+
+                <div class="flex justify-between items-center mb-4">
+
+                    <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest m-0">Visual Navigation Map
+                    </h2>
+
+                    <span class="text-xs text-slate-400 italic">Click a UI element to see its code</span>
+
+                </div>
+
+
+
+                <div id="visual-nav-content" class="max-w-4xl mx-auto">
+
+                    <!-- Core Architecture Wrapper -->
+
+                    <div class="core-wrapper" onclick="scrollToSection('architecture')">
+
+
+
+                                            <!-- New Layout: Ecosystem + Injector -->
+
+
+
+                                            <div class="flex gap-4 h-[380px]">
+
+
+
+                                                
+
+
+
+                                                <!-- Left: App Ecosystem Rectangle -->
+
+
+
+                                                <div class="flex-grow flex flex-col gap-4">
+
+
+
+                                                    
+
+
+
+                                                    <!-- Top Row: Main UI Components -->
+
+
+
+                                                    <div class="flex-grow grid grid-cols-11 gap-4 min-h-0">
+
+
+
+                                                        <!-- 1. Data Explorer & Sidebar -->
+
+
+
+                                                        <div class="col-span-12 md:col-span-2 h-full">
+
+
+
+                                                            <div class="wireframe-box h-full bg-amber-50/50 border-amber-200 text-amber-600 flex flex-col justify-center text-center p-2" 
+
+
+
+                                                                 onclick="event.stopPropagation(); scrollToSection('ui')" 
+
+
+
+                                                                 title="src/dataExplorer.js, src/ui.js">
+
+
+
+                                                                Data Explorer & Sidebar
+
+
+
+                                                            </div>
+
+
+
+                                                        </div>
+
+
+
+                        
+
+
+
+                                                        <!-- 2. Radar Canvas (Center) -->
+
+
+
+                                                        <div class="col-span-12 md:col-span-6 h-full">
+
+
+
+                                                            <div class="wireframe-box h-full bg-emerald-50/50 border-emerald-200 text-emerald-600 flex flex-col justify-center" 
+
+
+
+                                                                 onclick="event.stopPropagation(); scrollToSection('visualization')" 
+
+
+
+                                                                 title="src/p5/radarSketch.js">
+
+
+
+                                                                Radar Visualization Canvas<br>
+
+
+
+                                                                <span class="text-xs font-normal opacity-75 mt-1">(p5.js Render Loop)</span>
+
+
+
+                                                            </div>
+
+
+
+                                                        </div>
+
+
+
+                        
+
+
+
+                                                        <!-- 3. Video & Graph (Right) -->
+
+
+
+                                                        <div class="col-span-12 md:col-span-3 h-full flex flex-col gap-4">
+
+
+
+                                                            <div class="wireframe-box h-1/2 bg-red-50/50 border-red-200 text-red-600 flex flex-col justify-center" 
+
+
+
+                                                                 onclick="event.stopPropagation(); scrollToSection('sync')" 
+
+
+
+                                                                 title="src/sync.js">
+
+
+
+                                                                Video Player<br>
+
+
+
+                                                                <span class="text-xs font-normal opacity-75 mt-1">(Sync Engine)</span>
+
+
+
+                                                            </div>
+
+
+
+                                                            <div class="wireframe-box h-1/2 bg-emerald-50/50 border-emerald-200 text-emerald-600 flex flex-col justify-center" 
+
+
+
+                                                                 onclick="event.stopPropagation(); scrollToSection('visualization')" 
+
+
+
+                                                                 title="src/p5/speedGraphSketch.js">
+
+
+
+                                                                Speed Graph
+
+
+
+                                                            </div>
+
+
+
+                                                        </div>
+
+
+
+                                                    </div>
+
+
+
+                        
+
+
+
+                                                    <!-- Bottom Row: Controls (Fits Ecosystem Width) -->
+
+
+
+                                                    <div class="h-14">
+
+
+
+                                                        <div class="wireframe-box h-full bg-amber-50/50 border-amber-200 text-amber-600" 
+
+
+
+                                                             onclick="event.stopPropagation(); scrollToSection('ui')" 
+
+
+
+                                                             title="src/dom.js & src/ui.js">
+
+
+
+                                                            Playback Controls & Timeline
+
+
+
+                                                        </div>
+
+
+
+                                                    </div>
+
+
+
+                                                </div>
+
+
+
+                        
+
+
+
+                                                                                                                                                <!-- Right: Pipeline/Storage (The "Data Injector" - Full Height) -->
+
+
+
+                        
+
+
+
+                                                                                                                                                <div class="w-16 h-full flex flex-col pt-2 relative">
+
+
+
+                        
+
+
+
+                                                                                                                                                    
+
+
+
+                        
+
+
+
+                                                                                                                                                    <!-- Data Flow Arrows (Precisely Aligned) -->
+
+
+
+                        
+
+
+
+                                                                                                                                                    <div class="absolute inset-0 -left-6 pointer-events-none z-10">
+
+
+
+                        
+
+
+
+                                                                                                                                                        <!-- Top Arrow (Video) -->
+
+
+
+                        
+
+
+
+                                                                                                                                                        <div class="absolute top-[75px] w-6">
+
+
+
+                        
+
+
+
+                                                                                                                                                            <svg viewBox="0 0 24 12" class="text-blue-500 drop-shadow-sm">
+
+
+
+                        
+
+
+
+                                                                                                                                                                <path d="M2 6h20 M2 6l4-4 M2 6l4 4 M22 6l-4-4 M22 6l-4 4" 
+
+
+
+                        
+
+
+
+                                                                                                                                                                      fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+
+
+                        
+
+
+
+                                                                                                                                                            </svg>
+
+
+
+                        
+
+
+
+                                                                                                                                                        </div>
+
+
+
+                        
+
+
+
+                                                                                                                                                        <!-- Mid Arrow (Graph) -->
+
+
+
+                        
+
+
+
+                                                                                                                                                        <div class="absolute top-[235px] w-6">
+
+
+
+                        
+
+
+
+                                                                                                                                                            <svg viewBox="0 0 24 12" class="text-blue-500 drop-shadow-sm">
+
+
+
+                        
+
+
+
+                                                                                                                                                                <path d="M2 6h20 M2 6l4-4 M2 6l4 4 M22 6l-4-4 M22 6l-4 4" 
+
+
+
+                        
+
+
+
+                                                                                                                                                                      fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+
+
+                        
+
+
+
+                                                                                                                                                            </svg>
+
+
+
+                        
+
+
+
+                                                                                                                                                        </div>
+
+
+
+                        
+
+
+
+                                                                                                                                                        <!-- Low Arrow (Controls) -->
+
+
+
+                        
+
+
+
+                                                                                                                                                        <div class="absolute top-[350px] w-6">
+
+
+
+                        
+
+
+
+                                                                                                                                                            <svg viewBox="0 0 24 12" class="text-blue-500 drop-shadow-sm">
+
+
+
+                        
+
+
+
+                                                                                                                                                                <path d="M2 6h20 M2 6l4-4 M2 6l4 4 M22 6l-4-4 M22 6l-4 4" 
+
+
+
+                        
+
+
+
+                                                                                                                                                                      fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+
+
+                        
+
+
+
+                                                                                                                                                            </svg>
+
+
+
+                        
+
+
+
+                                                                                                                                                        </div>
+
+
+
+                        
+
+
+
+                                                                                                                                                    </div>
+
+
+
+                        
+
+
+
+                                                                                                                        
+
+
+
+                        
+
+
+
+                                                                                                                                                    <div class="database-unit h-full flex flex-col justify-center" 
+
+
+
+                        
+
+
+
+                                                                                                         onclick="event.stopPropagation(); scrollToSection('pipeline')" 
+
+
+
+                        
+
+
+
+                                                                                                         title="src/fileLoader.js, src/db.js">
+
+
+
+                        
+
+
+
+                                                                                                         <div style="writing-mode: vertical-rl; text-orientation: mixed;" class="flex flex-col items-center gap-2 px-2 py-4">
+
+
+
+                        
+
+
+
+                                                                                                            <span class="font-bold uppercase tracking-tighter text-blue-700 text-[11px]">Data Pipeline & Storage</span>
+
+
+
+                        
+
+
+
+                                                                                                            <span class="text-[9px] font-semibold text-blue-500 opacity-80">(Loader/DB)</span>
+
+
+
+                        
+
+
+
+                                                                                                         </div>
+
+
+
+                        
+
+
+
+                                                                                                    </div>
+
+
+
+                        
+
+
+
+                                                                                                    <!-- Small shadow for the base -->
+
+
+
+                        
+
+
+
+                                                                                                    <div class="h-2 w-full bg-slate-300 rounded-[50%] blur-[2px] mt-1 opacity-40"></div>
+
+
+
+                        
+
+
+
+                                                                                                </div>
+
+
+
+                        
+
+
+
+                                            </div>
+
+                    </div> <!-- End Core Wrapper -->
+
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- 1. Core Architecture (Purple) -->
+        <section id="architecture">
+            <div class="border border-purple-200 bg-purple-50/50 rounded-2xl p-6 md:p-8 shadow-sm">
+                <div class="flex items-center gap-4 mb-8">
+                    <span
+                        class="flex items-center justify-center w-12 h-12 bg-purple-100 text-purple-600 rounded-xl text-2xl shadow-sm">🧠</span>
+                    <div>
+                        <h2 class="text-2xl font-bold text-purple-900 m-0">Core Architecture</h2>
+                        <p class="text-purple-600/80 text-sm font-medium">State management and application
+                            initialization.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="file-card border-l-4 border-l-purple-500" onclick="viewFile('src/main.js')">
+                        <div class="flex justify-between items-start">
+                            <h3><span class="file-name bg-purple-100 text-purple-700">src/main.js</span></h3>
+                            <span class="core-badge bg-purple-500">Core</span>
+                        </div>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-purple-500"><strong>Entry Point:</strong> Initializes the
+                                    application sequence.</li>
+                                <li class="before:text-purple-500"><strong>Orchestrator:</strong> Sets up Theme, DB,
+                                    Session Manager.</li>
+                                <li class="before:text-purple-500"><strong>Glue Code:</strong> Wires independent modules
+                                    together.</li>
+                            </ul>
+                        </div>
+                        <div class="file-link">Links to: state.js, dom.js, sync.js</div>
+                    </div>
+
+                    <div class="file-card border-l-4 border-l-purple-500/30" onclick="viewFile('src/state.js')">
+                        <h3><span class="file-name bg-purple-100 text-purple-700">src/state.js</span></h3>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-purple-500"><strong>Source of Truth:</strong> Central
+                                    <code>appState</code> object.</li>
+                                <li class="before:text-purple-500"><strong>Runtime Variables:</strong> Stores current
+                                    frame, playback status.</li>
+                                <li class="before:text-purple-500"><strong>Global Settings:</strong> SNR limits, boolean
+                                    toggles.</li>
+                            </ul>
+                        </div>
+                        <div class="file-link">Imported by: Almost all modules</div>
+                    </div>
+
+                    <div class="file-card border-l-4 border-l-purple-500/30" onclick="viewFile('src/constants.js')">
+                        <h3><span class="file-name bg-purple-100 text-purple-700">src/constants.js</span></h3>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-purple-500"><strong>Configuration:</strong> Immutable system
+                                    constants.</li>
+                                <li class="before:text-purple-500"><strong>Parameters:</strong> <code>VIDEO_FPS</code>,
+                                    Radar boundaries.</li>
+                                <li class="before:text-purple-500"><strong>Visuals:</strong> Canvas aspect ratios.</li>
+                            </ul>
+                        </div>
+                        <div class="file-link">Used by: p5 Sketches, fileParsers.js</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Data Pipeline & Storage (Blue) -->
+        <section id="pipeline">
+            <div class="border border-blue-200 bg-blue-50/50 rounded-2xl p-6 md:p-8 shadow-sm">
+                <div class="flex items-center gap-4 mb-8">
+                    <span
+                        class="flex items-center justify-center w-12 h-12 bg-blue-100 text-blue-600 rounded-xl text-2xl shadow-sm">💾</span>
+                    <div>
+                        <h2 class="text-2xl font-bold text-blue-900 m-0">Data Pipeline & Storage</h2>
+                        <p class="text-blue-600/80 text-sm font-medium">Input handling, parsing, and persistent caching.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="file-card border-l-4 border-l-blue-500" onclick="viewFile('src/fileLoader.js')">
+                        <div class="flex justify-between items-start">
+                            <h3><span class="file-name bg-blue-100 text-blue-700">src/fileLoader.js</span></h3>
+                            <span class="core-badge bg-blue-500">Core</span>
+                        </div>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-blue-500"><strong>Input Handling:</strong> Detects JSON/Video
+                                    from Drag & Drop.</li>
+                                <li class="before:text-blue-500"><strong>Offset Logic:</strong> Extracts timestamps for
+                                    sync offset.</li>
+                                <li class="before:text-blue-500"><strong>Control:</strong> Triggers Web Worker parsing.
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="file-link">Triggers: parser.worker.js</div>
+                    </div>
+
+                    <div class="file-card border-l-4 border-l-blue-500/30" onclick="viewFile('src/parser.worker.js')">
+                        <h3><span class="file-name bg-blue-100 text-blue-700">src/parser.worker.js</span></h3>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-blue-500"><strong>Background Thread:</strong> Prevents UI
+                                    freezing.</li>
+                                <li class="before:text-blue-500"><strong>Streaming:</strong> Uses
+                                    <strong>Clarinet.js</strong> for chunk parsing.</li>
+                                <li class="before:text-blue-500"><strong>Messaging:</strong> Reports real-time progress.
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="file-link">Dependency: vendor/clarinet.min.js</div>
+                    </div>
+
+                    <div class="file-card border-l-4 border-l-blue-500/30" onclick="viewFile('src/fileParsers.js')">
+                        <h3><span class="file-name bg-blue-100 text-blue-700">src/fileParsers.js</span></h3>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-blue-500"><strong>Post-Processing:</strong> Refines raw JSON
+                                    data.</li>
+                                <li class="before:text-blue-500"><strong>Calculations:</strong> Computes
+                                    <code>timestampMs</code> & global SNR.</li>
+                                <li class="before:text-blue-500"><strong>Smoothing:</strong> Pre-calculates inter-frame
+                                    times.</li>
+                            </ul>
+                        </div>
+                        <div class="file-link">Called by: fileLoader.js</div>
+                    </div>
+
+                    <div class="file-card border-l-4 border-l-blue-500/30" onclick="viewFile('src/db.js')">
+                        <h3><span class="file-name bg-blue-100 text-blue-700">src/db.js</span></h3>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-blue-500"><strong>Wrapper:</strong> Abstraction for
+                                    <strong>IndexedDB</strong>.</li>
+                                <li class="before:text-blue-500"><strong>Caching:</strong> Stores blobs for instant
+                                    reloads.</li>
+                                <li class="before:text-blue-500"><strong>Management:</strong> Handles "load fresh" &
+                                    metadata.</li>
+                            </ul>
+                        </div>
+                        <div class="file-link">Used by: session.js, main.js</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Synchronization Engine (Red) -->
+        <section id="sync">
+            <div class="border border-red-200 bg-red-50/50 rounded-2xl p-6 md:p-8 shadow-sm">
+                <div class="flex items-center gap-4 mb-8">
+                    <span
+                        class="flex items-center justify-center w-12 h-12 bg-red-100 text-red-600 rounded-xl text-2xl shadow-sm">⏱️</span>
+                    <div>
+                        <h2 class="text-2xl font-bold text-red-900 m-0">Synchronization Engine</h2>
+                        <p class="text-red-600/80 text-sm font-medium">Time-critical logic, playback loops, and drift
+                            correction.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="file-card border-l-4 border-l-red-500" onclick="viewFile('src/sync.js')">
+                        <div class="flex justify-between items-start">
+                            <h3><span class="file-name bg-red-100 text-red-700">src/sync.js</span></h3>
+                            <span class="core-badge bg-red-500">Core</span>
+                        </div>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-red-500"><strong>Master Clock:</strong> Uses
+                                    <code>performance.now()</code>.</li>
+                                <li class="before:text-red-500"><strong>Loop:</strong> Custom animation loop decoupled
+                                    from video.</li>
+                                <li class="before:text-red-500"><strong>Drift Correction:</strong> Forces seek if drift
+                                    > 150ms.</li>
+                                <li class="before:text-red-500"><strong>Mapping:</strong> Finds exact radar frame for
+                                    video time.</li>
+                            </ul>
+                        </div>
+                        <div class="file-link">Controls: Video Element, P5 Loop</div>
+                    </div>
+
+                    <div class="file-card border-l-4 border-l-red-500/30" onclick="viewFile('src/utils.js')">
+                        <h3><span class="file-name bg-red-100 text-red-700">src/utils.js</span></h3>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-red-500"><strong>Binary Search:</strong> O(log n) frame lookups.
+                                </li>
+                                <li class="before:text-red-500"><strong>Regex:</strong> Extract timestamps from
+                                    filenames.</li>
+                                <li class="before:text-red-500"><strong>Formatting:</strong> Time display helpers
+                                    (MM:SS.ms).</li>
+                            </ul>
+                        </div>
+                        <div class="file-link">Used by: sync.js, fileLoader.js</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Visualization (Emerald) -->
+        <section id="visualization">
+            <div class="border border-emerald-200 bg-emerald-50/50 rounded-2xl p-6 md:p-8 shadow-sm">
+                <div class="flex items-center gap-4 mb-8">
+                    <span
+                        class="flex items-center justify-center w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl text-2xl shadow-sm">🎨</span>
+                    <div>
+                        <h2 class="text-2xl font-bold text-emerald-900 m-0">Visualization</h2>
+                        <p class="text-emerald-600/80 text-sm font-medium">P5.js sketches and drawing primitives.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="file-card border-l-4 border-l-emerald-500" onclick="viewFile('src/p5/radarSketch.js')">
+                        <div class="flex justify-between items-start">
+                            <h3><span class="file-name bg-emerald-100 text-emerald-700">src/p5/radarSketch.js</span>
+                            </h3>
+                            <span class="core-badge bg-emerald-500">Core</span>
+                        </div>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-emerald-500"><strong>Main Canvas:</strong> Primary renderer.</li>
+                                <li class="before:text-emerald-500"><strong>Scene:</strong> Draws Ego, points, tracks.
+                                </li>
+                                <li class="before:text-emerald-500"><strong>Scaling:</strong> World-to-Screen mapping.
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="file-card border-l-4 border-l-emerald-500" onclick="viewFile('src/drawUtils.js')">
+                        <div class="flex justify-between items-start">
+                            <h3><span class="file-name bg-emerald-100 text-emerald-700">src/drawUtils.js</span></h3>
+                            <span class="core-badge bg-emerald-500">Core</span>
+                        </div>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-emerald-500"><strong>Library:</strong> Optimized drawing
+                                    functions.</li>
+                                <li class="before:text-emerald-500"><strong>Decoupling:</strong> Separates logic from
+                                    render.</li>
+                                <li class="before:text-emerald-500"><strong>Palettes:</strong> SNR & TTC colors.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="file-card border-l-4 border-l-emerald-500/30"
+                        onclick="viewFile('src/p5/zoomSketch.js')">
+                        <h3><span class="file-name bg-emerald-100 text-emerald-700">src/p5/zoomSketch.js</span></h3>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-emerald-500"><strong>GOD MODE:</strong> Magnified cursor view.
+                                </li>
+                                <li class="before:text-emerald-500"><strong>Tracking:</strong> Follows mouse
+                                    coordinates.</li>
+                                <li class="before:text-emerald-500"><strong>Details:</strong> Tooltips for hovered
+                                    items.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="file-card border-l-4 border-l-emerald-500/30"
+                        onclick="viewFile('src/p5/speedGraphSketch.js')">
+                        <h3><span class="file-name bg-emerald-100 text-emerald-700">src/p5/speedGraphSketch.js</span>
+                        </h3>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-emerald-500"><strong>Graphing:</strong> Bottom-right chart.</li>
+                                <li class="before:text-emerald-500"><strong>Plotting:</strong> Ego vs. CAN Speed.</li>
+                                <li class="before:text-emerald-500"><strong>Sync:</strong> Playback indicator.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. UI & Interaction (Amber) -->
+        <section id="ui">
+            <div class="border border-amber-200 bg-amber-50/50 rounded-2xl p-6 md:p-8 shadow-sm">
+                <div class="flex items-center gap-4 mb-8">
+                    <span
+                        class="flex items-center justify-center w-12 h-12 bg-amber-100 text-amber-600 rounded-xl text-2xl shadow-sm">🖥️</span>
+                    <div>
+                        <h2 class="text-2xl font-bold text-amber-900 m-0">UI & Interaction</h2>
+                        <p class="text-amber-600/80 text-sm font-medium">DOM manipulation and user input.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="file-card border-l-4 border-l-amber-500" onclick="viewFile('src/dom.js')">
+                        <div class="flex justify-between items-start">
+                            <h3><span class="file-name bg-amber-100 text-amber-700">src/dom.js</span></h3>
+                            <span class="core-badge bg-amber-500">Core</span>
+                        </div>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-amber-500"><strong>Caching:</strong> Stores DOM references.</li>
+                                <li class="before:text-amber-500"><strong>Access:</strong> Efficient element lookup.
+                                </li>
+                                <li class="before:text-amber-500"><strong>Updates:</strong> Overlays & Debug.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="file-card border-l-4 border-l-amber-500/30" onclick="viewFile('src/ui.js')">
+                        <h3><span class="file-name bg-amber-100 text-amber-700">src/ui.js</span></h3>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-amber-500"><strong>Management:</strong> High-level UI
+                                    interactions.</li>
+                                <li class="before:text-amber-500"><strong>Components:</strong> Sidebar, Manual,
+                                    Shortcuts.</li>
+                                <li class="before:text-amber-500"><strong>Toggles:</strong> Fullscreen switching.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="file-card border-l-4 border-l-amber-500/30" onclick="viewFile('src/keyboard.js')">
+                        <h3><span class="file-name bg-amber-100 text-amber-700">src/keyboard.js</span></h3>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-amber-500"><strong>Listener:</strong> Intercepts keydown events.
+                                </li>
+                                <li class="before:text-amber-500"><strong>Mapping:</strong> Binds keys to functions.
+                                </li>
+                                <li class="before:text-amber-500"><strong>Controller:</strong> Hardware input layer.
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="file-card border-l-4 border-l-amber-500/30" onclick="viewFile('src/dataExplorer.js')">
+                        <h3><span class="file-name bg-amber-100 text-amber-700">src/dataExplorer.js</span></h3>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-amber-500"><strong>Inspector:</strong> Panel logic (AG Grid).
+                                </li>
+                                <li class="before:text-amber-500"><strong>Plot View:</strong> Integrates Chart.js.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="file-card border-l-4 border-l-amber-500/30" onclick="viewFile('src/session.js')">
+                        <h3><span class="file-name bg-amber-100 text-amber-700">src/session.js</span></h3>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-amber-500"><strong>Persistence:</strong> Serializes state to
+                                    JSON.</li>
+                                <li class="before:text-amber-500"><strong>Restoration:</strong> Re-hydrates from files.
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="file-card border-l-4 border-l-amber-500/30" onclick="viewFile('src/theme.js')">
+                        <h3><span class="file-name bg-amber-100 text-amber-700">src/theme.js</span></h3>
+                        <div class="file-desc">
+                            <ul>
+                                <li class="before:text-amber-500"><strong>Theming:</strong> Dark/Light mode toggle.</li>
+                                <li class="before:text-amber-500"><strong>Storage:</strong> Persists user preference.
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center mt-12 text-slate-500 text-sm pb-8">
+            <p>Generated for the Radar & Video Synchronizer Project.</p>
+        </footer>
+    </div>
+
+    <!-- CODE VIEWER MODAL -->
+    <div id="code-modal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeModal()"></div>
+
+        <div
+            class="absolute inset-4 md:inset-10 bg-[#1e1e1e] rounded-xl shadow-2xl flex flex-col overflow-hidden border border-slate-700">
+            <div class="flex items-center justify-between px-4 py-3 bg-[#252526] border-b border-black">
+                <div class="flex items-center gap-3">
+                    <span class="text-xl">📄</span>
+                    <span id="modal-title" class="text-slate-200 font-mono text-sm font-bold">file.js</span>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="copyCode()"
+                        class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded transition">Copy</button>
+                    <button onclick="closeModal()"
+                        class="px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded transition">Close</button>
+                </div>
+            </div>
+
+            <div class="flex-grow overflow-auto bg-[#1e1e1e] custom-scrollbar code-container">
+                <pre id="pre-container"><code>Loading...</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prism JS Scripts -->
+    <script src="vendor/prism.js"></script>
+
+    <script>
+        const modal = document.getElementById('code-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const preContainer = document.getElementById('pre-container');
+
+        async function viewFile(filePath) {
+            modal.classList.remove('hidden');
+            modalTitle.textContent = filePath;
+
+            // Initial loading state
+            preContainer.innerHTML = `<code class="language-text">Loading ${filePath}...</code>`;
+
+            let lang = 'javascript';
+            if (filePath.endsWith('.json')) lang = 'json';
+            else if (filePath.endsWith('.html')) lang = 'markup';
+            else if (filePath.endsWith('.css')) lang = 'css';
+
+            try {
+                const response = await fetch(filePath);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const text = await response.text();
+
+                // Create code element with correct class for Prism
+                const codeEl = document.createElement('code');
+                codeEl.className = `language-${lang}`;
+                codeEl.textContent = text;
+
+                // Update container
+                preContainer.innerHTML = '';
+                preContainer.className = `language-${lang}`;
+                preContainer.appendChild(codeEl);
+
+                // Trigger Highlight
+                if (window.Prism) {
+                    Prism.highlightElement(codeEl);
+                }
+
+                console.groupCollapsed(`📄 Source: ${filePath}`);
+                console.log(text);
+                console.groupEnd();
+
+            } catch (err) {
+                const isLocal = window.location.protocol === 'file:';
+                let errorMsg = `<div class="p-4 text-red-400 font-mono text-sm">`;
+                errorMsg += `<strong>Error loading file:</strong> ${err.message}<br><br>`;
+
+                if (isLocal) {
+                    errorMsg += `<em>It seems you are opening this HTML file directly (file:// protocol).<br>`;
+                    errorMsg += `Browsers block AJAX requests to local files for security.<br>`;
+                    errorMsg += `Please use the "Codebase Overview" button in the main app (served via localhost) or run a local server.</em><br><br>`;
+                    errorMsg += `<a href="${filePath}" target="_blank" class="underline text-blue-400">Click here to open ${filePath} in a new tab</a>`;
+                }
+
+                errorMsg += `</div>`;
+                preContainer.innerHTML = errorMsg;
+                console.error("Failed to load file:", err);
+            }
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+        }
+
+        function copyCode() {
+            const codeEl = preContainer.querySelector('code');
+            if (codeEl) {
+                navigator.clipboard.writeText(codeEl.textContent);
+                const btn = document.querySelector('button[onclick="copyCode()"]');
+                const originalText = btn.textContent;
+                btn.textContent = "Copied!";
+                setTimeout(() => btn.textContent = originalText, 1500);
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "Escape") closeModal();
+        });
+
+        // --- Visual Map Logic ---
+        function scrollToSection(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                // Offset for sticky header
+                const headerOffset = 180; // approximate shrunk header height
+                const elementPosition = el.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.scrollY - headerOffset;
+
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: "smooth"
+                });
+
+                // Highlight effect
+                el.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
+                setTimeout(() => el.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2'), 2000);
+            }
+        }
+
+        // Shrink-on-scroll effect
+        const navWrapper = document.getElementById('visual-nav-wrapper');
+        const navPlaceholder = document.getElementById('visual-nav-placeholder');
+        const navContent = document.getElementById('visual-nav-content');
+
+        window.addEventListener('scroll', () => {
+            const currentScrollY = window.scrollY;
+
+            // Threshold: When the user scrolls past the initial header + some buffer
+            if (currentScrollY > 100) {
+                if (!navWrapper.classList.contains('shrunk')) {
+                    // Lock the height of the placeholder to prevent layout shift
+                    navPlaceholder.style.height = navWrapper.offsetHeight + 'px';
+
+                    navWrapper.classList.add('shrunk');
+                    navWrapper.title = "Hover to expand map";
+                }
+            } else {
+                if (navWrapper.classList.contains('shrunk')) {
+                    navWrapper.classList.remove('shrunk');
+                    navWrapper.title = "";
+
+                    // Unlock the height
+                    navPlaceholder.style.height = 'auto';
+                }
+            }
+        }, { passive: true });
+    </script>
+</body>
+
+</html>
