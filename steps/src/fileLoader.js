@@ -368,6 +368,8 @@ function setupVideoPlayer(fileURL) {
   videoPlayer.classList.remove("hidden");
   videoPlaceholder.classList.add("hidden");
   videoPlayer.playbackRate = parseFloat(speedSlider.value);
+  videoPlayer.controls = false;
+  videoPlayer.muted = false;
 
   // Store the new object URL if it's a blob
   if (fileURL.startsWith("blob:")) {
