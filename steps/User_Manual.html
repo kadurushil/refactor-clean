@@ -308,7 +308,88 @@
             line-height: 1.15;
             line-height: 1.3;
         }
+
+        /* --- Dark Mode Overrides --- */
+        .dark body {
+            background-color: #0f172a; /* slate-900 */
+            color: #cbd5e1; /* slate-300 */
+        }
+        .dark h1, .dark h2, .dark h3 {
+            color: #f1f5f9; /* slate-100 */
+        }
+        .dark .feature-card, 
+        .dark .flow-step, 
+        .dark .annotation,
+        .dark .bg-white {
+            background-color: #1e293b; /* slate-800 */
+            border-color: #475569; /* slate-600 */
+            color: #e2e8f0;
+        }
+        .dark .feature-card p,
+        .dark .flow-step p,
+        .dark .text-slate-600 {
+             color: #cbd5e1; /* slate-300 */
+        }
+        .dark .text-slate-500 {
+            color: #94a3b8; /* slate-400 */
+        }
+        .dark .border-slate-200 {
+            border-color: #334155; /* slate-700 */
+        }
+        .dark .section-icon {
+            background-color: #0f172a; /* slate-900 */
+        }
+        .dark .wireframe-box {
+            background-color: #0f172a; /* slate-900 */
+            border-color: #475569; /* slate-600 */
+            color: #f1f5f9; /* slate-100 (Changed from slate-400 for high contrast) */
+        }
+        .dark .annotation strong {
+            color: #f8fafc; /* slate-50 */
+        }
+        .dark .annotation p {
+            color: #cbd5e1; /* slate-300 */
+        }
+        .dark code {
+            background-color: #334155 !important;
+            color: #e2e8f0 !important;
+        }
+        .dark kbd {
+            background-color: #334155;
+            border-color: #475569;
+            color: #e2e8f0;
+        }
+        .dark .file-tree li {
+            color: #cbd5e1;
+        }
+        .dark .flow-arrow {
+            color: #38bdf8; /* sky-400 */
+        }
     </style>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+        };
+        
+        function applyTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        // Initialize from storage
+        const savedTheme = localStorage.getItem('color-theme') || 'light';
+        applyTheme(savedTheme);
+
+        // Listen for messages from parent
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'theme-change') {
+                applyTheme(event.data.theme);
+            }
+        });
+    </script>
 </head>
 
 <body class="antialiased">

@@ -214,6 +214,15 @@
             border-radius: 0.75rem;
         }
 
+        /* Hide the header text when shrunk to make it cleaner? Optional. */
+        #visual-nav-wrapper.shrunk h2 {
+            opacity: 0; transition: opacity 0.2s;
+        }
+
+        #visual-nav-wrapper.shrunk:hover h2 {
+            opacity: 1;
+        }
+
                 /* The Minimized (Corner) State */
 
                 #visual-nav-wrapper.shrunk {
@@ -261,15 +270,6 @@
             z-index: 50;
             /* Ensure it pops over everything */
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        }
-
-        /* Hide the header text when shrunk to make it cleaner? Optional. */
-        #visual-nav-wrapper.shrunk h2 {
-            /* opacity: 0; transition: opacity 0.2s; */
-        }
-
-        #visual-nav-wrapper.shrunk:hover h2 {
-            /* opacity: 1; */
         }
 
         /* The scaling container for the actual grid content */
@@ -557,7 +557,128 @@
             opacity: 1;
             bottom: -24px;
         }
+        
+        /* --- Dark Mode Overrides --- */
+        .dark body {
+            background-color: #0f172a; /* slate-900 */
+            color: #cbd5e1; /* slate-300 */
+        }
+        .dark header {
+            background-color: rgba(15, 23, 42, 0.9); /* slate-900/90 */
+            border-bottom-color: #334155; /* slate-700 */
+        }
+        .dark h1, .dark h2, .dark h3 {
+            color: #f1f5f9; /* slate-100 */
+        }
+        .dark .file-card {
+            background-color: #1e293b; /* slate-800 */
+            border-color: #475569; /* slate-600 */
+        }
+        .dark .file-card:hover {
+             border-color: #94a3b8; /* slate-400 */
+        }
+        .dark .file-card::after {
+            background-color: #334155; /* slate-700 */
+            color: #e2e8f0;
+        }
+        .dark .file-desc {
+            color: #94a3b8; /* slate-400 */
+        }
+        .dark .file-link {
+            color: #64748b; /* slate-500 */
+            border-top-color: #334155; /* slate-700 */
+        }
+        .dark .nav-link:hover {
+            background-color: #1e293b; /* slate-800 */
+        }
+        
+        .dark .wireframe-box {
+            background-color: #1e293b; /* slate-800 */
+            border-color: #475569; /* slate-600 */
+            color: #94a3b8; /* slate-400 */
+        }
+        .dark .wireframe-box:hover {
+            background-color: #334155;
+        }
+        
+        /* Color-coded elements overrides */
+        .dark .bg-purple-50 { background-color: rgba(88, 28, 135, 0.2); }
+        .dark .bg-purple-100 { background-color: rgba(107, 33, 168, 0.4); }
+        .dark .text-purple-700 { color: #d8b4fe; }
+        .dark .text-purple-900 { color: #e9d5ff; }
+        .dark .border-purple-200 { border-color: #581c87; }
+
+        .dark .bg-blue-50 { background-color: rgba(30, 58, 138, 0.2); }
+        .dark .bg-blue-100 { background-color: rgba(30, 64, 175, 0.4); }
+        .dark .text-blue-700 { color: #93c5fd; }
+        .dark .text-blue-900 { color: #bfdbfe; }
+        .dark .border-blue-200 { border-color: #1e3a8a; }
+        
+        .dark .bg-red-50 { background-color: rgba(127, 29, 29, 0.2); }
+        .dark .bg-red-100 { background-color: rgba(153, 27, 27, 0.4); }
+        .dark .text-red-700 { color: #fca5a5; }
+        .dark .text-red-900 { color: #fecaca; }
+        .dark .border-red-200 { border-color: #7f1d1d; }
+        
+        .dark .bg-emerald-50 { background-color: rgba(6, 78, 59, 0.2); }
+        .dark .bg-emerald-100 { background-color: rgba(6, 95, 70, 0.4); }
+        .dark .text-emerald-700 { color: #6ee7b7; }
+        .dark .text-emerald-800 { color: #6ee7b7; }
+        .dark .text-emerald-900 { color: #a7f3d0; }
+        .dark .border-emerald-200 { border-color: #064e3b; }
+        
+        .dark .bg-amber-50 { background-color: rgba(120, 53, 15, 0.2); }
+        .dark .bg-amber-100 { background-color: rgba(146, 64, 14, 0.4); }
+        .dark .text-amber-700 { color: #fcd34d; }
+        .dark .text-amber-900 { color: #fde68a; }
+        .dark .border-amber-200 { border-color: #78350f; }
+        
+        .dark #visual-nav-wrapper {
+             background: rgba(15, 23, 42, 0.95);
+             border-bottom-color: #334155;
+        }
+        .dark .core-wrapper {
+             background-color: rgba(88, 28, 135, 0.1);
+             border-color: #6b21a8;
+        }
+        .dark .database-unit {
+             background: linear-gradient(90deg, #1e3a8a 0%, #172554 50%, #1e3a8a 100%);
+             border-color: #1d4ed8;
+        }
+        .dark .database-unit::before {
+             background: #172554;
+             border-color: #1d4ed8;
+        }
+        .dark #file-structure-panel .bg-white {
+             background-color: #1e293b;
+             border-color: #475569;
+        }
+        .dark .file-tree .file { color: #94a3b8; }
+        .dark .file-tree .folder { color: #e2e8f0; }
+
     </style>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+        };
+        
+        function applyTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        const savedTheme = localStorage.getItem('color-theme') || 'light';
+        applyTheme(savedTheme);
+
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'theme-change') {
+                applyTheme(event.data.theme);
+            }
+        });
+    </script>
 </head>
 
 <body class="antialiased pb-20">

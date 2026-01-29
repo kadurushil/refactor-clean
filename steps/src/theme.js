@@ -34,6 +34,16 @@ function setTheme(theme) {
       appState.speedGraphInstance.redraw();
     }
   }
+
+  // Notify Iframes about theme change
+  const manualIframe = document.getElementById('user-manual-iframe');
+  if (manualIframe && manualIframe.contentWindow) {
+      manualIframe.contentWindow.postMessage({ type: 'theme-change', theme: theme }, '*');
+  }
+  const codebaseIframe = document.getElementById('codebase-iframe');
+  if (codebaseIframe && codebaseIframe.contentWindow) {
+      codebaseIframe.contentWindow.postMessage({ type: 'theme-change', theme: theme }, '*');
+  }
 }
 
 export function initializeTheme() {

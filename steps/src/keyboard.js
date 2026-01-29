@@ -58,7 +58,15 @@ function handleKeyDown(event) {
     "c",
   ];
 
-  if (!appState.vizData || !recognizedKeys.includes(key)) {
+  // Keys that function globally, even without loaded data
+  const globalKeys = ["q", "m"];
+
+  if (!recognizedKeys.includes(key)) {
+    return;
+  }
+
+  // If no data is loaded, block keys unless they are global (like theme or menu)
+  if (!appState.vizData && !globalKeys.includes(key)) {
     return;
   }
 
