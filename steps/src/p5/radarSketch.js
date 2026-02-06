@@ -16,6 +16,7 @@ import {
   toggleVelocity,
   toggleVehicleDimensions,
   toggleClusterColor,
+  toggleConfirmedOnly,
 } from "../dom.js";
 import {
   drawStaticRegionsToBuffer,
@@ -205,6 +206,9 @@ export const radarSketch = function (p) {
         // }
         if (togglePredictedPos.checked) {
           for (const track of appState.vizData.tracks) {
+            if (toggleConfirmedOnly.checked && track.isConfirmed === false) {
+              continue;
+            }
             const log = track.historyLog.find((log) => log.frameIdx === appState.currentFrame);
             if (
               log &&
@@ -229,6 +233,9 @@ export const radarSketch = function (p) {
           drawTrajectories(p, plotScales);
           if (toggleCovariance.checked) {
             for (const track of appState.vizData.tracks) {
+              if (toggleConfirmedOnly.checked && track.isConfirmed === false) {
+                continue;
+              }
               const log = track.historyLog.find(
                 (log) => log.frameIdx === appState.currentFrame);
               if (
@@ -252,6 +259,9 @@ export const radarSketch = function (p) {
           }
           if (toggleVehicleDimensions.checked) {
             for (const track of appState.vizData.tracks) {
+              if (toggleConfirmedOnly.checked && track.isConfirmed === false) {
+                continue;
+              }
               const log = track.historyLog.find(
                 (log) => log.frameIdx === appState.currentFrame);
               if (
