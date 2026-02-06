@@ -61,9 +61,12 @@ function drawZoomTooltip(p, hoveredItems, mainMouseX) {
           trackVy = vy.toFixed(2);
           trackSpeed = (p.sqrt(vx * vx + vy * vy) * 3.6).toFixed(1) + " km/h";
         }
+        const signText = item.sign ? ` | Sign: ${item.sign}` : "";
+        const riskText = item.risk !== null && item.risk !== undefined ? ` | Risk: ${item.risk}` : "";
+        const stateText = item.state !== null && item.state !== undefined ? ` | St: ${item.state}` : "";
         infoText = `Track ${item.trackId} | X:${trackX.toFixed(
           2
-        )}, Y:${trackY.toFixed(2)} | Speed: ${trackSpeed}`;
+        )}, Y:${trackY.toFixed(2)} | Speed: ${trackSpeed}${signText}${riskText}${stateText}`;
         const isDark = document.documentElement.classList.contains("dark");
         itemColor = isDark
           ? p.color(100, 149, 237) // Lighter blue for dark mode

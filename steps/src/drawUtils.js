@@ -72,6 +72,17 @@ export const clusterColors = (p) => [
 export const stationaryColor = (p) => p.color(218, 165, 32); // Goldenrod
 export const movingColor = (p) => p.color(255, 0, 255); // Magenta
 
+export function getTrackRisk(track, log) {
+  if (log && log.risk !== undefined && log.risk !== null) {
+    return log.risk;
+  }
+  if (track && track.ttcCategoryTimeline && log) {
+    const entry = track.ttcCategoryTimeline.find((e) => e.frameIdx === log.frameIdx);
+    return entry ? entry.ttcCategory : null;
+  }
+  return null;
+}
+
 /**
  * Draws the static radar region lines, axes, and ego vehicle to a buffer.
  * @param {p5} p - The main p5 instance (used for constants/colors if needed).
@@ -549,8 +560,13 @@ export function drawTrackMarkers(p, plotScales) {
             } else if (log.ttc !== null && isFinite(log.ttc) && log.ttc < 100) {
               ttcText = `TTC: ${log.ttc.toFixed(1)}s`;
             }
-            if (log.state !== undefined && log.state !== null) {
-              ttcText += ttcText ? ` | st: ${log.state}` : `st: ${log.state}`;
+            const risk = getTrackRisk(track, log);
+            if (risk !== null) {
+              ttcText += ttcText ? ` | Risk: ${risk}` : `Risk: ${risk}`;
+            }
+            const state = log.state !== undefined && log.state !== null ? log.state : track.state;
+            if (state !== undefined && state !== null) {
+              ttcText += ttcText ? ` | St: ${state}` : `St: ${state}`;
             }
             const text = `ID: ${track.id} | ${speed} km/h\n${ttcText}`;
             
@@ -686,6 +702,9 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
                 type: "track",
                 data: currentLog, // Use the log for the current frame
                 trackId: track.id,
+                sign: track.sign,
+                risk: getTrackRisk(track, currentLog),
+                state: currentLog.state !== undefined && currentLog.state !== null ? currentLog.state : track.state,
                 screenX,
                 screenY,
               });
@@ -768,9 +787,10 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
             // Calculate speed in km/h, similar to drawTrackMarkers
             trackSpeed = (p.sqrt(vx * vx + vy * vy) * 3.6).toFixed(1) + " km/h";
           }
+          const signText = item.sign ? ` | Sign: ${item.sign}` : "";
           infoText = `Track ${item.trackId} | X:${trackX.toFixed(
             2
-          )}, Y:${trackY.toFixed(2)} | Speed: ${trackSpeed}`;
+          )}, Y:${trackY.toFixed(2)} | Speed: ${trackSpeed}${signText}`;
           // Check for dark mode to ensure visibility
           const isDark = document.documentElement.classList.contains("dark");
           itemColor = isDark
