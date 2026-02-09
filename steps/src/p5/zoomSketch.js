@@ -17,7 +17,7 @@ import {
   toggleCovariance,
 } from "../dom.js";
 
-function drawZoomTooltip(p, hoveredItems, mainMouseX) {
+function drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY) {
   if (!hoveredItems || hoveredItems.length === 0) return;
 
   // 1. Generate text content
@@ -139,15 +139,36 @@ function drawZoomTooltip(p, hoveredItems, mainMouseX) {
   boxWidth += boxPadding * 2;
 
   // Smart Positioning Logic
-  let boxX, connectorAnchorX;
+  let boxX;
+  let anchorOnRight = false;
+
   if (mainMouseX > appState.p5_instance.width / 2) {
     boxX = avgX - xOffset - boxWidth;
-    connectorAnchorX = boxX + boxWidth;
+    anchorOnRight = true;
   } else {
     boxX = avgX + xOffset;
-    connectorAnchorX = boxX;
+    anchorOnRight = false;
   }
-  const boxY = avgY - boxHeight / 2;
+  let boxY = avgY - boxHeight / 2;
+
+  // --- START: Boundary Constraint Logic ---
+  // Calculate the visible bounds in the current coordinate system (which is scaled and translated)
+  const visibleW = p.width / zoomFactor;
+  const visibleH = p.height / zoomFactor;
+  const minVisX = mainMouseX - visibleW / 2;
+  const maxVisX = mainMouseX + visibleW / 2;
+  const minVisY = mainMouseY - visibleH / 2;
+  const maxVisY = mainMouseY + visibleH / 2;
+  const edgePad = 10 / zoomFactor;
+
+  // Constrain X & Y to keep tooltip within the zoom view
+  if (boxX + boxWidth > maxVisX - edgePad) boxX = maxVisX - edgePad - boxWidth;
+  if (boxX < minVisX + edgePad) boxX = minVisX + edgePad;
+  if (boxY + boxHeight > maxVisY - edgePad) boxY = maxVisY - edgePad - boxHeight;
+  if (boxY < minVisY + edgePad) boxY = minVisY + edgePad;
+
+  const connectorAnchorX = anchorOnRight ? boxX + boxWidth : boxX;
+  // --- END: Boundary Constraint Logic ---
 
   // Draw highlighting circles
   hoveredItems.forEach((item) => {
@@ -307,7 +328,7 @@ export const zoomSketch = function (p) {
     p.pop(); // End radar transformations
 
     // --- Call the new, self-contained tooltip function ---
-    drawZoomTooltip(p, hoveredItems, mainMouseX);
+    drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY);
 
     // --- START: Draw Purple Debug Circle ---
     // This circle represents the hover radius, drawn in the zoomed coordinate space.
