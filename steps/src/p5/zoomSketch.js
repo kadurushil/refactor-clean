@@ -263,20 +263,21 @@ export const zoomSketch = function (p) {
     p.scale(1, -1);
 
     const frameData = appState.vizData.radarFrames[appState.currentFrame];
+    const inverseZoom = 1 / appState.zoomFactor * 2;
     
     // --- OPTIMIZATION: Axes and Ego Vehicle are already in the static background image ---
     // drawAxes(p, plotScales);
     // drawEgoVehicle(p, plotScales);
     
     if (frameData) {
-      drawTrackMarkers(p, plotScales);
+      drawTrackMarkers(p, plotScales, inverseZoom);
       drawRegionsOfInterest(p, frameData, plotScales);
       if (toggleTracks.checked) {
-        drawTrajectories(p, plotScales);
+        drawTrajectories(p, plotScales, inverseZoom);
       }
-      drawPointCloud(p, frameData.pointCloud, plotScales);
+      drawPointCloud(p, frameData.pointCloud, plotScales, 4 * inverseZoom);
       if (toggleClusterColor.checked) {
-        drawClusterCentroids(p, frameData.clusters, plotScales);
+        drawClusterCentroids(p, frameData.clusters, plotScales, inverseZoom);
       }
       if (togglePredictedPos.checked) {
         for (const track of appState.vizData.tracks) {
@@ -291,12 +292,13 @@ export const zoomSketch = function (p) {
             const pos = log.predictedPosition;
             const x = pos[0] * plotScales.plotScaleX;
             const y = pos[1] * plotScales.plotScaleY;
+            const size = 4 * inverseZoom;
 
             p.push();
             p.stroke(255, 0, 0); // Red for predicted
-            p.strokeWeight(2);
-            p.line(x - 4, y - 4, x + 4, y + 4);
-            p.line(x + 4, y - 4, x - 4, y + 4);
+            p.strokeWeight(2 * inverseZoom);
+            p.line(x - size, y - size, x + size, y + size);
+            p.line(x + size, y - size, x - size, y + size);
             p.pop();
           }
         }

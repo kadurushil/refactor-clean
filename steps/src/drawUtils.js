@@ -231,10 +231,10 @@ export function drawAxes(p, plotScales) {
 }
 
 
-export function drawPointCloud(p, points, plotScales) {
+export function drawPointCloud(p, points, plotScales, pointSize = 4) {
   try {
     // Set stroke weight for points.
-    p.strokeWeight(4);
+    p.strokeWeight(pointSize);
     // Get state of various toggles from the DOM.
     const useSnr = toggleSnrColor.checked;
     const useCluster = toggleClusterColor.checked;
@@ -325,7 +325,7 @@ export function drawPointCloud(p, points, plotScales) {
   }
 }
 
-export function drawTrajectories(p, plotScales) {
+export function drawTrajectories(p, plotScales, scaleFactor = 1) {
   try {
     const localTtcColors = ttcColors(p);
 
@@ -372,7 +372,7 @@ export function drawTrajectories(p, plotScales) {
       if (isCurrentlyStationary) {
         // Stationary tracks are always green and dashed
         p.stroke(34, 139, 34, 220);
-        p.strokeWeight(1);
+        p.strokeWeight(1 * scaleFactor);
         p.drawingContext.setLineDash([3, 3]);
         for (let i = 1; i < trajPts.length; i++) {
           // ... (draw fading stationary trajectory logic)
@@ -448,7 +448,7 @@ export function drawTrajectories(p, plotScales) {
           }
         }
 
-        p.strokeWeight(1.5);
+        p.strokeWeight(1.5 * scaleFactor);
         p.drawingContext.setLineDash([]);
 
         // Fading trajectory logic (works for both modes)
@@ -476,7 +476,7 @@ export function drawTrajectories(p, plotScales) {
   }
 }
 
-export function drawTrackMarkers(p, plotScales) {
+export function drawTrackMarkers(p, plotScales, scaleFactor = 1) {
   try {
     const showDetails = toggleVelocity.checked;
     const useStationary = toggleStationaryColor.checked;
@@ -492,7 +492,7 @@ export function drawTrackMarkers(p, plotScales) {
     const textLabels = [];
 
     p.push();
-    p.strokeWeight(2);
+    p.strokeWeight(2 * scaleFactor);
 
     for (const track of appState.vizData.tracks) {
       if (toggleConfirmedOnly.checked && track.isConfirmed === false) continue;
@@ -506,7 +506,7 @@ export function drawTrackMarkers(p, plotScales) {
       if (log) {
         const pos = log.correctedPosition;
         if (pos && pos.length === 2 && pos[0] !== null && pos[1] !== null) {
-          const size = 5;
+          const size = 5 * scaleFactor;
           const x = pos[0] * plotScales.plotScaleX;
           const y = pos[1] * plotScales.plotScaleY;
           
@@ -582,13 +582,13 @@ export function drawTrackMarkers(p, plotScales) {
         p.push();
         p.fill(textColor);
         p.noStroke();
-        p.textSize(12);
+        p.textSize(12 * scaleFactor);
         // Set alignment once
         // Note: we handle the flip manually
         
         for (const label of textLabels) {
             p.push();
-            p.translate(label.x + 10, label.y);
+            p.translate(label.x + 10 * scaleFactor, label.y);
             p.scale(1, -1); // Flip text back up
             p.text(label.text, 0, 0);
             p.pop();
@@ -1040,7 +1040,7 @@ export function drawRegionsOfInterest(p, frameData, plotScales) {
   }
 }
 
-export function drawClusterCentroids(p, clustersInput, plotScales) {
+export function drawClusterCentroids(p, clustersInput, plotScales, scaleFactor = 1) {
   try {
     if (!clustersInput) {
       return; // Do nothing if there's no cluster data
@@ -1076,9 +1076,9 @@ export function drawClusterCentroids(p, clustersInput, plotScales) {
 
         p.push();
         p.stroke(color);
-        p.strokeWeight(1.5);
+        p.strokeWeight(1.5 * scaleFactor);
 
-        const armLength = 5;
+        const armLength = 5 * scaleFactor;
 
         p.line(x, y - armLength, x, y + armLength);
         p.line(x - armLength, y, x + armLength, y);
