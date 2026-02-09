@@ -114,6 +114,7 @@ function drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY) {
   const BASE_HIGHLIGHT_THICKNESS = 2;
   const BASE_LINE_THICKNESS = 2;
   const BASE_DISTANCE_OFFSET = 65; // <-- How far the tooltip is from the items
+  const BASE_VERTICAL_OFFSET = 40; // <-- Upward shift for diagonal effect
 
   // COLORS
   const highlightColor = p.color(46, 204, 113); // Green for border and lines
@@ -130,6 +131,7 @@ function drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY) {
   const lineHeight = BASE_LINE_HEIGHT / zoomFactor;
   const boxPadding = BASE_PADDING / zoomFactor;
   const xOffset = BASE_DISTANCE_OFFSET / zoomFactor;
+  const yOffset = BASE_VERTICAL_OFFSET / zoomFactor;
 
   let boxWidth = 0;
   infoStrings.forEach((info) => {
@@ -149,7 +151,7 @@ function drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY) {
     boxX = avgX + xOffset;
     anchorOnRight = false;
   }
-  let boxY = avgY - boxHeight / 2;
+  let boxY = avgY - boxHeight / 2 - yOffset;
 
   // --- START: Boundary Constraint Logic ---
   // Calculate the visible bounds in the current coordinate system (which is scaled and translated)
@@ -291,7 +293,7 @@ export const zoomSketch = function (p) {
     // drawEgoVehicle(p, plotScales);
     
     if (frameData) {
-      drawTrackMarkers(p, plotScales, inverseZoom);
+      drawTrackMarkers(p, plotScales, inverseZoom, false);
       drawRegionsOfInterest(p, frameData, plotScales);
       if (toggleTracks.checked) {
         drawTrajectories(p, plotScales, inverseZoom);

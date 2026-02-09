@@ -2,6 +2,7 @@
 import { appState } from "../state.js";
 import { videoPlayer, speedGraphContainer, playPauseBtn } from "../dom.js";
 import { updateFrame, pausePlayback } from "../sync.js";
+import { ttcColors } from "../drawUtils.js";
 
 export const speedGraphSketch = function (p) {
   let staticBuffer, minSpeed, maxSpeed, videoDuration;
@@ -44,6 +45,62 @@ export const speedGraphSketch = function (p) {
     b.background(isDark ? [55, 65, 81] : 255);
     const gridColor = isDark ? 100 : 200;
     const textColor = isDark ? 200 : 100;
+    
+    // --- Step 1: Define Spectral Color Scheme (MATLAB Style) ---
+    // Anchors: Blue (0%) -> Cyan (25%) -> Green (50%) -> Yellow (75%) -> Red (100%)
+    const spectralAnchors = [
+      p.color(0, 0, 255),   // Blue
+      p.color(0, 255, 255), // Cyan
+      p.color(0, 255, 0),   // Green
+      p.color(255, 255, 0), // Yellow
+      p.color(255, 0, 0)    // Red
+    ];
+
+    function getSpectralColor(ratio) {
+      const amt = p.constrain(ratio, 0, 1);
+      if (amt <= 0.25) return p.lerpColor(spectralAnchors[0], spectralAnchors[1], amt / 0.25);
+      if (amt <= 0.50) return p.lerpColor(spectralAnchors[1], spectralAnchors[2], (amt - 0.25) / 0.25);
+      if (amt <= 0.75) return p.lerpColor(spectralAnchors[2], spectralAnchors[3], (amt - 0.50) / 0.25);
+      return p.lerpColor(spectralAnchors[3], spectralAnchors[4], (amt - 0.75) / 0.25);
+    }
+
+    // --- Step 2: Pre-calculate Track Density ---
+    const numFrames = radarData && radarData.radarFrames ? radarData.radarFrames.length : 0;
+    const trackCounts = new Uint16Array(numFrames).fill(0);
+    const confirmedOnly = document.getElementById("toggleConfirmedOnly")?.checked ?? true;
+
+    if (radarData && radarData.tracks && numFrames > 0) {
+      for (const track of radarData.tracks) {
+        // Only count tracks that would actually be visible in the confirmed view
+        if (confirmedOnly && track.isConfirmed === false) continue;
+        
+        if (track.historyLog) {
+          for (const log of track.historyLog) {
+            if (log.frameIdx >= 0 && log.frameIdx < numFrames) {
+              trackCounts[log.frameIdx]++;
+            }
+          }
+        }
+      }
+    }
+
+    // Determine normalization factor using a robust metric (95th percentile)
+    // This prevents a single frame with 100 tracks (noise) from making the rest of the graph blue.
+    let normTracks = 1;
+    if (numFrames > 0) {
+      const sortedCounts = [...trackCounts].sort((a, b) => a - b);
+      // Use 95th percentile as the "High" anchor
+      const p95Index = Math.floor(numFrames * 0.95);
+      const p95Value = sortedCounts[p95Index];
+      const maxValue = sortedCounts[numFrames - 1];
+      
+      // We'll normalize against p95, but ensure it's at least a reasonable number.
+      normTracks = Math.max(1, p95Value);
+      
+      console.log(`[SpeedGraph] Density Info (Confirmed Only: ${confirmedOnly}):`);
+      console.log(` - Max tracks: ${maxValue}, 95th Percentile: ${p95Value}`);
+      console.log(` - Normalizing against: ${normTracks}`);
+    }
 
     b.push();
     b.stroke(gridColor);
@@ -97,22 +154,68 @@ export const speedGraphSketch = function (p) {
     b.text("Time (s)", (pad.left + (b.width - pad.right)) / 2, b.height - pad.bottom + 18);
     b.pop();
 
-    // Draw CAN speed (solid blue)
+    // --- Density Legend Bar (Left Side) ---
+    // Smooth gradient representation of track density
+    const lx = 10;
+    const lw = 6;
+    const ly = pad.top;
+    const lh = b.height - pad.bottom - pad.top;
+
+    b.push();
+    b.noFill();
+    for (let i = 0; i < lh; i++) {
+      const ratio = b.map(i, 0, lh, 1, 0); // 1 at top (red), 0 at bottom (blue)
+      b.stroke(getSpectralColor(ratio));
+      b.line(lx, ly + i, lx + lw, ly + i);
+    }
+    b.pop();
+
+    // Legend Labels for the vertical bar
+    b.fill(textColor);
+    b.textSize(9);
+    
+    b.textAlign(b.LEFT, b.TOP);
+    b.text(normTracks, lx + lw + 3, ly);
+    
+    b.textAlign(b.LEFT, b.BOTTOM);
+    b.text("0", lx + lw + 3, ly + lh);
+
+    b.textAlign(b.LEFT, b.TOP);
+    b.text("Tracks", lx, ly + lh + 4);
+
+    // Draw CAN speed (Colored by Track Density)
     if (radarData && radarData.radarFrames) {
+      b.strokeWeight(2.5); // Slightly thicker for better color visibility
       b.noFill();
-      b.stroke(0, 150, 255);
-      b.strokeWeight(1.5);
-      b.beginShape();
-      for (const frame of radarData.radarFrames) {
-        if (frame.canVehSpeed_kmph === null || isNaN(frame.canVehSpeed_kmph)) continue;
-        const relTime = frame.timestamp / 1000;
-        if (relTime >= 0 && relTime <= videoDuration) {
-          const x = b.map(relTime, 0, videoDuration, pad.left, b.width - pad.right);
-          const y = b.map(frame.canVehSpeed_kmph, minSpeed, maxSpeed, b.height - pad.bottom, pad.top);
-          b.vertex(x, y);
+      
+      let prevX = null;
+      let prevY = null;
+
+      for (let i = 0; i < radarData.radarFrames.length; i++) {
+        const frame = radarData.radarFrames[i];
+        
+        if (frame.canVehSpeed_kmph === null || isNaN(frame.canVehSpeed_kmph)) {
+          prevX = null; 
+          continue;
         }
+        
+        const relTime = frame.timestamp / 1000;
+        if (relTime < 0 || relTime > videoDuration) continue;
+
+        const x = b.map(relTime, 0, videoDuration, pad.left, b.width - pad.right);
+        const speed = frame.canVehSpeed_kmph;
+        const y = b.map(speed, minSpeed, maxSpeed, b.height - pad.bottom, pad.top);
+
+        if (prevX !== null) {
+          // Robust normalization: Ratio based on 95th percentile
+          const ratio = trackCounts[i] / normTracks;
+          b.stroke(getSpectralColor(ratio));
+          b.line(prevX, prevY, x, y);
+        }
+
+        prevX = x;
+        prevY = y;
       }
-      b.endShape();
     }
 
     // Draw Ego speed (dashed green)
@@ -140,7 +243,7 @@ export const speedGraphSketch = function (p) {
     b.textSize(12);
     b.textAlign(b.LEFT, b.CENTER);
 
-    const canLabel = "CAN Speed";
+    const canLabel = "CAN Speed (Color: Tracks Density)";
     const egoLabel = "Ego Speed";
 
     const segLen = 18;
@@ -159,11 +262,17 @@ export const speedGraphSketch = function (p) {
     const legendStartX = centerX - totalLegendWidth / 2;
     const legendY = pad.top / 2; // vertically centered inside the top padding
 
-    // Draw CAN legend item
-    b.push();
-    b.stroke(0, 150, 255);
+    // Draw CAN legend item (Gradient Line to represent density range)
+    // We draw small segments of different colors to show the range
     b.strokeWeight(2);
-    b.line(legendStartX, legendY + 6, legendStartX + segLen, legendY + 6);
+    const step = segLen / 5;
+    // Use spectralAnchors for the horizontal legend line
+    b.stroke(spectralAnchors[0]); b.line(legendStartX, legendY + 6, legendStartX + step, legendY + 6);
+    b.stroke(spectralAnchors[1]); b.line(legendStartX + step, legendY + 6, legendStartX + step*2, legendY + 6);
+    b.stroke(spectralAnchors[2]); b.line(legendStartX + step*2, legendY + 6, legendStartX + step*3, legendY + 6);
+    b.stroke(spectralAnchors[3]); b.line(legendStartX + step*3, legendY + 6, legendStartX + step*4, legendY + 6);
+    b.stroke(spectralAnchors[4]); b.line(legendStartX + step*4, legendY + 6, legendStartX + segLen, legendY + 6);
+
     b.noStroke();
     b.fill(textColor);
     b.text(canLabel, legendStartX + segLen + gapBetweenSegAndLabel, legendY + 6);

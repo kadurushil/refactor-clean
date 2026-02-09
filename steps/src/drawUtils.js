@@ -5,6 +5,7 @@ import {
   MAX_TRAJECTORY_LENGTH,
   ROI_TRACKS_Y_MIN,
   ROI_CLOSE_Y_MIN,
+  ROI_CLOSE_Y_MAX,
 } from "./constants.js";
 import { appState } from "./state.js";
 import {
@@ -473,27 +474,37 @@ export function drawTrajectories(p, plotScales, scaleFactor = 1) {
   }
 }
 
-export function drawTrackMarkers(p, plotScales, scaleFactor = 1) {
+export function drawTrackMarkers(p, plotScales, scaleFactor = 1, showDetailsBox = true) {
   try {
     const showDetails = toggleVelocity.checked;
     const useStationary = toggleStationaryColor.checked;
-    const textColor = document.documentElement.classList.contains("dark")
-      ? p.color(255)
-      : p.color(0);
     const localStationaryColor = stationaryColor(p);
     const localMovingColor = movingColor(p);
 
-    // Optimization: Batch drawing commands
-    // We collect all text labels to draw them in a single pass at the end.
-    // This avoids switching between stroke/fill and push/pop for every track.
-    const textLabels = [];
+    // Style constants for the floating tooltips (matching zoomSketch)
+    const highlightColor = p.color(46, 204, 113);
+    const bgColor = document.documentElement.classList.contains("dark")
+      ? p.color(20, 20, 30, 220)
+      : p.color(245, 245, 245, 220);
+    const defaultTextColor = document.documentElement.classList.contains("dark")
+      ? p.color(230)
+      : p.color(20);
+
+    // Preparation for smart positioning
+    const labels = [];
+    // Adjust text size based on zoom (scaleFactor is roughly 1/zoom)
+    const textSize = 12 * scaleFactor;
+    const padding = 6 * scaleFactor;
+    const lineHeight = textSize * 1.2;
 
     p.push();
     p.strokeWeight(2 * scaleFactor);
+    // Set text size once for width measurement
+    p.textSize(textSize);
 
     for (const track of appState.vizData.tracks) {
       if (toggleConfirmedOnly.checked && track.isConfirmed === false) continue;
-      // Robust check for malformed tracks (same as drawTrajectories)
+      // Robust check for malformed tracks
       if (!track || !track.historyLog || !Array.isArray(track.historyLog)) continue;
 
       const log = track.historyLog.find(
@@ -523,7 +534,7 @@ export function drawTrackMarkers(p, plotScales, scaleFactor = 1) {
             p.line(x, y - size, x, y + size);
           }
 
-          // --- Draw Velocity Vector & Collect Text ---
+          // --- Velocity Vector & Collect Label Data ---
           if (
             showDetails &&
             log.predictedVelocity &&
@@ -531,66 +542,176 @@ export function drawTrackMarkers(p, plotScales, scaleFactor = 1) {
           ) {
             const [vx, vy] = log.predictedVelocity;
             
-            // Draw velocity line immediately (shares stroke context)
+            // Draw velocity line
             if (log.isStationary === false) {
-              // Determine color again (optimization: could be refactored to avoid recalc)
               let velocityColor = p.color(255, 0, 255, 200); 
               if (useStationary) velocityColor = localMovingColor;
-              
               p.stroke(velocityColor);
-              p.line(
-                x,
-                y,
-                (pos[0] + vx) * plotScales.plotScaleX,
-                (pos[1] + vy) * plotScales.plotScaleY
-              );
+
+              // Reduce thickness by 25% (2.0 -> 1.5)
+              p.strokeWeight(1.5 * scaleFactor);
+
+              // Make velocity line 30% smaller
+              const velScale = 0.7;
+              const vxScaled = vx * velScale;
+              const vyScaled = vy * velScale;
+              
+              const endX = (pos[0] + vxScaled) * plotScales.plotScaleX;
+              const endY = (pos[1] + vyScaled) * plotScales.plotScaleY;
+
+              p.line(x, y, endX, endY);
+
+              // Draw arrow head
+              const arrowSize = 4 * scaleFactor;
+              const angle = Math.atan2(endY - y, endX - x);
+              
+              p.push();
+              p.translate(endX, endY);
+              p.rotate(angle);
+              // Arrowhead wings
+              p.line(0, 0, -arrowSize, -arrowSize * 0.6);
+              p.line(0, 0, -arrowSize, arrowSize * 0.6);
+              p.pop();
             }
 
-            // Defer Text Drawing
-            const speed = (Math.sqrt(vx * vx + vy * vy) * 3.6).toFixed(1);
-            let ttcText = "";
-            if ("tti" in log) {
-              const tti = log.tti;
-              if (typeof tti === "number" && isFinite(tti)) {
-                ttcText = `TTI: ${tti.toFixed(1)}s`;
-              }
-            } else if (log.ttc !== null && isFinite(log.ttc) && log.ttc < 100) {
-              ttcText = `TTC: ${log.ttc.toFixed(1)}s`;
+            // --- Collect Text Data (Only if details box is enabled) ---
+            if (showDetailsBox) {
+                const speed = (Math.sqrt(vx * vx + vy * vy) * 3.6).toFixed(1);
+                let ttcText = "";
+                if ("tti" in log) {
+                  const tti = log.tti;
+                  if (typeof tti === "number" && isFinite(tti)) {
+                    ttcText = `TTI: ${tti.toFixed(1)}s`;
+                  }
+                } else if (log.ttc !== null && isFinite(log.ttc) && log.ttc < 100) {
+                  ttcText = `TTC: ${log.ttc.toFixed(1)}s`;
+                }
+                
+                const risk = getTrackRisk(track, log);
+                if (risk !== null) {
+                  ttcText += ttcText ? ` | Risk: ${risk}` : `Risk: ${risk}`;
+                }
+                
+                const state = log.state !== undefined && log.state !== null ? log.state : track.state;
+                if (state !== undefined && state !== null) {
+                  ttcText += ttcText ? ` | St: ${state}` : `St: ${state}`;
+                }
+
+                const lines = [`ID: ${track.id} | ${speed} km/h`];
+                if (ttcText) lines.push(ttcText);
+
+                let maxW = 0;
+                for(let l of lines) maxW = Math.max(maxW, p.textWidth(l));
+                const w = maxW + padding * 2;
+                const h = lines.length * lineHeight + padding * 2;
+
+                labels.push({ x, y, w, h, lines });
             }
-            const risk = getTrackRisk(track, log);
-            if (risk !== null) {
-              ttcText += ttcText ? ` | Risk: ${risk}` : `Risk: ${risk}`;
-            }
-            const state = log.state !== undefined && log.state !== null ? log.state : track.state;
-            if (state !== undefined && state !== null) {
-              ttcText += ttcText ? ` | St: ${state}` : `St: ${state}`;
-            }
-            const text = `ID: ${track.id} | ${speed} km/h\n${ttcText}`;
-            
-            textLabels.push({ x, y, text });
           }
         }
       }
     }
     p.pop(); // End shape drawing context
 
-    // --- Batch Draw Text ---
-    if (textLabels.length > 0) {
-        p.push();
-        p.fill(textColor);
-        p.noStroke();
-        p.textSize(12 * scaleFactor);
-        // Set alignment once
-        // Note: we handle the flip manually
+    // --- Smart Positioning & Drawing Labels ---
+    if (labels.length > 0) {
+        // Sort by Y descending (Top to Bottom in World Space)
+        // allowing us to stack labels downwards
+        labels.sort((a, b) => b.y - a.y);
         
-        for (const label of textLabels) {
+        const placedBoxes = [];
+        // Increased distance to 60 (3x previous 20)
+        const offsetDist = 60 * scaleFactor; 
+
+        for (const label of labels) {
+            // Initial Position:
+            // If X < 0: Place to Left (x - offset - width)
+            // If X >= 0: Place to Right (x + offset)
+            let bx;
+            if (label.x < 0) {
+                bx = label.x - offsetDist - label.w;
+            } else {
+                bx = label.x + offsetDist;
+            }
+            
+            // Vertical position (Top edge) starts at same Y as marker + offset (Diagonal Up)
+            let by = label.y + offsetDist; 
+            
+            // Collision Resolution (Greedy)
+            const maxAttempts = 20;
+            let attempts = 0;
+            let collision = true;
+            
+            while(collision && attempts < maxAttempts) {
+                collision = false;
+                for (const pBox of placedBoxes) {
+                    // Check intersection in World Space
+                    // Box A (Current): [bx, bx+w] x [by-h, by]
+                    // Box B (Placed):  [pBox.x, pBox.x+pBox.w] x [pBox.y-pBox.h, pBox.y]
+                    
+                    const Ax1 = bx, Ax2 = bx + label.w;
+                    const Ay1 = by - label.h, Ay2 = by; 
+                    
+                    const Bx1 = pBox.x, Bx2 = pBox.x + pBox.w;
+                    const By1 = pBox.y - pBox.h, By2 = pBox.y;
+                    
+                    // Standard AABB Intersection
+                    if (Ax1 < Bx2 && Ax2 > Bx1 && Ay1 < By2 && Ay2 > By1) {
+                         // Collision! Move 'by' DOWN (decrease Y)
+                         // Snap Top (by) to just below Placed Box Bottom (By1)
+                         by = By1 - 5 * scaleFactor;
+                         collision = true;
+                         break; // Restart collision check against all
+                    }
+                }
+                attempts++;
+            }
+            
+            label.finalX = bx;
+            label.finalY = by;
+            placedBoxes.push(label);
+        }
+
+        // --- Draw Tooltips ---
+        for (const label of placedBoxes) {
             p.push();
-            p.translate(label.x + 10 * scaleFactor, label.y);
-            p.scale(1, -1); // Flip text back up
-            p.text(label.text, 0, 0);
+            
+            // 1. Draw Leader Line (World Space)
+            p.stroke(highlightColor);
+            p.strokeWeight(1 * scaleFactor);
+            // Draw to the closest side of the box
+            // If box is to the right, draw to Left Edge (finalX)
+            // If box is to the left, draw to Right Edge (finalX + w)
+            let boxSideX;
+            if (label.finalX > label.x) {
+                boxSideX = label.finalX; // Box is to the right
+            } else {
+                boxSideX = label.finalX + label.w; // Box is to the left
+            }
+            const boxCenterY = label.finalY - label.h / 2;
+            p.line(label.x, label.y, boxSideX, boxCenterY);
+
+            // 2. Draw Box & Text
+            // Translate to Top-Left of box
+            p.translate(label.finalX, label.finalY);
+            // Flip for text drawing (local +Y is Down)
+            p.scale(1, -1); 
+            
+            p.fill(bgColor);
+            p.stroke(highlightColor);
+            p.strokeWeight(1 * scaleFactor);
+            p.rect(0, 0, label.w, label.h, 4 * scaleFactor);
+            
+            p.noStroke();
+            p.fill(defaultTextColor);
+            p.textAlign(p.LEFT, p.TOP);
+            
+            for(let i=0; i<label.lines.length; i++) {
+                p.text(label.lines[i], padding, padding + i * lineHeight);
+            }
+
             p.pop();
         }
-        p.pop();
     }
   } catch (error) {
     console.error("Error in drawTrackMarkers:", error);
@@ -1028,7 +1149,7 @@ export function drawRegionsOfInterest(p, frameData, plotScales) {
       left * plotScales.plotScaleX,
       ROI_CLOSE_Y_MIN * plotScales.plotScaleY,
       right * plotScales.plotScaleX,
-      (appState.radarYMax * 0.25) * plotScales.plotScaleY
+      ROI_CLOSE_Y_MAX * plotScales.plotScaleY
     );
 
     p.pop();
