@@ -1,3 +1,10 @@
+import {
+  RADAR_X_MIN,
+  RADAR_X_MAX,
+  RADAR_Y_MIN,
+  RADAR_Y_MAX
+} from "./constants.js";
+
 export const appState = {
   zoomHideDelayTimeout: null, // Timeout before the hide countdown begins
   zoomCountdown: null, // Holds the number of seconds left before zoom hides
@@ -60,4 +67,9 @@ export const appState = {
   consecutiveResyncs: 0, // Counter for consecutive resyncs
   isInLockdown: false, // Flag to prevent nested lockdown triggers
 
+  // --- Dynamic Radar Boundaries ---
+  radarXMin: RADAR_X_MIN,
+  radarXMax: RADAR_X_MAX,
+  radarYMin: RADAR_Y_MIN,
+  radarYMax: RADAR_Y_MAX,
 };

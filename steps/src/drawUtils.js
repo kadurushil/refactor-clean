@@ -1,13 +1,10 @@
 import {
   RADAR_X_MAX,
   RADAR_X_MIN,
-  RADAR_Y_MAX,
   RADAR_Y_MIN,
   MAX_TRAJECTORY_LENGTH,
   ROI_TRACKS_Y_MIN,
-  ROI_TRACKS_Y_MAX,
   ROI_CLOSE_Y_MIN,
-  ROI_CLOSE_Y_MAX,
 } from "./constants.js";
 import { appState } from "./state.js";
 import {
@@ -163,7 +160,7 @@ export function drawAxes(p, plotScales) {
     // Draw horizontal grid lines.
     p.stroke(axisColor);
     p.strokeWeight(1);
-    for (let y = 5; y <= RADAR_Y_MAX; y += 5)
+    for (let y = 5; y <= appState.radarYMax; y += 5)
       p.line(
         RADAR_X_MIN * plotScales.plotScaleX,
         y * plotScales.plotScaleY,
@@ -182,7 +179,7 @@ export function drawAxes(p, plotScales) {
         x * plotScales.plotScaleX,
         RADAR_Y_MIN * plotScales.plotScaleY,
         x * plotScales.plotScaleX,
-        RADAR_Y_MAX * plotScales.plotScaleY
+        appState.radarYMax * plotScales.plotScaleY
       );
     }
     p.stroke(mainAxisColor);
@@ -196,13 +193,13 @@ export function drawAxes(p, plotScales) {
       0,
       RADAR_Y_MIN * plotScales.plotScaleY,
       0,
-      RADAR_Y_MAX * plotScales.plotScaleY
+      appState.radarYMax * plotScales.plotScaleY
     );
     // Draw Y-axis labels.
     p.fill(textColor);
     p.noStroke();
     p.textSize(10);
-    for (let y = 5; y <= RADAR_Y_MAX; y += 5) {
+    for (let y = 5; y <= appState.radarYMax; y += 5) {
       p.push();
       p.translate(5, y * plotScales.plotScaleY);
       // Flip text vertically to align with flipped Y-axis.
@@ -1022,7 +1019,7 @@ export function drawRegionsOfInterest(p, frameData, plotScales) {
       left * plotScales.plotScaleX,
       ROI_TRACKS_Y_MIN * plotScales.plotScaleY,
       right * plotScales.plotScaleX,
-      ROI_TRACKS_Y_MAX * plotScales.plotScaleY
+      appState.radarYMax * plotScales.plotScaleY
     );
 
     // --- Draw Close Region ---
@@ -1031,7 +1028,7 @@ export function drawRegionsOfInterest(p, frameData, plotScales) {
       left * plotScales.plotScaleX,
       ROI_CLOSE_Y_MIN * plotScales.plotScaleY,
       right * plotScales.plotScaleX,
-      ROI_CLOSE_Y_MAX * plotScales.plotScaleY
+      (appState.radarYMax * 0.25) * plotScales.plotScaleY
     );
 
     p.pop();

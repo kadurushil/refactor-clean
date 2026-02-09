@@ -2,7 +2,6 @@ import { appState } from "../state.js";
 import { debugFlags } from "../debug.js";
 import {
   RADAR_X_MAX,
-  // Define radar plot boundaries
   RADAR_X_MIN,
   RADAR_Y_MAX,
   RADAR_Y_MIN,
@@ -17,6 +16,8 @@ import {
   toggleVehicleDimensions,
   toggleClusterColor,
   toggleConfirmedOnly,
+  rangeSlider,
+  rangeValueDisplay,
 } from "../dom.js";
 import {
   drawStaticRegionsToBuffer,
@@ -60,6 +61,21 @@ export const radarSketch = function (p) {
   };
   // Function to calculate scaling factors for radar coordinates to canvas pixels
   function calculatePlotScales() {
+    // --- START: Safety Fallback Logic ---
+    // Ensure we have valid numbers; if not, revert to constants from constants.js
+    const xMin = typeof appState.radarXMin === 'number' ? appState.radarXMin : RADAR_X_MIN;
+    const xMax = typeof appState.radarXMax === 'number' ? appState.radarXMax : RADAR_X_MAX;
+    const yMin = typeof appState.radarYMin === 'number' ? appState.radarYMin : RADAR_Y_MIN;
+    const yMax = typeof appState.radarYMax === 'number' ? appState.radarYMax : RADAR_Y_MAX;
+
+    const dx = xMax - xMin;
+    const dy = yMax - yMin;
+
+    // Final safety: Prevent division by zero if values are somehow identical or inverted
+    const safeDx = dx > 0 ? dx : 50; // Default width 50m
+    const safeDy = dy > 0 ? dy : 80; // Default height 80m
+    // --- END: Safety Fallback Logic ---
+
     // Padding and offset values for the plot area
     const hPad = 0.05,
       vPad = 0.05,
@@ -67,9 +83,10 @@ export const radarSketch = function (p) {
     // Calculate available width and height for the plot
     const aW = p.width * (1 - 2 * hPad);
     const aH = p.height * (1 - bOff - vPad);
+    
     // Determine plot scales based on radar boundaries and available canvas space
-    plotScales.plotScaleX = aW / (RADAR_X_MAX - RADAR_X_MIN);
-    plotScales.plotScaleY = aH / (RADAR_Y_MAX - RADAR_Y_MIN);
+    plotScales.plotScaleX = aW / safeDx;
+    plotScales.plotScaleY = aH / safeDy;
   }
 
   p.setup = function () {
@@ -106,7 +123,7 @@ export const radarSketch = function (p) {
             appState.zoomSketchInstance &&
             appState.zoomSketchInstance.updateAndDraw
           ) {
-            const hoveredItems = handleCloseUpDisplay(p, plotScales);
+            const hoveredItems = handleCloseUpDisplay(p, plotScales, p.mouseX, p.mouseY);
             appState.zoomSketchInstance.updateAndDraw(
               p.mouseX,
               p.mouseY,
@@ -134,6 +151,38 @@ export const radarSketch = function (p) {
     // Reset FPS state to prevent stale values from previous sessions
     appState.fps = 0; 
     
+    // --- START: Radar Range Slider Logic ---
+    if (rangeSlider && rangeValueDisplay) {
+      // Initialize slider value from appState
+      rangeSlider.value = appState.radarYMax;
+      rangeValueDisplay.textContent = appState.radarYMax + "m";
+
+      // Add listener to handle slider changes
+      rangeSlider.addEventListener("input", () => {
+        const newMax = parseInt(rangeSlider.value);
+        appState.radarYMax = newMax;
+        rangeValueDisplay.textContent = newMax + "m";
+
+        // Recalculate scales and redraw static background
+        calculatePlotScales();
+        drawStaticRegionsToBuffer(p, staticBackgroundBuffer, plotScales);
+        
+        // Redraw main sketch to reflect new scale immediately
+        p.redraw();
+      });
+
+      // Reset to default on double-click
+      rangeSlider.addEventListener("dblclick", () => {
+        appState.radarYMax = RADAR_Y_MAX;
+        rangeSlider.value = RADAR_Y_MAX;
+        rangeValueDisplay.textContent = RADAR_Y_MAX + "m";
+        calculatePlotScales();
+        drawStaticRegionsToBuffer(p, staticBackgroundBuffer, plotScales);
+        p.redraw();
+      });
+    }
+    // --- END: Radar Range Slider Logic ---
+
     p.noLoop();
     // Disable continuous looping, redraw will be called manually
   };

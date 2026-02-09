@@ -394,12 +394,21 @@
     <div class="lg:w-1/2 flex flex-col gap-4">
       <div class="relative">
         <div id="canvas-container"
-          class="w-full h-[75vh] bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-inner flex items-center justify-center">
+          class="w-full h-[75vh] bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-inner flex items-center justify-center relative">
           <p id="canvas-placeholder" class="text-gray-500 dark:text-gray-400 text-lg">Load JSON data to start
             visualization</p>
+          
+          <!-- Range Slider (Vertical) -->
+          <div class="absolute bottom-8 left-2 flex flex-col items-center gap-2 z-20 group">
+            <span id="range-value-display" class="bg-black bg-opacity-60 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">80m</span>
+            <input type="range" id="range-slider" min="40" max="200" value="80" step="10"
+              class="h-32 cursor-pointer accent-blue-600" 
+              style="writing-mode: bt-lr; -webkit-appearance: slider-vertical; width: 8px;" />
+            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter" style="writing-mode: vertical-lr; transform: rotate(180deg);">Range</span>
+          </div>
         </div>
         <div id="radar-info-overlay"
-          class="absolute top-[-35px] left-2 z-10 bg-black bg-opacity-60 text-white font-mono text-xs p-2 rounded-md hidden">
+          class="absolute top-[-35px] left-0 right-0 z-10 bg-black bg-opacity-60 text-white font-mono text-xs p-2 rounded-md hidden">
         </div>
         <div class="absolute bottom left-1/2 -translate-x-1/2 flex items-center justify-center gap-4">
           <div id="ego-speed-display"

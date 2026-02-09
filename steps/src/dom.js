@@ -110,6 +110,8 @@ export const guideModalCloseBtn = document.getElementById("guide-modal-close-btn
 export const codebaseBtn = document.getElementById("codebase-btn");
 export const codebaseModal = document.getElementById("codebase-modal");
 export const codebaseModalCloseBtn = document.getElementById("codebase-modal-close-btn");
+export const rangeSlider = document.getElementById("range-slider");
+export const rangeValueDisplay = document.getElementById("range-value-display");
 
 
 
@@ -327,7 +329,7 @@ export function updatePersistentOverlays(currentMediaTime) {
     // --- OPTIMIZATION: One-time DOM Setup & Caching ---
     if (!overlayCache) {
         radarInfoOverlay.innerHTML = `
-            <div id="radar-text-content" style="line-height: 1.5;">
+            <div id="radar-text-content" style="line-height: 1.5; text-align: center;">
                 Frame: <span id="ov-frame"></span>
                 | EGO State: <span id="ov-motion"></span>
                 | FPS: <b id="ov-fps"></b>
