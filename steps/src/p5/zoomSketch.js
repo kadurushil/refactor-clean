@@ -17,8 +17,8 @@ import {
   toggleCovariance,
 } from "../dom.js";
 
-function drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY) {
-  if (!hoveredItems || hoveredItems.length === 0) return;
+function drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY, smoothedAvgX, smoothedAvgY) {
+  if (!hoveredItems || hoveredItems.length === 0 || smoothedAvgX === null) return;
 
   // 1. Generate text content
   const infoStrings = [];
@@ -94,13 +94,9 @@ function drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY) {
     }
   }
 
-  // 2. Find the average screen position of hovered items
-  const avgX =
-    hoveredItems.reduce((acc, item) => acc + item.screenX, 0) /
-    hoveredItems.length;
-  const avgY =
-    hoveredItems.reduce((acc, item) => acc + item.screenY, 0) /
-    hoveredItems.length;
+  // 2. Use filtered screen positions for the tooltip box
+  const avgX = smoothedAvgX;
+  const avgY = smoothedAvgY;
 
   p.push();
 
@@ -216,10 +212,16 @@ export const zoomSketch = function (p) {
   let canvas = null;
   const containerId = "zoom-canvas-container";
 
+  // Persistent smoothed coordinates for the tooltip
+  let smoothedAvgX = null;
+  let smoothedAvgY = null;
+
   appState.zoomFactor = 4; // Set a default zoom factor in the global state
 
   p.setup = function () {
-    p.noLoop();
+    p.frameRate(60);
+    // We enable looping so the lerp smoothing can animate between frames
+    p.loop();
   };
 
   p.updateAndDraw = function (mainMouseX, mainMouseY, hoveredItems, scales) {
@@ -238,7 +240,8 @@ export const zoomSketch = function (p) {
         return;
       }
     }
-    p.redraw();
+    // With loop() enabled, we don't strictly need redraw(), 
+    // but it helps if updateAndDraw is called less frequently than the frame rate.
   };
 
   p.handleResize = function () {
@@ -259,6 +262,24 @@ export const zoomSketch = function (p) {
     );
 
     const { mainMouseX, mainMouseY, hoveredItems } = lastUpdate;
+
+    // --- Tooltip Smoothing (Low Pass Filter) ---
+    if (hoveredItems.length > 0) {
+      const targetAvgX = hoveredItems.reduce((acc, item) => acc + item.screenX, 0) / hoveredItems.length;
+      const targetAvgY = hoveredItems.reduce((acc, item) => acc + item.screenY, 0) / hoveredItems.length;
+
+      if (smoothedAvgX === null) {
+        smoothedAvgX = targetAvgX;
+        smoothedAvgY = targetAvgY;
+      } else {
+        const smoothingFactor = 0.05; // Tweak this for more/less lag
+        smoothedAvgX = p.lerp(smoothedAvgX, targetAvgX, smoothingFactor);
+        smoothedAvgY = p.lerp(smoothedAvgY, targetAvgY, smoothingFactor);
+      }
+    } else {
+      smoothedAvgX = null;
+      smoothedAvgY = null;
+    }
 
     p.push(); // Start zoom transformations
     p.translate(
@@ -329,8 +350,8 @@ export const zoomSketch = function (p) {
     }
     p.pop(); // End radar transformations
 
-    // --- Call the new, self-contained tooltip function ---
-    drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY);
+    // --- Call the new, self-contained tooltip function with smoothed coords ---
+    drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY, smoothedAvgX, smoothedAvgY);
 
     // --- START: Draw Purple Debug Circle ---
     // This circle represents the hover radius, drawn in the zoomed coordinate space.
