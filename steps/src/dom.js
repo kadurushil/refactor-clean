@@ -353,6 +353,14 @@ export function updatePersistentOverlays(currentMediaTime) {
         };
     }
 
+    // --- PERFORMANCE FIX: Read layout BEFORE writing to DOM ---
+    // Reading clientWidth here avoids "Forced Reflow" (Layout Thrashing) because
+    // we haven't dirtied the layout with text updates yet in this frame.
+    let currentCanvasWidth = 0;
+    if (overlayCache && overlayCache.dotCanvas) {
+        currentCanvasWidth = overlayCache.dotCanvas.clientWidth;
+    }
+
     // --- 1. Smart Smooth Zoom Logic ---
     // Use pre-calculated maxWindowIFT (computed in fileParsers.js) for O(1) performance.
     const maxWindowIFT = currentRadarFrame.maxWindowIFT || 0;
@@ -367,9 +375,16 @@ export function updatePersistentOverlays(currentMediaTime) {
     }
 
     // Smooth Interpolation (Lerp)
-    // Move current scale 10% of the way to the target per frame.
-    const smoothingFactor = 0.1;
+    // Move current scale towards the target.
+    // If playing, use 0.1 (fast). If stopped, use 0.033 (slow, ~3x slower).
+    const smoothingFactor = appState.isPlaying ? 0.1 : 0.033;
     appState.currentGraphScale += (targetMsPerBlock - appState.currentGraphScale) * smoothingFactor;
+
+    // If the scale hasn't converged yet and we are NOT playing (main loop not running),
+    // request another frame to continue the smoothing animation.
+    if (!appState.isPlaying && Math.abs(targetMsPerBlock - appState.currentGraphScale) > 0.01) {
+        requestAnimationFrame(() => updatePersistentOverlays(videoPlayer.currentTime));
+    }
     
     // Use the smoothed value for drawing
     const msPerBlock = appState.currentGraphScale;
@@ -399,9 +414,8 @@ export function updatePersistentOverlays(currentMediaTime) {
     let isResized = false;
 
     if (dotCanvas) {
-        const clientWidth = dotCanvas.clientWidth;
-        if (dotCanvas.width !== clientWidth) {
-            dotCanvas.width = clientWidth;
+        if (dotCanvas.width !== currentCanvasWidth) {
+            dotCanvas.width = currentCanvasWidth;
             isResized = true;
         }
     }
