@@ -956,7 +956,7 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
       boxX = mouseX + xOffset;
       lineAnchorX = boxX;
     }
-    let boxY = p.mouseY - boxHeight / 2;
+    let boxY = mouseY - boxHeight / 2;
     boxY = p.constrain(boxY, 0, p.height - boxHeight);
 
     const highlightColor = p.color(46, 204, 113);
