@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARAS Evolution: V2 to V3 Comprehensive Changelog</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #f1f5f9; }
+        .commit-hash { font-family: 'Fira Code', monospace; color: #94a3b8; font-size: 0.8rem; }
+        .version-tag { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); }
+        .card { background: #1e293b; border: 1px solid #334155; transition: transform 0.2s; height: 100%; }
+        .card:hover { transform: translateY(-4px); border-color: #475569; }
+        .highlight-green { color: #4ade80; }
+        .highlight-blue { color: #60a5fa; }
+        .highlight-purple { color: #c084fc; }
+        .highlight-amber { color: #fbbf24; }
+        .icon-box { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 12px; }
+        code { font-family: 'Fira Code', monospace; background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 4px; font-size: 0.9em; }
+    </style>
+</head>
+<body class="p-8 md:p-16">
+
+    <header class="max-w-6xl mx-auto mb-16 border-b border-slate-700 pb-12">
+        <div class="flex items-center gap-4 mb-4">
+            <span class="version-tag text-white px-3 py-1 rounded-full text-sm font-bold tracking-widest uppercase">Major Release</span>
+            <span class="text-slate-500 font-mono text-sm">Baseline: e1b8aac (V2) | Current: 16f7736 (V3)</span>
+        </div>
+        <h1 class="text-5xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400 italic">
+            ARAS Visualizer: Version 3
+        </h1>
+        <p class="text-xl text-slate-400 max-w-4xl leading-relaxed">
+            Version 3 represents a major architectural milestone. The application evolved from a functional visualization prototype into a robust, modular, performance-optimized, and architecturally documented professional tool.
+        </p>
+    </header>
+
+    <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <!-- 1. Sync Engine Rearchitecture -->
+        <div class="card p-8 rounded-2xl shadow-2xl">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-blue text-2xl">⚡</div>
+                <h2 class="text-2xl font-bold">1. Sync Engine Rearchitecture</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">Redesigned to eliminate drift, stutter, and race conditions.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> Migration to <code>videoFrameCallback</code> for deterministic sync.</li>
+                <li class="flex gap-2"><span>•</span> Hybrid video-radar synchronization architecture.</li>
+                <li class="flex gap-2"><span>•</span> Centralized offset handling logic and persistence.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Drift Cascade Lockdown:</strong> Prevents seek-loops on low-end hardware.</li>
+            </ul>
+        </div>
+
+        <!-- 2. File Loading & Caching -->
+        <div class="card p-8 rounded-2xl shadow-2xl">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-green text-2xl">📂</div>
+                <h2 class="text-2xl font-bold">2. File Loading & Caching</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">Complete modularization of the file processing pipeline.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> Extraction of file handling into dedicated <code>fileLoader.js</code>.</li>
+                <li class="flex gap-2"><span>•</span> Incremental JSON & video loading support.</li>
+                <li class="flex gap-2"><span>•</span> Promise-based IndexedDB initialization (Race condition fixes).</li>
+                <li class="flex gap-2"><span>•</span> Non-blocking "fire-and-forget" caching logic.</li>
+            </ul>
+        </div>
+
+        <!-- 3. Performance Optimization -->
+        <div class="card p-8 rounded-2xl shadow-2xl">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-amber text-2xl">🚀</div>
+                <h2 class="text-2xl font-bold">3. Performance Optimization</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">Rendering refactored for memory stability and frame-rate consistency.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> Removed layout-thrashing <code>innerHTML</code> calls in draw loops.</li>
+                <li class="flex gap-2"><span>•</span> Canvas optimization to avoid heap allocations and GC pressure.</li>
+                <li class="flex gap-2"><span>•</span> 20% total performance gain via smart throttling and debouncing.</li>
+                <li class="flex gap-2"><span>•</span> FPS counter stabilization with warmup and smoothing logic.</li>
+            </ul>
+        </div>
+
+        <!-- 4. Advanced Visualization -->
+        <div class="card p-8 rounded-2xl shadow-2xl">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-purple text-2xl">🧠</div>
+                <h2 class="text-2xl font-bold">4. Advanced Visualization</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">Intelligent data interpretation and professional UI interactions.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> <strong>Smart Labeling:</strong> Greedy collision resolution for track markers.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Spectral Density:</strong> Speed graph coloring based on track count.</li>
+                <li class="flex gap-2"><span>•</span> Interactive seeking and high-speed scrubbing in speed graph.</li>
+                <li class="flex gap-2"><span>•</span> Dynamic range slider (20m–200m) with auto-scaling ROI.</li>
+            </ul>
+        </div>
+
+        <!-- 5. Zoom & God Mode -->
+        <div class="card p-8 rounded-2xl shadow-2xl">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-blue text-2xl">🔭</div>
+                <h2 class="text-2xl font-bold">5. Zoom & God Mode</h2>
+            </div>
+            <ul class="space-y-3 text-slate-300 text-sm mt-2">
+                <li class="flex gap-2"><span>•</span> <strong>Inertial Tracking:</strong> Exponential mouse smoothing (60Hz/144Hz agnostic).</li>
+                <li class="flex gap-2"><span>•</span> Inverse zoom logic and boundary-aware tooltip constraints.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Shift-Key seeking:</strong> Integrated timeline scrubbing within radar canvas.</li>
+                <li class="flex gap-2"><span>•</span> Relative distance square optimization to eliminate hover jitter.</li>
+            </ul>
+        </div>
+
+        <!-- 6. Architectural Mapping -->
+        <div class="card p-8 rounded-2xl shadow-2xl">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-green text-2xl">🗺️</div>
+                <h2 class="text-2xl font-bold">6. Living Documentation</h2>
+            </div>
+            <ul class="space-y-3 text-slate-300 text-sm mt-2">
+                <li class="flex gap-2"><span>•</span> <strong>Interactive Codebase Overview:</strong> Integrated 3D-styled navigation.</li>
+                <li class="flex gap-2"><span>•</span> Color-coded architecture explorer (Core, Sync, UI, P5).</li>
+                <li class="flex gap-2"><span>•</span> Local <strong>PrismJS</strong> integration for high-perf syntax highlighting.</li>
+                <li class="flex gap-2"><span>•</span> Mini-map docking navigation system for architectural modules.</li>
+            </ul>
+        </div>
+
+        <!-- 7. UX & Modal System -->
+        <div class="card p-8 rounded-2xl shadow-2xl">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-amber text-2xl">🛠️</div>
+                <h2 class="text-2xl font-bold">7. UX & Modal System</h2>
+            </div>
+            <ul class="space-y-3 text-slate-300 text-sm mt-2">
+                <li class="flex gap-2"><span>•</span> First-run detection with automated User Guide onboarding.</li>
+                <li class="flex gap-2"><span>•</span> Standalone Keyboard Shortcut reference modal.</li>
+                <li class="flex gap-2"><span>•</span> Refactored header navigation with theme-aware icons.</li>
+                <li class="flex gap-2"><span>•</span> Internet-free operation (Removed Google Fonts dependency).</li>
+            </ul>
+        </div>
+
+        <!-- 8. Data Explorer -->
+        <div class="card p-8 rounded-2xl shadow-2xl">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-purple text-2xl">📊</div>
+                <h2 class="text-2xl font-bold">8. Data Explorer</h2>
+            </div>
+            <ul class="space-y-3 text-slate-300 text-sm mt-2">
+                <li class="flex gap-2"><span>•</span> Draggable and resizable side-panel for granular inspection.</li>
+                <li class="flex gap-2"><span>•</span> Bi-directional timeline synchronization.</li>
+                <li class="flex gap-2"><span>•</span> Expanded metadata for tracked objects (Risk, State, Sign).</li>
+                <li class="flex gap-2"><span>•</span> Throttled data updates to maintain rendering performance.</li>
+            </ul>
+        </div>
+
+        <!-- 9 & 10. Stability & Infrastructure -->
+        <div class="card md:col-span-2 p-8 rounded-2xl shadow-2xl border-l-4 border-indigo-500">
+            <h2 class="text-2xl font-bold mb-6">9 & 10. Stability & Infrastructure</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <ul class="space-y-2 text-slate-400 text-sm">
+                    <li class="flex gap-2"><span>•</span> Guards against division-by-zero in SNR mapping.</li>
+                    <li class="flex gap-2"><span>•</span> Fixed tooltip Y-jitter bug in <code>drawUtils.js</code>.</li>
+                    <li class="flex gap-2"><span>•</span> Standardized <code>p.deltaTime</code> across all browser engines.</li>
+                    <li class="flex gap-2"><span>•</span> Dark mode refinements for raw point visibility.</li>
+                </ul>
+                <ul class="space-y-2 text-slate-400 text-sm">
+                    <li class="flex gap-2"><span>•</span> Decoupled UI logic from the <code>main.js</code> orchestrator.</li>
+                    <li class="flex gap-2"><span>•</span> Isolated keyboard shortcuts for improved maintainability.</li>
+                    <li class="flex gap-2"><span>•</span> Unit test suite expanded for <code>utils</code> and <code>parsers</code>.</li>
+                    <li class="flex gap-2"><span>•</span> Comprehensive Context and README documentation updates.</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+    <footer class="max-w-6xl mx-auto mt-24 pt-12 border-t border-slate-700 text-slate-500 text-center">
+        <p class="mb-2"><strong>Classification:</strong> Major Release – Architectural & Performance Upgrade</p>
+        <p class="text-sm italic">Generated via Gemini CLI | Analysis of 80+ Commits | ARAS Refactor Documentation Project &copy; 2026</p>
+    </footer>
+
+</body>
+</html>

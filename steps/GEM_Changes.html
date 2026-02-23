@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Version 3.0 Changelog</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased p-6 md:p-12">
+
+    <div class="max-w-5xl mx-auto">
+        
+        <header class="mb-12 border-b border-gray-200 pb-6">
+            <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">Changelog <span class="text-blue-600">v3.0</span></h1>
+            <p class="text-lg text-gray-600 mt-2">A comprehensive overview of architectural overhauls, performance optimizations, and new features introduced in the latest release.</p>
+        </header>
+
+        <main class="space-y-12">
+
+            <section>
+                <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                    Major Changes
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="text-xl font-bold text-gray-800 mb-3">Hybrid Sync & Playback Engine</h3>
+                        <p class="text-gray-600 mb-4 text-sm">The synchronization architecture between video and radar data was completely rewritten to eliminate stutter and ensure 100% solid logic.</p>
+                        <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                            <li>Moved <code>updateFrame</code> directly into the <code>videoframecallback</code> for display refresh rate synchronization.</li>
+                            <li>Implemented a "Resync Drift Cascade Lockdown" (circuit breaker) to prevent infinite loop freezes on low-end hardware or when multiple tabs are open.</li>
+                            <li>Added frame-rate independent smoothing for UI and sketches.</li>
+                            <li>Centralized timeline slider, manual offset, and play/stop/pause logic into a dedicated <code>sync.js</code> module.</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="text-xl font-bold text-gray-800 mb-3">Modular File Loading & Offline Support</h3>
+                        <p class="text-gray-600 mb-4 text-sm">Monolithic application files were broken down, and the software was adapted to work entirely offline.</p>
+                        <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                            <li>Extracted file handling into <code>src/fileLoader.js</code>, supporting incremental loading (replacing individual files without breaking app state).</li>
+                            <li>Resolved IndexedDB race conditions and startup crashes by ensuring metadata is extracted before parsing visualization data.</li>
+                            <li>Removed Google Fonts dependency and implemented robust fallback logic for local JS libraries, enabling full offline capability.</li>
+                            <li>Corrected caching key usage to ensure auto-reloading from IndexedDB works seamlessly.</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="text-xl font-bold text-gray-800 mb-3">Performance & Memory Optimizations</h3>
+                        <p class="text-gray-600 mb-4 text-sm">Significant improvements to the rendering pipeline to reduce memory allocation and boost framerates.</p>
+                        <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                            <li>Resolved major heap memory issues by iterating through data and drawing rectangles directly to the canvas, changing <code>ctx.fillStyle</code> only once per column.</li>
+                            <li>Improved FPS counter stability with a warmup period to prevent erroneous spikes during new file loads.</li>
+                            <li>Removed unnecessary animation loop calls (e.g., drawing axes every frame) and reduced text content updates for a 20%+ performance boost.</li>
+                            <li>Throttled the MATLAB-style Data Explorer updates to prevent unnecessary function calls when closed.</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="text-xl font-bold text-gray-800 mb-3">Living Documentation & Analytical Tools</h3>
+                        <p class="text-gray-600 mb-4 text-sm">Introduced powerful new ways to explore both the application data and the codebase itself.</p>
+                        <ul class="list-disc list-inside text-sm text-gray-700 space-y-2">
+                            <li><strong>Living Documentation:</strong> Added an interactive codebase overview with a visual 3D-styled navigation map and PrismJS syntax highlighting.</li>
+                            <li><strong>Data Explorer:</strong> Added a draggable, resizable MATLAB-style data explorer with timeline sync and track information (launched via 'i' key).</li>
+                            <li><strong>Speed Graph:</strong> Implemented drag-to-seek, click-to-seek, and hover tooltips for CAN/Ego speeds.</li>
+                            <li>Added an Inter-Frame Timing (IFT) graph with dynamic scaling animations.</li>
+                        </ul>
+                    </div>
+
+                </div>
+            </section>
+
+            <section>
+                <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center mt-12">
+                    <svg class="w-6 h-6 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                    Minor Changes & UX Polish
+                </h2>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        
+                        <div>
+                            <h4 class="font-bold text-gray-800 mb-2 border-b pb-1">User Interface</h4>
+                            <ul class="list-disc list-inside text-sm text-gray-600 space-y-1.5">
+                                <li>Added vertical range slider (20m-200m) to adjust <code>RADAR_Y_MAX</code> dynamically.</li>
+                                <li>Double-click reset functionality added to range sliders.</li>
+                                <li>Implemented an auto-loading Quick Start Guide modal on the first session launch.</li>
+                                <li>Refined radar-info-overlay to match plot width and center text.</li>
+                                <li>Added theme-aware color logic for raw point clouds in dark mode.</li>
+                                <li>Removed redundant 'scale' and 'absolute time' metrics from persistent overlays.</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="font-bold text-gray-800 mb-2 border-b pb-1">Zoom & God Mode</h4>
+                            <ul class="list-disc list-inside text-sm text-gray-600 space-y-1.5">
+                                <li>Implemented smooth mouse tracking for the zoom tooltip.</li>
+                                <li>Added Inverse Zoom Logic.</li>
+                                <li>Constrained God Mode tooltips to remain inside the bounding sketch box.</li>
+                                <li>Fixed hover detection bugs during scroll-zoom interactions.</li>
+                                <li>Switched to relative distance squares to reduce computational overhead and initial hover jitter.</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="font-bold text-gray-800 mb-2 border-b pb-1">Visuals & Inputs</h4>
+                            <ul class="list-disc list-inside text-sm text-gray-600 space-y-1.5">
+                                <li>Added vehicle dimensions visualization and enhanced track risk coloring.</li>
+                                <li>Added state identifiers directly beside TTC markers.</li>
+                                <li>Fixed visibility toggle for "Confirmed ONLY" tracks.</li>
+                                <li>New keyboard shortcuts: Arrow keys (navigation), Shift key (God Mode activation).</li>
+                                <li>Isolated keyboard shortcut logic to prevent input conflicts.</li>
+                                <li>Video player mute defaults removed; standard controls option added.</li>
+                            </ul>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+        </main>
+        
+        <footer class="mt-16 text-center text-sm text-gray-500 border-t border-gray-200 pt-6">
+            Generated from git commit history.
+        </footer>
+    </div>
+
+</body>
+</html>
