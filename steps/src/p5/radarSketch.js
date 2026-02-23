@@ -209,8 +209,11 @@ export const radarSketch = function (p) {
         if (framesDrawn === 10 || appState.fps === 0) {
           appState.fps = currentFps;
         } else {
-          const smoothingFactor = 0.95;
-          appState.fps = appState.fps * smoothingFactor + currentFps * (1 - smoothingFactor);
+          // --- START: Frame-Rate Independent FPS Smoothing ---
+          const baseFactor = 0.05; // Smoothing factor at 60 FPS
+          const adjustedFactor = 1 - Math.pow(1 - baseFactor, delta / (1000 / 60));
+          appState.fps = p.lerp(appState.fps, currentFps, adjustedFactor);
+          // --- END: Frame-Rate Independent FPS Smoothing ---
         }
       }
       lastFrameTime = currentTime;
@@ -375,13 +378,16 @@ export const radarSketch = function (p) {
         isFirstFrame = false;
       }
 
-      // The smoothing factor. A smaller value (e.g., 0.1) means more smoothing.
-      // This can be adjusted to feel more or less responsive.
-      const smoothingFactor = 0.5;
+      // --- START: Frame-Rate Independent Smoothing ---
+      // We use p.deltaTime to adjust the smoothing factor so that the animation
+      // speed remains consistent across different monitor refresh rates.
+      const baseSmoothing = 0.5; // Target smoothing at 60 FPS
+      const adjustedSmoothing = 1 - Math.pow(1 - baseSmoothing, p.deltaTime / (1000 / 60));
 
       // Linearly interpolate the smoothed position towards the actual mouse position.
-      smoothedMouseX = p.lerp(smoothedMouseX, p.mouseX, smoothingFactor);
-      smoothedMouseY = p.lerp(smoothedMouseY, p.mouseY, smoothingFactor);
+      smoothedMouseX = p.lerp(smoothedMouseX, p.mouseX, adjustedSmoothing);
+      smoothedMouseY = p.lerp(smoothedMouseY, p.mouseY, adjustedSmoothing);
+      // --- END: Frame-Rate Independent Smoothing ---
 
       // Use the smoothed coordinates for all subsequent zoom-related calculations.
       const hoveredItems = handleCloseUpDisplay(p, plotScales, smoothedMouseX, smoothedMouseY);

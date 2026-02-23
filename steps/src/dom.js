@@ -126,6 +126,7 @@ export function resetUIForNewLoad(isNewVideo = true) {
 
     // Reset the FPS counter state to prevent incorrect calculations on reload
     appState.fps = 0;
+    appState.lastOverlayUpdateTime = 0;
 
     // --- Conditional Video Reset ---
     if (isNewVideo || !videoPlayer.src) {
@@ -374,11 +375,21 @@ export function updatePersistentOverlays(currentMediaTime) {
        targetMsPerBlock = Math.min(40, Math.max(10, maxWindowIFT / 10));
     }
 
+    // --- START: Frame-Rate Independent Smoothing ---
+    // We use performance.now() to calculate a delta time for smooth animations
+    // across different monitor refresh rates.
+    const now = performance.now();
+    const dt = appState.lastOverlayUpdateTime ? now - appState.lastOverlayUpdateTime : 16.67;
+    appState.lastOverlayUpdateTime = now;
+
     // Smooth Interpolation (Lerp)
     // Move current scale towards the target.
     // If playing, use 0.1 (fast). If stopped, use 0.033 (slow, ~3x slower).
-    const smoothingFactor = appState.isPlaying ? 0.1 : 0.033;
-    appState.currentGraphScale += (targetMsPerBlock - appState.currentGraphScale) * smoothingFactor;
+    const baseSmoothing = appState.isPlaying ? 0.1 : 0.033;
+    const adjustedSmoothing = 1 - Math.pow(1 - baseSmoothing, dt / (1000 / 60));
+
+    appState.currentGraphScale += (targetMsPerBlock - appState.currentGraphScale) * adjustedSmoothing;
+    // --- END: Frame-Rate Independent Smoothing ---
 
     // If the scale hasn't converged yet and we are NOT playing (main loop not running),
     // request another frame to continue the smoothing animation.

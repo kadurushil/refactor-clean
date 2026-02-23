@@ -219,7 +219,6 @@ export const zoomSketch = function (p) {
   appState.zoomFactor = 4; // Set a default zoom factor in the global state
 
   p.setup = function () {
-    p.frameRate(60);
     // We enable looping so the lerp smoothing can animate between frames
     p.loop();
   };
@@ -272,9 +271,14 @@ export const zoomSketch = function (p) {
         smoothedAvgX = targetAvgX;
         smoothedAvgY = targetAvgY;
       } else {
-        const smoothingFactor = 0.05; // Tweak this for more/less lag
-        smoothedAvgX = p.lerp(smoothedAvgX, targetAvgX, smoothingFactor);
-        smoothedAvgY = p.lerp(smoothedAvgY, targetAvgY, smoothingFactor);
+        // --- START: Frame-Rate Independent Smoothing ---
+        // We use p.deltaTime to adjust the smoothing factor so that the animation
+        // speed remains consistent across different monitor refresh rates.
+        const baseSmoothing = 0.05; // Target smoothing at 60 FPS
+        const adjustedSmoothing = 1 - Math.pow(1 - baseSmoothing, p.deltaTime / (1000 / 60));
+        smoothedAvgX = p.lerp(smoothedAvgX, targetAvgX, adjustedSmoothing);
+        smoothedAvgY = p.lerp(smoothedAvgY, targetAvgY, adjustedSmoothing);
+        // --- END: Frame-Rate Independent Smoothing ---
       }
     } else {
       smoothedAvgX = null;

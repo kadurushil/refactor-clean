@@ -53,6 +53,7 @@ export const appState = {
   lastFrameRenderTime: 0,
   lastVideoFrameTime: 0,
   videoFrameRenderTime: 0,
+  lastOverlayUpdateTime: 0, // Track time between overlay updates for smoothing
   useCustomTtcScheme: false, // Flag to switch between default and custom
   customTtcScheme: {
     // Default values match the UI
