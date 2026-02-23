@@ -246,6 +246,11 @@ export function drawPointCloud(p, points, plotScales, pointSize = 4) {
       if (snrVals.length > 1) {
         minSnr = Math.min(...snrVals);
         maxSnr = Math.max(...snrVals);
+        // If all SNR values are the same, add a small range to avoid division by zero
+        if (minSnr === maxSnr) {
+          minSnr -= 1;
+          maxSnr += 1;
+        }
       } else if (snrVals.length === 1) {
         minSnr = snrVals[0] - 1;
         maxSnr = snrVals[0] + 1;
@@ -450,19 +455,21 @@ export function drawTrajectories(p, plotScales, scaleFactor = 1) {
         p.drawingContext.setLineDash([]);
 
         // Fading trajectory logic (works for both modes)
-        for (let i = 1; i < trajPts.length; i++) {
-          const alpha = p.map(i, 0, trajPts.length, 50, 255);
-          trajectoryColor.setAlpha(alpha);
-          p.stroke(trajectoryColor);
+        if (trajPts.length > 0) {
+          for (let i = 1; i < trajPts.length; i++) {
+            const alpha = p.map(i, 0, trajPts.length, 50, 255);
+            trajectoryColor.setAlpha(alpha);
+            p.stroke(trajectoryColor);
 
-          const prevPt = trajPts[i - 1];
-          const currPt = trajPts[i];
-          p.line(
-            prevPt[0] * plotScales.plotScaleX,
-            prevPt[1] * plotScales.plotScaleY,
-            currPt[0] * plotScales.plotScaleX,
-            currPt[1] * plotScales.plotScaleY
-          );
+            const prevPt = trajPts[i - 1];
+            const currPt = trajPts[i];
+            p.line(
+              prevPt[0] * plotScales.plotScaleX,
+              prevPt[1] * plotScales.plotScaleY,
+              currPt[0] * plotScales.plotScaleX,
+              currPt[1] * plotScales.plotScaleY
+            );
+          }
         }
         // --- END: New Dynamic Coloring Logic ---
       }

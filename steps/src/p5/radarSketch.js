@@ -211,7 +211,8 @@ export const radarSketch = function (p) {
         } else {
           // --- START: Frame-Rate Independent FPS Smoothing ---
           const baseFactor = 0.05; // Smoothing factor at 60 FPS
-          const adjustedFactor = 1 - Math.pow(1 - baseFactor, delta / (1000 / 60));
+          const dt = Math.max(0, delta);
+          const adjustedFactor = 1 - Math.pow(1 - baseFactor, dt / (1000 / 60));
           appState.fps = p.lerp(appState.fps, currentFps, adjustedFactor);
           // --- END: Frame-Rate Independent FPS Smoothing ---
         }
@@ -382,7 +383,8 @@ export const radarSketch = function (p) {
       // We use p.deltaTime to adjust the smoothing factor so that the animation
       // speed remains consistent across different monitor refresh rates.
       const baseSmoothing = 0.5; // Target smoothing at 60 FPS
-      const adjustedSmoothing = 1 - Math.pow(1 - baseSmoothing, p.deltaTime / (1000 / 60));
+      const dt = Math.max(0, p.deltaTime);
+      const adjustedSmoothing = 1 - Math.pow(1 - baseSmoothing, dt / (1000 / 60));
 
       // Linearly interpolate the smoothed position towards the actual mouse position.
       smoothedMouseX = p.lerp(smoothedMouseX, p.mouseX, adjustedSmoothing);

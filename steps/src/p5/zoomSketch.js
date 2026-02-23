@@ -275,7 +275,8 @@ export const zoomSketch = function (p) {
         // We use p.deltaTime to adjust the smoothing factor so that the animation
         // speed remains consistent across different monitor refresh rates.
         const baseSmoothing = 0.05; // Target smoothing at 60 FPS
-        const adjustedSmoothing = 1 - Math.pow(1 - baseSmoothing, p.deltaTime / (1000 / 60));
+        const dt = Math.max(0, p.deltaTime);
+        const adjustedSmoothing = 1 - Math.pow(1 - baseSmoothing, dt / (1000 / 60));
         smoothedAvgX = p.lerp(smoothedAvgX, targetAvgX, adjustedSmoothing);
         smoothedAvgY = p.lerp(smoothedAvgY, targetAvgY, adjustedSmoothing);
         // --- END: Frame-Rate Independent Smoothing ---
