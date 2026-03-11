@@ -182,11 +182,12 @@ Project Structure
 
 ├── index.html                       # Main HTML shell
 ├── README.md                        # This documentation
-├── User_Manual.html                 # Content for the Quick Start Guide (loaded via iframe)
-├── code-base-overview.html          # Technical overview of the codebase (infographic style)
-├── shortcuts.html                   # Reference for keyboard shortcuts (legacy/static)
-├── Visualization_Start.bat          # Script to start the local server
-├── python_check.bat                 # Script to check Python installation
+├── annex/                       # Supplementary documentation and reference files
+│   ├── User_Manual.html         # Content for the Quick Start Guide (loaded via iframe)
+│   ├── code-base-overview.html  # Technical overview of the codebase (infographic style)
+│   └── shortcuts.html           # Reference for keyboard shortcuts (legacy/static)
+├── Visualization_Start.bat      # Script to start the local server
+├── python_check.bat             # Script to check Python installation
 ├── favicon.png                      # Browser tab icon
 ├── context.md                       # Detailed technical overview for AI assistance
 ├── Improvements.txt                 # Log of planned and completed improvements

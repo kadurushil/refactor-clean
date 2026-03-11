@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Prism.js for Syntax Highlighting (Local Okaidia Theme) -->
-    <link href="vendor/prism.css" rel="stylesheet" />
+    <link href="../vendor/prism.css" rel="stylesheet" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1297,7 +1297,7 @@
     </div>
 
     <!-- Prism JS Scripts -->
-    <script src="vendor/prism.js"></script>
+    <script src="../vendor/prism.js"></script>
 
     <script>
         const modal = document.getElementById('code-modal');
@@ -1317,7 +1317,8 @@
             else if (filePath.endsWith('.css')) lang = 'css';
 
             try {
-                const response = await fetch(filePath);
+                // Since this file is in 'annex/', we need to go up one level to find the 'src/' files
+                const response = await fetch('../' + filePath);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const text = await response.text();
 
