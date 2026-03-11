@@ -110,6 +110,9 @@ export const guideModalCloseBtn = document.getElementById("guide-modal-close-btn
 export const codebaseBtn = document.getElementById("codebase-btn");
 export const codebaseModal = document.getElementById("codebase-modal");
 export const codebaseModalCloseBtn = document.getElementById("codebase-modal-close-btn");
+export const changelogBtn = document.getElementById("changelog-btn");
+export const changelogModal = document.getElementById("changelog-modal");
+export const changelogModalCloseBtn = document.getElementById("changelog-modal-close-btn");
 export const rangeSlider = document.getElementById("range-slider");
 export const rangeValueDisplay = document.getElementById("range-value-display");
 

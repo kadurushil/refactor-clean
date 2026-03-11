@@ -257,6 +257,10 @@
         class="bg-blue-100 dark:bg-blue-700 text-blue-800 dark:text-blue-100 border border-blue-300 dark:border-blue-600 shadow-sm hover:bg-blue-200 dark:hover:bg-blue-600 active:scale-95 active:shadow-inner font-medium rounded-lg text-xs px-4 py-2 transition-all text-center">
         Keyboard<br>Shortcuts
       </button>
+      <button id="changelog-btn" type="button"
+        class="bg-cyan-100 dark:bg-cyan-700 text-cyan-800 dark:text-cyan-100 border border-cyan-300 dark:border-cyan-600 shadow-sm hover:bg-cyan-200 dark:hover:bg-cyan-600 active:scale-95 active:shadow-inner font-medium rounded-lg text-xs px-4 py-2 transition-all text-center">
+        What's<br>New?
+      </button>
             <button id="theme-toggle" type="button" class="bg-indigo-900 dark:bg-amber-100 text-indigo-100 dark:text-amber-800 border border-indigo-700 dark:border-amber-300 shadow-sm hover:bg-indigo-800 dark:hover:bg-amber-200 active:scale-95 active:shadow-inner flex flex-row items-center gap-2 rounded-lg text-xs px-4 py-3.5 transition-all">
               <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
@@ -648,6 +652,27 @@
 
       <!-- Iframe Content -->
       <iframe id="codebase-iframe" src="annex/code-base-overview.html" class="flex-grow w-full border-0 rounded-b-2xl" style="min-height: 400px;"></iframe>
+      </div>
+      </div>
+
+      <!-- CHANGELOG MODAL -->
+      <div id="changelog-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-80 backdrop-blur-sm p-4">
+      <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full h-full mx-8 my-4 relative flex flex-col">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-1 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-900 z-10 rounded-t-2xl">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl">🚀</span>
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Changelog</h2>
+          </div>
+        </div>
+        <button id="changelog-modal-close-btn"
+          class="px-6 py-2 rounded-lg bg-cyan-600 text-white hover:bg-cyan-700 font-semibold text-lg">Close</button>
+      </div>
+
+      <!-- Iframe Content -->
+      <iframe id="changelog-iframe" src="annex/Changelog.html" class="flex-grow w-full border-0 rounded-b-2xl" style="min-height: 400px;"></iframe>
       </div>
       </div>
   <div id="modal-container" class="fixed inset-0 z-50 flex items-center justify-center hidden">
