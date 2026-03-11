@@ -18,9 +18,15 @@ Context Document: Radar and Video Synchronizer Application
 
 The application uses a modular ES6 structure. All source code resides in the `/src` directory.
 
-- **`index.html`**: The main HTML shell. Defines the DOM structure, including the main layout, collapsible sidebar, data explorer panel, and modal dialogs. It loads all necessary CDN libraries and the main JS module.
+- **`index.html`**: The main HTML shell. Defines the DOM structure, including the main layout, collapsible sidebar, data explorer panel, and documentation modals (User Manual, Shortcuts, Codebase Overview, Changelog). It loads all necessary CDN libraries and the main JS module.
 
-- **`/src/main.js`**: **The Orchestrator**. This is the application's entry point. It initializes the database, theme, and data explorer. It sets up the initial event listeners for the UI and delegates specialized tasks to other modules (`fileLoader.js`, `keyboard.js`, `sync.js`).
+...
+
+- **`/annex/`**: **Supplementary Documentation**. Contains HTML files for the User Manual, Keyboard Shortcuts, Codebase Overview, and Changelog, as well as the progress log (`Improvements.txt`).
+
+- **`/intel/`**: **Project Intelligence**. Contains documentation and AI-specific context files (`readme.md`, `GEMINI.md`, `context.md`).
+
+- **`/src/main.js`**: **The Orchestrator**. This is the application's entry point. It initializes the database, theme, and data explorer. It sets up the initial event listeners for the UI and delegates specialized tasks to other modules (`fileLoader.js`, `keyboard.js`, `sync.js`, `ui.js`).
 
 - **`/src/state.js`**: **The Single Source of Truth**. Exports a single global `appState` object that holds all dynamic data (e.g., `vizData`, `isPlaying`, `currentFrame`). All modules import from this file.
 

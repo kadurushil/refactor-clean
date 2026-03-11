@@ -56,5 +56,6 @@ Since this is a static project using ES6 modules directly in the browser:
 - Use PascalCase for class-like structures (though the project primarily uses objects and functions).
 
 ### Documentation
-- Maintain `readme.md` and `context.md` with significant architectural changes.
-- Use `Improvements.txt` to track progress on the refactor and new feature requests.
+- Maintain `readme.md`, `GEMINI.md`, and `context.md` in the `intel/` folder with significant architectural changes.
+- Use `Improvements.txt` (in `annex/`) to track progress on the refactor and new feature requests.
+- Reference supplementary guides in `annex/` (User Manual, Shortcuts, Changelog).

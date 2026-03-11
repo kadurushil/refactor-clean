@@ -142,9 +142,10 @@ Persistent overlays (#radar-info-overlay, #video-info-overlay) updated by dom.js
 
 Dark/Light theme managed by theme.js::setTheme, saving preference to localStorage, and triggering redraws in p5 sketches.
 
-**Startup Guide & Shortcuts**:
+**Startup Guide, Shortcuts, & Changelog**:
 *   Includes a "First Run" experience with a loading screen and Quick Start Guide modal (ui.js).
 *   A "Shortcuts" modal (toggle with <kbd>K</kbd> or via the UI) provides a reference for all keyboard interactions (ui.js).
+*   A **Changelog** modal ("What's New?") provides a history of updates and refactors (ui.js).
 
 Session Management (session.js, main.js, db.js):
 
@@ -181,17 +182,19 @@ Open in Browser: Navigate to http://localhost:8000.
 Project Structure
 
 ├── index.html                       # Main HTML shell
-├── README.md                        # This documentation
-├── annex/                       # Supplementary documentation and reference files
-│   ├── User_Manual.html         # Content for the Quick Start Guide (loaded via iframe)
-│   ├── code-base-overview.html  # Technical overview of the codebase (infographic style)
-│   └── shortcuts.html           # Reference for keyboard shortcuts (legacy/static)
 ├── Visualization_Start.bat      # Script to start the local server
 ├── python_check.bat             # Script to check Python installation
 ├── favicon.png                      # Browser tab icon
-├── context.md                       # Detailed technical overview for AI assistance
-├── Improvements.txt                 # Log of planned and completed improvements
 ├── package-lock.json                # NPM lockfile
+├── annex/                       # Supplementary documentation and reference files
+│   ├── User_Manual.html         # Content for the Quick Start Guide (loaded via iframe)
+│   ├── code-base-overview.html  # Technical overview of the codebase (infographic style)
+│   ├── Changelog.html           # Project update history (loaded via iframe)
+│   └── shortcuts.html           # Reference for keyboard shortcuts (legacy/static)
+├── intel/                       # Project documentation and AI context
+│   ├── readme.md                # This documentation
+│   ├── context.md               # Detailed technical overview for AI assistance
+│   └── GEMINI.md                # High-level project overview for AI
 ├── src/
     ├── constants.js                 # Shared constants (radar bounds, FPS)
     ├── dataExplorer.js              # Logic for the Data Explorer panel (AG Grid, Chart.js)
@@ -242,6 +245,8 @@ Playback: Use UI buttons (<kbd>Space</kbd>), timeline slider (drag, hover, scrol
 Adjust Offset: Manually enter offset (ms, +ve if radar lags) and press Enter.
 
 Adjust Speed: Use the "Speed" slider.
+
+Use Header Buttons: Access "Quick-Start Guide", "Codebase Overview", "Keyboard Shortcuts", and "What's New?".
 
 Use Sidebar (<kbd>M</kbd>): Access toggles (Color modes <kbd>1-4</kbd>/<kbd>S</kbd>, Tracks <kbd>T</kbd>, Details <kbd>D</kbd>, Zoom <kbd>G</kbd>, Predicted Pos <kbd>P</kbd>, Debug <kbd>A</kbd>, Raw Only <kbd>C</kbd>, Confirmed Only), SNR range, TTC customization.
 

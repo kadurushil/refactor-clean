@@ -88,6 +88,31 @@ Idea: A simple "Camera" button that saves the current view of the radar canvas a
 
 Benefit: Perfect for quickly capturing interesting moments for reports, presentations, or bug tracking.
 
+--------------------------------------------------------------------------------------------------------------------------------------------
+5.) COMPLETED IMPROVEMENTS (Refactor Phase)
+
+	a) Modular ES6 Architecture:
+	Completely refactored from a monolithic HTML file into specialized modules (sync, ui, dom, state, etc.) for better maintainability.
+
+	b) High-Precision Sync Engine:
+	Implemented a master clock system with drift correction and videoFrameCallback integration for rock-solid synchronization.
+
+	c) Streaming JSON Parser:
+	Integrated a Web Worker with Clarinet.js to handle massive radar logs without freezing the browser UI.
+
+	d) Persistent Caching (IndexedDB):
+	Files are now cached locally, allowing for instant session restoration and reducing redundant uploads.
+
+	e) Draggable/Resizable Data Explorer:
+	A professional-grade inspection panel with AG-Grid and Chart.js integration for deep-dive data analysis.
+
+	f) Documentation Intelligence:
+	Reorganized all project documentation into the 'intel/' folder and supplementary UI assets into 'annex/' for a cleaner project root.
+
+	g) Integrated Changelog & Shortcuts:
+	Added dedicated, theme-aware modals for keyboard shortcuts and a project changelog ("What's New?").
+
+
 
 
 
