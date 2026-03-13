@@ -90,6 +90,9 @@ export const radarSketch = function (p) {
   }
 
   p.setup = function () {
+    // Optimization: Increase target frame rate to match high-refresh monitors.
+    p.frameRate(144);
+
     // Create the p5.js canvas and attach it to the specified DOM element
     let canvas = p.createCanvas(
       canvasContainer.offsetWidth,

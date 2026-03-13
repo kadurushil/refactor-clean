@@ -224,9 +224,6 @@ export const zoomSketch = function (p) {
   appState.zoomLeadFactor = 0.2; // Control how much the circle "leads" the camera (0.0 = smooth, 1.0 = instant)
 
   p.setup = function () {
-    // Optimization: Force 1:1 pixel density. 
-    // High-DPI (4K) monitors default to 2.0+, causing 4x rendering load which kills performance.
-    p.pixelDensity(1);
     // Optimization: Increase target frame rate.
     // p5.js often defaults to 60fps. On 75Hz+ screens, this causes frame skipping and judder.
     p.frameRate(144);
