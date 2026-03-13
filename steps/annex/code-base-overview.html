@@ -656,6 +656,41 @@
         .dark .file-tree .file { color: #94a3b8; }
         .dark .file-tree .folder { color: #e2e8f0; }
 
+        /* Enhanced Tree View Connectors */
+        .file-tree ul {
+            border-left: 1px solid #cbd5e1; /* slate-300 */
+            margin-left: 0.35rem;
+            padding-left: 1rem;
+            margin-top: 0.25rem;
+            margin-bottom: 0.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem; /* space-y-1.5 equivalent */
+        }
+        .dark .file-tree ul { 
+            border-color: #475569; 
+        }
+
+        /* Position relative for the pseudo-element */
+        .file-tree ul li {
+            position: relative;
+        }
+
+        /* Horizontal connector line */
+        .file-tree ul li::before {
+            content: '';
+            position: absolute;
+            top: 0.6em; /* Vertically center */
+            left: -1rem;
+            width: 0.8rem;
+            height: 1px;
+            background-color: #cbd5e1;
+        }
+        
+        .dark .file-tree ul li::before { 
+            background-color: #475569; 
+        }
+
     </style>
     <script>
         tailwind.config = {
@@ -846,54 +881,112 @@
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 sticky top-0">
                     <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b pb-2 flex justify-between">
                         <span>Project Files</span>
-                        <span class="text-[10px] opacity-60">src/</span>
+                        <span class="text-[10px] opacity-60">root</span>
                     </h3>
                     
                     <ul class="file-tree text-xs space-y-1.5 font-mono leading-tight">
-                        <li class="file opacity-50">index.html</li>
-                        <li class="file opacity-50">readme.md</li>
+                        <!-- Root Files -->
+                        <li class="file opacity-70">index.html</li>
+                        <li class="file opacity-50">Visualization_Start.bat</li>
+                        <li class="file opacity-50">python_check.bat</li>
+                        <li class="file opacity-50">package-lock.json</li>
                         
                         <!-- SRC Folder -->
-                        <li class="folder text-slate-800 font-bold mt-2">src/
+                        <li class="folder text-slate-800 font-bold mt-3">src/
                             <ul class="file-tree pl-3 border-l-2 border-slate-100 ml-1 mt-1 space-y-1.5">
                                 
                                 <!-- Core (Purple) -->
                                 <li class="file group cursor-help" title="Application Entry Point" onclick="scrollToSection('architecture')"><span class="bg-purple-100 text-purple-700 font-medium px-1.5 py-0.5 rounded border border-purple-200 group-hover:bg-purple-200 transition-colors">main.js</span></li>
-                                <li class="file group"><span class="bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded group-hover:bg-purple-100 transition-colors">state.js</span></li>
-                                <li class="file group"><span class="bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded group-hover:bg-purple-100 transition-colors">constants.js</span></li>
+                                <li class="file group cursor-help" onclick="scrollToSection('architecture')"><span class="bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded group-hover:bg-purple-100 transition-colors">state.js</span></li>
+                                <li class="file group cursor-help" onclick="scrollToSection('architecture')"><span class="bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded group-hover:bg-purple-100 transition-colors">constants.js</span></li>
 
                                 <!-- Pipeline (Blue) -->
-                                <li class="file group cursor-help mt-2" title="File Input Handler" onclick="scrollToSection('pipeline')"><span class="bg-blue-100 text-blue-700 font-medium px-1.5 py-0.5 rounded border border-blue-200">fileLoader.js</span></li>
-                                <li class="file group"><span class="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">fileParsers.js</span></li>
-                                <li class="file group"><span class="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">parser.worker.js</span></li>
-                                <li class="file group"><span class="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">db.js</span></li>
+                                <li class="file group cursor-help mt-1" title="File Input Handler" onclick="scrollToSection('pipeline')"><span class="bg-blue-100 text-blue-700 font-medium px-1.5 py-0.5 rounded border border-blue-200">fileLoader.js</span></li>
+                                <li class="file group cursor-help" onclick="scrollToSection('pipeline')"><span class="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">fileParsers.js</span></li>
+                                <li class="file group cursor-help" onclick="scrollToSection('pipeline')"><span class="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">parser.worker.js</span></li>
+                                <li class="file group cursor-help" onclick="scrollToSection('pipeline')"><span class="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">db.js</span></li>
 
                                 <!-- Sync (Red) -->
-                                <li class="file group cursor-help mt-2" title="Master Sync Engine" onclick="scrollToSection('sync')"><span class="bg-red-100 text-red-700 font-medium px-1.5 py-0.5 rounded border border-red-200">sync.js</span></li>
-                                <li class="file group"><span class="bg-red-50 text-red-700 px-1.5 py-0.5 rounded">utils.js</span></li>
+                                <li class="file group cursor-help mt-1" title="Master Sync Engine" onclick="scrollToSection('sync')"><span class="bg-red-100 text-red-700 font-medium px-1.5 py-0.5 rounded border border-red-200">sync.js</span></li>
+                                <li class="file group cursor-help" onclick="scrollToSection('sync')"><span class="bg-red-50 text-red-700 px-1.5 py-0.5 rounded">utils.js</span></li>
 
                                 <!-- UI (Amber) -->
-                                <li class="file group cursor-help mt-2" title="DOM Reference Cache" onclick="scrollToSection('ui')"><span class="bg-amber-100 text-amber-700 font-medium px-1.5 py-0.5 rounded border border-amber-200">dom.js</span></li>
-                                <li class="file group"><span class="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">ui.js</span></li>
-                                <li class="file group"><span class="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">keyboard.js</span></li>
-                                <li class="file group"><span class="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">dataExplorer.js</span></li>
-                                <li class="file group"><span class="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">session.js</span></li>
-                                <li class="file group"><span class="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">theme.js</span></li>
-                                <li class="file group"><span class="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">modal.js</span></li>
-                                <li class="file group"><span class="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">debug.js</span></li>
+                                <li class="file group cursor-help mt-1" title="DOM Reference Cache" onclick="scrollToSection('ui')"><span class="bg-amber-100 text-amber-700 font-medium px-1.5 py-0.5 rounded border border-amber-200">dom.js</span></li>
+                                <li class="file group cursor-help" onclick="scrollToSection('ui')"><span class="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">ui.js</span></li>
+                                <li class="file group cursor-help" onclick="scrollToSection('ui')"><span class="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">keyboard.js</span></li>
+                                <li class="file group cursor-help" onclick="scrollToSection('ui')"><span class="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">dataExplorer.js</span></li>
+                                <li class="file group cursor-help" onclick="scrollToSection('ui')"><span class="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">session.js</span></li>
+                                <li class="file group cursor-help" onclick="scrollToSection('ui')"><span class="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">theme.js</span></li>
+                                <li class="file group cursor-help" onclick="scrollToSection('ui')"><span class="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">modal.js</span></li>
+                                <li class="file group cursor-help" onclick="scrollToSection('ui')"><span class="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">debug.js</span></li>
 
                                 <!-- Viz (Emerald) -->
-                                <li class="file group cursor-help mt-2" title="Core Drawing Library" onclick="scrollToSection('visualization')"><span class="bg-emerald-100 text-emerald-800 font-medium px-1.5 py-0.5 rounded border border-emerald-200">drawUtils.js</span></li>
+                                <li class="file group cursor-help mt-1" title="Core Drawing Library" onclick="scrollToSection('visualization')"><span class="bg-emerald-100 text-emerald-800 font-medium px-1.5 py-0.5 rounded border border-emerald-200">drawUtils.js</span></li>
                                 
                                 <li class="folder text-slate-700 font-medium mt-1">p5/
                                     <ul class="file-tree pl-3 border-l-2 border-emerald-100 ml-1 mt-1 space-y-1">
                                         <li class="file group cursor-help" title="Main Radar Renderer" onclick="scrollToSection('visualization')"><span class="bg-emerald-100 text-emerald-800 font-medium px-1.5 py-0.5 rounded border border-emerald-200">radarSketch.js</span></li>
-                                        <li class="file"><span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">speedGraphSketch.js</span></li>
-                                        <li class="file"><span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">zoomSketch.js</span></li>
+                                        <li class="file group cursor-help" onclick="scrollToSection('visualization')"><span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">speedGraphSketch.js</span></li>
+                                        <li class="file group cursor-help" onclick="scrollToSection('visualization')"><span class="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">zoomSketch.js</span></li>
                                     </ul>
                                 </li>
                             </ul>
                         </li>
+
+                        <!-- Annex Folder -->
+                        <li class="folder text-slate-700 font-medium mt-3">annex/
+                            <ul class="file-tree pl-3 border-l-2 border-slate-100 ml-1 mt-1 space-y-1.5">
+                                <li class="file opacity-70">User_Manual.html</li>
+                                <li class="file opacity-70">code-base-overview.html</li>
+                                <li class="file opacity-70">Changelog.html</li>
+                                <li class="file opacity-70">shortcuts.html</li>
+                            </ul>
+                        </li>
+
+                        <!-- Intel Folder -->
+                        <li class="folder text-slate-700 font-medium mt-3">intel/
+                            <ul class="file-tree pl-3 border-l-2 border-slate-100 ml-1 mt-1 space-y-1.5">
+                                <li class="file opacity-70">readme.md</li>
+                                <li class="file opacity-50">context.md</li>
+                                <li class="file opacity-50">GEMINI.md</li>
+                            </ul>
+                        </li>
+
+                        <!-- Vendor Folder -->
+                        <li class="folder text-slate-700 font-medium mt-3">vendor/
+                            <ul class="file-tree pl-3 border-l-2 border-slate-100 ml-1 mt-1 space-y-1.5">
+                                <li class="file opacity-50">ag-grid-community.min.js</li>
+                                <li class="file opacity-50">chart.min.js</li>
+                                <li class="file opacity-50">clarinet.min.js</li>
+                                <li class="file opacity-50">p5.js</li>
+                                <li class="file opacity-50">tailwind-cdn.js</li>
+                            </ul>
+                        </li>
+
+                        <!-- Tests Folder -->
+                        <li class="folder text-slate-700 font-medium mt-3">tests/
+                            <ul class="file-tree pl-3 border-l-2 border-slate-100 ml-1 mt-1 space-y-1.5">
+                                <li class="file opacity-50">test-runner.html</li>
+                                <li class="file opacity-50">fileLoader.test.js</li>
+                                <li class="file opacity-50">utils.test.js</li>
+                            </ul>
+                        </li>
+                        
+                        <!-- Data Structures -->
+                        <li class="folder text-slate-700 font-medium mt-3">Data_structs/
+                            <ul class="file-tree pl-3 border-l-2 border-slate-100 ml-1 mt-1 space-y-1.5">
+                                <li class="file opacity-50">JSON_Structure.json</li>
+                                <li class="file opacity-50">ROS2_Data_Structure.json</li>
+                            </ul>
+                        </li>
+                        
+                        <!-- Logs -->
+                        <li class="folder text-slate-700 font-medium mt-3">Console_logs/
+                            <ul class="file-tree pl-3 border-l-2 border-slate-100 ml-1 mt-1 space-y-1.5">
+                                <li class="file opacity-50">...</li>
+                            </ul>
+                        </li>
+
                     </ul>
                 </div>
             </div>
