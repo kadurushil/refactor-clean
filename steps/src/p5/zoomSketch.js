@@ -216,9 +216,20 @@ export const zoomSketch = function (p) {
   let smoothedAvgX = null;
   let smoothedAvgY = null;
 
+  // Smooth camera coordinates to prevent judder on high-refresh monitors (75Hz+)
+  let smoothedCamX = null;
+  let smoothedCamY = null;
+
   appState.zoomFactor = 4; // Set a default zoom factor in the global state
+  appState.zoomLeadFactor = 0.2; // Control how much the circle "leads" the camera (0.0 = smooth, 1.0 = instant)
 
   p.setup = function () {
+    // Optimization: Force 1:1 pixel density. 
+    // High-DPI (4K) monitors default to 2.0+, causing 4x rendering load which kills performance.
+    p.pixelDensity(1);
+    // Optimization: Increase target frame rate.
+    // p5.js often defaults to 60fps. On 75Hz+ screens, this causes frame skipping and judder.
+    p.frameRate(144);
     // We enable looping so the lerp smoothing can animate between frames
     p.loop();
   };
@@ -262,6 +273,18 @@ export const zoomSketch = function (p) {
 
     const { mainMouseX, mainMouseY, hoveredItems } = lastUpdate;
 
+    // --- Camera Smoothing (Prevents Judder) ---
+    // If the main app updates at 60Hz but this sketch runs at 75Hz, raw coordinates cause stutter.
+    if (smoothedCamX === null) {
+      smoothedCamX = mainMouseX;
+      smoothedCamY = mainMouseY;
+    }
+    const camSmoothing = 0.5; 
+    const dt = Math.max(0, p.deltaTime);
+    const adjustedCamSmoothing = 1 - Math.pow(1 - camSmoothing, dt / (1000 / 60));
+    smoothedCamX = p.lerp(smoothedCamX, mainMouseX, adjustedCamSmoothing);
+    smoothedCamY = p.lerp(smoothedCamY, mainMouseY, adjustedCamSmoothing);
+
     // --- Tooltip Smoothing (Low Pass Filter) ---
     if (hoveredItems.length > 0) {
       const targetAvgX = hoveredItems.reduce((acc, item) => acc + item.screenX, 0) / hoveredItems.length;
@@ -288,20 +311,37 @@ export const zoomSketch = function (p) {
 
     p.push(); // Start zoom transformations
     p.translate(
-      p.width / 2 - mainMouseX * appState.zoomFactor,
-      p.height / 2 - mainMouseY * appState.zoomFactor
+      p.width / 2 - smoothedCamX * appState.zoomFactor,
+      p.height / 2 - smoothedCamY * appState.zoomFactor
     );
     p.scale(appState.zoomFactor);
 
     // --- Redraw the scene from scratch ---
     if (appState.p5_instance && appState.p5_instance.getStaticBackground) {
-      p.image(
-        appState.p5_instance.getStaticBackground(),
-        0,
-        0,
-        appState.p5_instance.width,
-        appState.p5_instance.height
-      );
+      const bg = appState.p5_instance.getStaticBackground();
+      // Optimization: Only draw the visible slice of the background
+      // Drawing the full 1920x1080 texture every frame is expensive if we only see a tiny part.
+      const imgW = bg.width;
+      const imgH = bg.height;
+      
+      const visibleW = p.width / appState.zoomFactor;
+      const visibleH = p.height / appState.zoomFactor;
+      
+      // Calculate World Coordinates of the top-left of the view
+      const sX = smoothedCamX - visibleW / 2;
+      const sY = smoothedCamY - visibleH / 2;
+
+      // Intersect visible view with image bounds
+      const dX = Math.max(0, sX);
+      const dY = Math.max(0, sY);
+      const dW = Math.min(imgW, sX + visibleW) - dX;
+      const dH = Math.min(imgH, sY + visibleH) - dY;
+
+      if (dW > 0 && dH > 0) {
+        // Draw only the visible sub-rectangle
+        // Since we are transformed to World Space, destination (dx,dy) matches source (dx,dy)
+        p.image(bg, dX, dY, dW, dH, dX, dY, dW, dH);
+      }
     }
 
     p.push(); // Start radar transformations
@@ -372,7 +412,14 @@ export const zoomSketch = function (p) {
     p.strokeWeight(1 / appState.zoomFactor);
     p.drawingContext.setLineDash([5 / appState.zoomFactor, 3 / appState.zoomFactor]);
     // The circle is drawn at the mouse position from the main canvas.
-    p.ellipse(mainMouseX, mainMouseY, hoverRadius * 2, hoverRadius * 2);
+    
+    // Control how much the circle "leads" the camera movement.
+    // 0.0 = Locked to center (smooth). 1.0 = Locked to mouse (jumpy/leads).
+    const leadFactor = appState.zoomLeadFactor; 
+    const circleX = p.lerp(smoothedCamX, mainMouseX, leadFactor);
+    const circleY = p.lerp(smoothedCamY, mainMouseY, leadFactor);
+    p.ellipse(circleX, circleY, hoverRadius * 2, hoverRadius * 2);
+    
     p.drawingContext.setLineDash([]);
     p.pop();
     // --- END: Draw Purple Debug Circle ---
