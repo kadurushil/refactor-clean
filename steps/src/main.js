@@ -53,6 +53,11 @@ import {
   shortcutsModal,
   shortcutsModalCloseBtn,
   guideModalCloseBtn,
+  startScreenModal,
+  startDropZone,
+  startLoadJsonBtn,
+  startLoadVideoBtn,
+  startClearCacheBtn,
 } from "./dom.js";
 
 import { initializeTheme } from "./theme.js";
@@ -69,27 +74,48 @@ videoFileInput.addEventListener("change", (event) =>
   handleFiles(event.target.files)
 );
 
-// Wire up the drag-and-drop functionality
-const dropZone = document.querySelector("main");
-dropZone.addEventListener("dragover", (event) => {
+// Wire up the drag-and-drop functionality for the start screen
+startDropZone.addEventListener("dragover", (event) => {
   event.preventDefault();
-  dropZone.style.border = "2px dashed #3b82f6";
+  startDropZone.classList.add("border-blue-500", "bg-blue-50", "dark:bg-gray-700");
 });
-dropZone.addEventListener("dragleave", () => {
-  dropZone.style.border = "none";
+startDropZone.addEventListener("dragleave", () => {
+  startDropZone.classList.remove("border-blue-500", "bg-blue-50", "dark:bg-gray-700");
 });
-dropZone.addEventListener("drop", (event) => {
+startDropZone.addEventListener("drop", (event) => {
   event.preventDefault();
-  dropZone.style.border = "none";
+  startDropZone.classList.remove("border-blue-500", "bg-blue-50", "dark:bg-gray-700");
   handleFiles(event.dataTransfer.files);
 });
 
+// Also keep the main body as a backup drop zone for modifying active sessions
+const mainDropZone = document.querySelector("main");
+mainDropZone.addEventListener("dragover", (event) => {
+  event.preventDefault();
+});
+mainDropZone.addEventListener("drop", (event) => {
+  event.preventDefault();
+  handleFiles(event.dataTransfer.files);
+});
 
-// Event listener for loading JSON file.
+// Event listeners for loading files (Start Screen)
+startLoadJsonBtn.addEventListener("click", () => jsonFileInput.click());
+startLoadVideoBtn.addEventListener("click", () => videoFileInput.click());
+
+// Event listeners for loading files (Workspace Footer - Legacy)
 loadJsonBtn.addEventListener("click", () => jsonFileInput.click());
 loadVideoBtn.addEventListener("click", () => videoFileInput.click());
 
 clearCacheBtn.addEventListener("click", async () => {
+  const confirmed = await showModal("Clear all cached data and reload?", true);
+  if (confirmed) {
+    indexedDB.deleteDatabase("visualizerDB");
+    localStorage.clear();
+    window.location.reload();
+  }
+});
+
+startClearCacheBtn.addEventListener("click", async () => {
   const confirmed = await showModal("Clear all cached data and reload?", true);
   if (confirmed) {
     indexedDB.deleteDatabase("visualizerDB");

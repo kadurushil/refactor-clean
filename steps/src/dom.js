@@ -23,6 +23,22 @@ function getTimingColor(diffMs) {
 
 // --- DOM Element References --- //
 
+export const startScreenModal = document.getElementById("start-screen-modal");
+export const startDropZone = document.getElementById("start-drop-zone");
+export const startLoadJsonBtn = document.getElementById("start-load-json-btn");
+export const startLoadVideoBtn = document.getElementById("start-load-video-btn");
+export const startClearCacheBtn = document.getElementById("start-clear-cache-btn");
+export const startProgressContainer = document.getElementById("start-progress-container");
+export const startProgressBar = document.getElementById("start-progress-bar");
+export const startProgressText = document.getElementById("start-progress-text");
+
+export const startUserManualBtn = document.getElementById("start-user-manual-btn");
+export const startCodebaseBtn = document.getElementById("start-codebase-btn");
+export const startChangelogBtn = document.getElementById("start-changelog-btn");
+export const startThemeToggleBtn = document.getElementById("start-theme-toggle");
+export const startThemeToggleDarkIcon = document.getElementById("start-theme-toggle-dark-icon");
+export const startThemeToggleLightIcon = document.getElementById("start-theme-toggle-light-icon");
+
 export const themeToggleBtn = document.getElementById("theme-toggle");
 export const canvasContainer = document.getElementById("canvas-container");
 export const canvasPlaceholder = document.getElementById("canvas-placeholder");

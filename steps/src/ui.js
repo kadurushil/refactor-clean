@@ -45,6 +45,9 @@ import {
   changelogBtn,
   changelogModal,
   changelogModalCloseBtn,
+  startUserManualBtn,
+  startCodebaseBtn,
+  startChangelogBtn,
 } from "./dom.js";
 
 function toggleMenu(show) {
@@ -134,6 +137,10 @@ export function initUIEventListeners() {
     e.preventDefault();
     toggleGuideModal(true);
   });
+  startUserManualBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    toggleGuideModal(true);
+  });
   guideModalCloseBtn.addEventListener("click", () => toggleGuideModal(false));
   guideModal.addEventListener("click", (e) => {
     if (e.target === guideModal) {
@@ -146,6 +153,10 @@ export function initUIEventListeners() {
     e.preventDefault();
     toggleCodebaseModal(true);
   });
+  startCodebaseBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    toggleCodebaseModal(true);
+  });
   codebaseModalCloseBtn.addEventListener("click", () => toggleCodebaseModal(false));
   codebaseModal.addEventListener("click", (e) => {
     if (e.target === codebaseModal) {
@@ -155,6 +166,10 @@ export function initUIEventListeners() {
 
   // --- Changelog Modal ---
   changelogBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    toggleChangelogModal(true);
+  });
+  startChangelogBtn.addEventListener("click", (e) => {
     e.preventDefault();
     toggleChangelogModal(true);
   });

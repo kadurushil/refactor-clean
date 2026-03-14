@@ -31,6 +31,7 @@ import {
   updatePersistentOverlays,
   updateDebugOverlay,
   resetUIForNewLoad,
+  startScreenModal,
 } from "./dom.js";
 
 import { forceResyncWithOffset } from "./sync.js";
@@ -164,11 +165,12 @@ async function processFilePipeline(jsonFile, videoFile, fromCache) {
   // --- PART F: Finalize UI ---
   finalizeSetup();
 
-  // Hide modal only if the video didn't fail. If it failed, the video
-  // loader has already handled showing an error/choice modal.
   if (!appState.videoMissing) {
     updateLoadingModal(100, "Complete!");
-    setTimeout(hideModal, 300);
+    setTimeout(() => {
+        hideModal();
+        startScreenModal.classList.add("hidden");
+    }, 300);
   }
 
   // Log the results of the non-blocking cache operations once they complete.

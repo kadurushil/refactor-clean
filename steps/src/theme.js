@@ -1,5 +1,5 @@
 import { appState } from "./state.js";
-import { videoPlayer, themeToggleBtn} from "./dom.js";
+import { videoPlayer, themeToggleBtn, startThemeToggleBtn, startThemeToggleDarkIcon, startThemeToggleLightIcon } from "./dom.js";
 const darkIcon = document.getElementById("theme-toggle-dark-icon");
 const lightIcon = document.getElementById("theme-toggle-light-icon");
 
@@ -8,11 +8,15 @@ function setTheme(theme) {
     document.documentElement.classList.add("dark");
     lightIcon.classList.remove("hidden");
     darkIcon.classList.add("hidden");
+    if (startThemeToggleLightIcon) startThemeToggleLightIcon.classList.remove("hidden");
+    if (startThemeToggleDarkIcon) startThemeToggleDarkIcon.classList.add("hidden");
     localStorage.setItem("color-theme", "dark");
   } else {
     document.documentElement.classList.remove("dark");
     darkIcon.classList.remove("hidden");
     lightIcon.classList.add("hidden");
+    if (startThemeToggleDarkIcon) startThemeToggleDarkIcon.classList.remove("hidden");
+    if (startThemeToggleLightIcon) startThemeToggleLightIcon.classList.add("hidden");
     localStorage.setItem("color-theme", "light");
   }
 
@@ -56,6 +60,14 @@ export function initializeTheme() {
   }
 
   themeToggleBtn.addEventListener("click", () => {
+    if (document.documentElement.classList.contains("dark")) {
+      setTheme("light");
+    } else {
+      setTheme("dark");
+    }
+  });
+  
+  startThemeToggleBtn.addEventListener("click", () => {
     if (document.documentElement.classList.contains("dark")) {
       setTheme("light");
     } else {
