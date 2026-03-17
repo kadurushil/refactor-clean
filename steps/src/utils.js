@@ -52,13 +52,20 @@ export function extractTimestampInfo(filename) {
     const timestamp = `${match[1]}_${match[2]}${match[3]}${match[4]}`;
     return { timestampStr: timestamp, format: "video" };
   }
-  // Try to match another common video filename pattern: "video_YYYYMMDD_HHMMSS"
-  match = filename.match(/video_(\d{8}_\d{6})/);
-  if (match)
-    return {
-      timestampStr: match[1],
-      format: "video",
-    };
+  // Try to match generic YYYYMMDD_HHMMSS or similar patterns anywhere in the name
+  // Examples: video_20231027_103000, cam_20260312_163310, 20260312163310
+  match = filename.match(/((?:19|20)\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])[-_]?([01]\d|2[0-3])([0-5]\d)([0-5]\d)/);
+  if (match) {
+    const timestamp = `${match[1]}${match[2]}${match[3]}_${match[4]}${match[5]}${match[6]}`;
+    return { timestampStr: timestamp, format: "video" };
+  }
+
+  // Try generic DDMMYYYY_HHMMSS pattern just in case
+  match = filename.match(/(0[1-9]|[12]\d|3[01])(0[1-9]|1[0-2])((?:19|20)\d{2})[-_]?([01]\d|2[0-3])([0-5]\d)([0-5]\d)/);
+  if (match) {
+    const timestamp = `${match[3]}${match[2]}${match[1]}_${match[4]}${match[5]}${match[6]}`;
+    return { timestampStr: timestamp, format: "video" };
+  }
   // If no pattern matches, return null
   return null;
 }

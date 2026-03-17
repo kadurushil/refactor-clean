@@ -217,9 +217,8 @@ export function updateDebugOverlay(currentMediaTime) {
   // --- Logic for the original debug overlay ---
   if (isDebug1Visible) {
     content.push(`--- Basic Info ---`);
-    if (appState.videoStartDate) {
-      const videoAbsoluteTimeMs =
-        appState.videoStartDate.getTime() + currentMediaTime * 1000;
+      const baseTimeMs = appState.videoStartDate ? appState.videoStartDate.getTime() : (appState.radarStartTimeMs || 0);
+      const videoAbsoluteTimeMs = baseTimeMs + currentMediaTime * 1000;
       
       let timeString = `Media Time (s): ${currentMediaTime.toFixed(2)}`; // Two decimal places
       if (videoPlayer && !isNaN(videoPlayer.duration) && videoPlayer.duration > 0) {
@@ -234,32 +233,29 @@ export function updateDebugOverlay(currentMediaTime) {
           .split("T")[1]
           .replace("Z", "")}`
       ); // Format and display video absolute time
-    } else {
-      content.push("Video not loaded..."); // Indicate video not loaded.
+    
+      if (
+        appState.vizData &&
+        appState.vizData.radarFrames[appState.currentFrame]
+      ) {
+        content.push(`Radar Frame: ${appState.currentFrame + 1}`);
+        const frameData = appState.vizData.radarFrames[appState.currentFrame];
+        const frameTime = frameData.timestampMs;
+        const baseTimeMs = appState.videoStartDate ? appState.videoStartDate.getTime() : (appState.radarStartTimeMs || 0);
+        
+        content.push(
+          `Radar Abs Time: ${new Date(baseTimeMs + frameTime)
+            .toISOString()
+            .split("T")[1]
+            .replace("Z", "")}`
+        ); // Format and display radar absolute time
+      }
     }
-    if (
-      appState.vizData &&
-      appState.vizData.radarFrames[appState.currentFrame]
-    ) {
-      content.push(`Radar Frame: ${appState.currentFrame + 1}`);
-      const frameTime =
-        appState.vizData.radarFrames[appState.currentFrame].timestampMs;
-      content.push(
-        `Radar Abs Time: ${new Date(
-          appState.videoStartDate.getTime() + frameTime
-        )
-          .toISOString()
-          .split("T")[1]
-          .replace("Z", "")}`
-      ); // Format and display radar absolute time
-    }
-  }
 
   // --- Logic for the new advanced debug overlay ---
   if (isDebug2Visible) {
     content.push(`--- Sync Diagnostics ---`);
     if (
-      appState.videoStartDate &&
       appState.vizData &&
       appState.vizData.radarFrames[appState.currentFrame]
     ) {
@@ -275,8 +271,9 @@ export function updateDebugOverlay(currentMediaTime) {
       content.push(`Video Time (s): ${currentMediaTime.toFixed(3)}`); // Display current video time
       content.push(`Target Sync Time (s): ${currentRadarFrame.videoSyncedTime.toFixed(3)}`);
       content.push(`Drift (ms): <b style="color: ${driftColor};">${driftMs.toFixed(0)}</b>`);
-      content.push(`Video Start Time: ${appState.videoStartDate.toISOString()}`);
-      content.push(`Radar Start Time: ${new Date(appState.radarStartTimeMs).toISOString()}`);
+      const videoStart = appState.videoStartDate ? appState.videoStartDate.toISOString() : new Date(0).toISOString();
+      content.push(`Video Start Time: ${videoStart}`);
+      content.push(`Radar Start Time: ${new Date(appState.radarStartTimeMs || 0).toISOString()}`);
       content.push(`Calculated Offset (ms): ${offsetInput.value}`); // Display calculated offset.
       const renderTime = appState.lastFrameRenderTime;
       // Color is green if render time is under 33ms (~30fps budget), otherwise red
@@ -320,7 +317,7 @@ export function updatePersistentOverlays(currentMediaTime) {
   }
 
   // If we don't have the necessary data, hide the overlays and exit.
-  if (!appState.vizData || !appState.videoStartDate) {
+  if (!appState.vizData) {
     radarInfoOverlay.classList.add("hidden");
     videoInfoOverlay.classList.add("hidden");
     return;
@@ -521,7 +518,9 @@ export function updatePersistentOverlays(currentMediaTime) {
   }
 
   // --- Update Video Persistent Overlay ---
-  const absVideoTime = new Date(appState.videoStartDate.getTime() + currentMediaTime * 1000);
+  // Default to Unix Epoch (Jan 1, 1970) if no dates are available
+  const baseTimeMs = appState.videoStartDate ? appState.videoStartDate.getTime() : (appState.radarStartTimeMs || 0);
+  const absVideoTime = new Date(baseTimeMs + currentMediaTime * 1000);
   const videoFrame = Math.floor(currentMediaTime * VIDEO_FPS);
   
   let timeDisplay = `Elapsed Time: ${currentMediaTime.toFixed(2)}s`;
