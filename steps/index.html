@@ -8,6 +8,19 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png" />
 
   <!-- <script src="https://cdn.tailwindcss.com"></script>  -->
+  <script>
+    // Silence Tailwind CDN production warning
+    (function() {
+      const suppress = (msg) => typeof msg === 'string' && (msg.includes('cdn.tailwindcss.com') || msg.includes('Tailwind CSS in production'));
+      ['log', 'info', 'warn', 'error'].forEach(method => {
+        const original = console[method];
+        console[method] = function() {
+          if (arguments[0] && suppress(arguments[0])) return;
+          original.apply(console, arguments);
+        };
+      });
+    })();
+  </script>
   <script src="./vendor/tailwind-cdn.js"></script>
   <script>
     !window.tailwind && (function() {
