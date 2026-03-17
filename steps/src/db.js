@@ -92,8 +92,8 @@ export function saveFileWithMetadata(key, file) {
 export function saveManualOffset(filename, offset) {
   return new Promise(async (resolve, reject) => {
     const database = await getDB();
-    if (!database) {
-      resolve(); // Fail silently if DB is not available
+    if (!database || !filename) {
+      resolve(); // Fail silently if DB is not available or filename is missing
       return;
     }
     const transaction = database.transaction(["manualOffsets"], "readwrite");
@@ -115,7 +115,7 @@ export function saveManualOffset(filename, offset) {
 export function loadManualOffset(filename) {
   return new Promise(async (resolve) => {
     const database = await getDB();
-    if (!database) {
+    if (!database || !filename) {
       resolve(null);
       return;
     }
@@ -142,7 +142,7 @@ export function loadManualOffset(filename) {
 export function deleteManualOffset(filename) {
   return new Promise(async (resolve) => {
     const database = await getDB();
-    if (!database) {
+    if (!database || !filename) {
       resolve();
       return;
     }

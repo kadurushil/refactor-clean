@@ -401,10 +401,8 @@ async function calculateAndSetOffset() {
   }
 
   // 1. Try to load a manually saved offset for this specific file pair.
-  // We use the JSON filename as the primary key, but ideally, it should be a combo.
-  // For now, sticking to the user request: "if the user uploads a similarly named file".
-  // We'll use the JSON filename as the key.
-  const savedOffset = await loadManualOffset(appState.jsonFilename);
+  // We use the JSON filename as the primary key.
+  const savedOffset = appState.jsonFilename ? await loadManualOffset(appState.jsonFilename) : null;
 
   if (savedOffset !== null) {
     console.log(`Applying saved manual offset: ${savedOffset}ms`);

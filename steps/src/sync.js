@@ -29,9 +29,18 @@ import { saveManualOffset } from "./db.js";
 export function resetVisualization() {
   appState.isPlaying = false;
   playPauseBtn.textContent = "Play";
-  const numFrames = appState.vizData.radarFrames.length;
-  timelineSlider.max = numFrames > 0 ? numFrames - 1 : 0;
-  updateFrame(0, true); // Update to the first frame and force video seek
+  
+  if (appState.vizData) {
+    const numFrames = appState.vizData.radarFrames.length;
+    timelineSlider.max = numFrames > 0 ? numFrames - 1 : 0;
+    updateFrame(0, true); // Update to the first frame and force video seek
+  } else {
+    timelineSlider.max = 0;
+    timelineSlider.value = 0;
+    if (videoPlayer.src) {
+      videoPlayer.currentTime = 0;
+    }
+  }
 }
 
 // --- NEW Playback Control Functions ---
