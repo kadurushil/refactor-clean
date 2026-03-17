@@ -58,6 +58,7 @@ import {
   startLoadJsonBtn,
   startLoadVideoBtn,
   startClearCacheBtn,
+  globalDragOverlay,
 } from "./dom.js";
 
 import { initializeTheme } from "./theme.js";
@@ -74,27 +75,36 @@ videoFileInput.addEventListener("change", (event) =>
   handleFiles(event.target.files)
 );
 
-// Wire up the drag-and-drop functionality for the start screen
-startDropZone.addEventListener("dragover", (event) => {
+// Wire up the universal drag-and-drop functionality
+let dragCounter = 0;
+
+document.body.addEventListener("dragenter", (event) => {
   event.preventDefault();
-  startDropZone.classList.add("border-blue-500", "bg-blue-50", "dark:bg-gray-700");
-});
-startDropZone.addEventListener("dragleave", () => {
-  startDropZone.classList.remove("border-blue-500", "bg-blue-50", "dark:bg-gray-700");
-});
-startDropZone.addEventListener("drop", (event) => {
-  event.preventDefault();
-  startDropZone.classList.remove("border-blue-500", "bg-blue-50", "dark:bg-gray-700");
-  handleFiles(event.dataTransfer.files);
+  dragCounter++;
+  if (dragCounter === 1) {
+    globalDragOverlay.classList.remove("opacity-0");
+    globalDragOverlay.classList.add("opacity-100");
+  }
 });
 
-// Also keep the main body as a backup drop zone for modifying active sessions
-const mainDropZone = document.querySelector("main");
-mainDropZone.addEventListener("dragover", (event) => {
+document.body.addEventListener("dragover", (event) => {
   event.preventDefault();
 });
-mainDropZone.addEventListener("drop", (event) => {
+
+document.body.addEventListener("dragleave", (event) => {
   event.preventDefault();
+  dragCounter--;
+  if (dragCounter === 0) {
+    globalDragOverlay.classList.remove("opacity-100");
+    globalDragOverlay.classList.add("opacity-0");
+  }
+});
+
+document.body.addEventListener("drop", (event) => {
+  event.preventDefault();
+  dragCounter = 0;
+  globalDragOverlay.classList.remove("opacity-100");
+  globalDragOverlay.classList.add("opacity-0");
   handleFiles(event.dataTransfer.files);
 });
 

@@ -38,6 +38,7 @@ export const startChangelogBtn = document.getElementById("start-changelog-btn");
 export const startThemeToggleBtn = document.getElementById("start-theme-toggle");
 export const startThemeToggleDarkIcon = document.getElementById("start-theme-toggle-dark-icon");
 export const startThemeToggleLightIcon = document.getElementById("start-theme-toggle-light-icon");
+export const globalDragOverlay = document.getElementById("global-drag-overlay");
 
 export const themeToggleBtn = document.getElementById("theme-toggle");
 export const canvasContainer = document.getElementById("canvas-container");
