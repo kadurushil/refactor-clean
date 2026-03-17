@@ -3,6 +3,7 @@ import { appState } from "../state.js";
 import { videoPlayer, speedGraphContainer, playPauseBtn } from "../dom.js";
 import { updateFrame, pausePlayback } from "../sync.js";
 import { ttcColors } from "../drawUtils.js";
+import { debugFlags } from "../debug.js";
 
 export const speedGraphSketch = function (p) {
   let staticBuffer, minSpeed, maxSpeed, videoDuration;
@@ -97,9 +98,11 @@ export const speedGraphSketch = function (p) {
       // We'll normalize against p95, but ensure it's at least a reasonable number.
       normTracks = Math.max(1, p95Value);
       
-      console.log(`[SpeedGraph] Density Info (Confirmed Only: ${confirmedOnly}):`);
-      console.log(` - Max tracks: ${maxValue}, 95th Percentile: ${p95Value}`);
-      console.log(` - Normalizing against: ${normTracks}`);
+      if (debugFlags.speedGraph) {
+        console.log(`[SpeedGraph] Density Info (Confirmed Only: ${confirmedOnly}):`);
+        console.log(` - Max tracks: ${maxValue}, 95th Percentile: ${p95Value}`);
+        console.log(` - Normalizing against: ${normTracks}`);
+      }
     }
 
     b.push();
@@ -289,8 +292,6 @@ export const speedGraphSketch = function (p) {
     b.noStroke();
     b.fill(textColor);
     b.text(egoLabel, egoX + segLen + gapBetweenSegAndLabel, legendY + 6);
-    b.pop();
-
     b.pop();
   };
 

@@ -13,6 +13,9 @@ export const debugFlags = {
   // Logs related to file loading, parsing, and caching
   fileLoading: false,
 
+  // Logs from the SpeedGraph p5 sketch (density info, etc.)
+  speedGraph: false,
+
   // If true, file caching blocks the main thread for debugging.
   CACHE_BLOCKING: false,
 
