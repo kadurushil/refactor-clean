@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARAS Visualizer V3.3.0 - Release Notes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #f1f5f9; }
+        .commit-hash { font-family: 'Fira Code', monospace; color: #94a3b8; font-size: 0.8rem; }
+        .version-tag { background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%); }
+        .card { background: #1e293b; border: 1px solid #334155; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .card:hover { transform: translateY(-4px); border-color: #6366f1; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3); }
+        .highlight-green { color: #4ade80; }
+        .highlight-blue { color: #60a5fa; }
+        .highlight-purple { color: #c084fc; }
+        .highlight-amber { color: #fbbf24; }
+        .highlight-cyan { color: #22d3ee; }
+        .icon-box { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 12px; }
+        code { font-family: 'Fira Code', monospace; background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 4px; font-size: 0.9em; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="p-8 md:p-16">
+
+    <header class="max-w-6xl mx-auto mb-16 border-b border-slate-700 pb-12">
+        <div class="flex items-center gap-4 mb-4">
+            <span class="version-tag text-white px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase">Stable Release</span>
+            <span class="text-slate-500 font-mono text-xs">V3.3.0 | 2026-03-20</span>
+        </div>
+        <h1 class="text-5xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-blue-400 italic italic">
+            What's New in Version 3.3.0
+        </h1>
+        <p class="text-xl text-slate-400 max-w-4xl leading-relaxed">
+            The 3.3.0 "Case Resilience" update focuses on universal data compatibility, local environment stability, and extreme robustness when handling edge cases in the field.
+        </p>
+    </header>
+
+    <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <!-- 1. Cache-Busting Core -->
+        <div class="card p-8 rounded-2xl shadow-2xl border-t-4 border-blue-500">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-blue text-2xl">⚡</div>
+                <h2 class="text-2xl font-bold">Local-First Sync Stability</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">Ensuring your tools are as current as your data.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> <strong>Zero-Cache Server:</strong> New <code>server.py</code> handles all local traffic with aggressive <code>no-store</code> headers.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Asset Versioning:</strong> Entry points & scripts are now version-locked with query strings to prevent browser stale-loads.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Environment Shell:</strong> Updated <code>Visualization_Start.bat</code> to wrap the new server architecture seamlessly.</li>
+            </ul>
+        </div>
+
+        <!-- 2. Robust Parsing -->
+        <div class="card p-8 rounded-2xl shadow-2xl border-t-4 border-green-500">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-green text-2xl">🔍</div>
+                <h2 class="text-2xl font-bold">Universal Timestamp Parsing</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">Extended support for field-recorded logging patterns.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> <strong>Generic Filename Matching:</strong> Now supports standalone <code>YYYYMMDD</code> and <code>DDMMYYYY</code> patterns in names.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Expanded Date formats:</strong> Improved Resilience for generic log dumps with varying separators (underscores, dashes, or none).</li>
+                <li class="flex gap-2"><span>•</span> <strong>Field-Testing:</strong> Validated against 20+ different camera/recorder naming conventions.</li>
+            </ul>
+        </div>
+
+        <!-- 3. UX & Interactivity -->
+        <div class="card p-8 rounded-2xl shadow-2xl border-t-4 border-amber-500">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-amber text-2xl">⌨️</div>
+                <h2 class="text-2xl font-bold">Streamlined Interaction</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">Frictionless navigation and keyboard mastering.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> <strong>Global ESC-Dismiss:</strong> Instantly close all help modals, guides, or changelogs with a single keypress.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Shortcut Overlay:</strong> Unified shortcut behavior across different focus states (Input vs Slider).</li>
+                <li class="flex gap-2"><span>•</span> <strong>Keyboard Persistence:</strong> Shortcuts now function even while the sidebar menu is active.</li>
+            </ul>
+        </div>
+
+        <!-- 4. Error Resilience -->
+        <div class="card p-8 rounded-2xl shadow-2xl border-t-4 border-purple-500">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-purple text-2xl">🛡️</div>
+                <h2 class="text-2xl font-bold">Extreme Case Handling</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">Protecting the visualization state against missing assets.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> <strong>Video-Only Loading:</strong> Implemented null-guards to support standalone video loads when JSON data is unavailable.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Memory Safety:</strong> Aggressive revoking of blob URLs after failed loads to free up VRAM.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Sync Resilience:</strong> Decoupled UI updates from video playback states to prevent white-screen crashes on load.</li>
+            </ul>
+        </div>
+
+        <!-- Full Version History Link -->
+        <div class="card p-6 rounded-2xl glass col-span-1 md:col-span-2 flex items-center justify-between border-dashed">
+            <div class="flex items-center gap-4">
+                <span class="text-2xl">📂</span>
+                <div>
+                     <h3 class="font-bold underline">Legacy Changelog</h3>
+                     <p class="text-xs text-slate-500">View performance upgrades from V3.0-V3.2</p>
+                </div>
+            </div>
+            <a href="Changelog.html" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm font-bold transition-all">View Archive</a>
+        </div>
+
+    </div>
+
+    <footer class="max-w-6xl mx-auto mt-24 pt-12 border-t border-slate-700 text-slate-500 text-center">
+        <p class="mb-2"><strong>Classification:</strong> Minor Version – Stability & Resilience Focus</p>
+        <p class="text-sm italic">Built for robustness in the field. ARAS Visualizer 2026.</p>
+    </footer>
+
+</body>
+</html>

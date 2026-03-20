@@ -189,7 +189,8 @@ Project Structure
 ├── annex/                       # Supplementary documentation and reference files
 │   ├── User_Manual.html         # Content for the Quick Start Guide (loaded via iframe)
 │   ├── code-base-overview.html  # Technical overview of the codebase (infographic style)
-│   ├── Changelog.html           # Project update history (loaded via iframe)
+│   ├── Changelog_3.3.0.html     # Current version release notes (loaded via iframe)
+│   ├── Changelog.html           # Legacy change archive
 │   └── shortcuts.html           # Reference for keyboard shortcuts (legacy/static)
 ├── intel/                       # Project documentation and AI context
 │   ├── readme.md                # This documentation
