@@ -168,8 +168,24 @@
             </ul>
         </div>
 
+        <!-- 11. Refinement & Stability (v3.3.0) -->
+        <div class="card p-8 rounded-2xl shadow-2xl border-l-4 border-cyan-500">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-amber text-2xl">✨</div>
+                <h2 class="text-2xl font-bold">11. Refinement & Case Resilience (v3.3.0)</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">Focus on universal operation, zero-cache local server, and parsing robustness.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> <strong>Cache-Busting local server:</strong> New <code>server.py</code> with zero-cache headers.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Universal Versioning:</strong> Entry points & assets versioned with <code>?v=3.3.0</code> query strings.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Robust Regex:</strong> Pattern matching for generic YYYYMMDD/DDMMYYYY formats in filenames.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Interactive Controls:</strong> ESC-key global dismiss for all modal windows.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Error Handling:</strong> Null-guards for video-only loading states in <code>sync.js</code>.</li>
+            </ul>
+        </div>
+
         <!-- 10. Stability & Infrastructure -->
-        <div class="card md:col-span-2 p-8 rounded-2xl shadow-2xl border-l-4 border-indigo-500">
+        <div class="card p-8 rounded-2xl shadow-2xl border-l-4 border-indigo-500">
             <h2 class="text-2xl font-bold mb-6">10. Stability & Infrastructure</h2>
             <div class="grid md:grid-cols-2 gap-8">
                 <ul class="space-y-2 text-slate-400 text-sm">

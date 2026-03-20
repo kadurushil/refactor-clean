@@ -22,4 +22,4 @@ echo Server is now running on http://127.0.0.1:8000
 echo Press CTRL+C at any time to stop the server.
 
 :: Run the server command directly. We know 'python' works from our test.
-python -m http.server 8000
+python server.py
