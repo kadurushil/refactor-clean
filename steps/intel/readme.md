@@ -46,35 +46,106 @@ On completion, the fully parsed object (data) is sent back.
 
 The main thread receives the parsed data and passes it to fileParsers.js::parseVisualizationJson for post-processing (calculating relative timestampMs, determining global SNR range).
 
-Interactive Visualization (p5/, drawUtils.js, ui.js):
+Interactive Visualization (p5/, drawUtils.js):
 
 radarSketch.js: The primary p5 sketch.
-- Master timer for God Mode auto-visibility (5s delay).
-- Hardened with guards against 0-width container crashes during layout shifts.
-- "Mouse Out of Bounds" safety indicators for high-speed tracking.
+
+Manages the main canvas within #canvas-container.
+
+Calculates plot scales (plotScaleX, plotScaleY) based on canvas size and constants.js boundaries.
+
+Draws axes, ego vehicle representation (drawUtils.js::drawEgoVehicle).
+
+Draws dynamic elements: point clouds (drawUtils.js::drawPointCloud), tracks (drawUtils.js::drawTrajectories), track markers (drawUtils.js::drawTrackMarkers), predicted positions (now drawn for the current frame currentFrame, not currentFrame + 1), covariance ellipses (drawUtils.js::drawCovarianceEllipse), cluster centroids (drawUtils.js::drawClusterCentroids), and regions of interest (drawUtils.js::drawRegionsOfInterest).
+
+Handles hover interactions for the Zoom Mode ("GOD MODE") tooltip via drawUtils.js::handleCloseUpDisplay.
+
+Draws legends (SNR, Track TTC).
 
 speedGraphSketch.js: The secondary p5 sketch for the speed graph.
-- Refined with initialization guards to handle rapid GridStack resizing.
+
+Manages the canvas within #speed-graph-container.
+
+Draws time-series lines for Ego Speed (frame.egoVelocity[1] * 3.6) and CAN Speed (frame.canVehSpeed_kmph) from the JSON vizData.
+
+Draws axes and legends.
+
+Draws a vertical red line indicator synchronized with the current frame's timestamp (frameData.timestampMs).
 
 zoomSketch.js: p5 sketch for the magnified "GOD MODE" view.
-- **Floating Overlay**: Now a standalone window decoupled from the dashboard grid.
-- **Auto-Hide UX**: 5s analysis period + 3s visual countdown before fading.
-- **Safety**: Includes "Out of Bounds" warning and "Closing in..." countdown labels.
 
-UI & Workspace Engine (ui.js, index.html):
+Manages a separate canvas within #zoom-canvas-container.
 
-- **Hybrid Dashboard**: Combines a GridStack-based fixed background with standalone floating modules.
-- **makeDraggableAndResizable**: A unified utility that transforms static UI elements into interactive windows.
-- **Persistent Memory**: Automatically saves and restores panel coordinates and GridStack geometry using `localStorage`.
-- **Soft-Restore**: Loads layout updates by ID without destroying inner DOM content (preserving p5 canvases and video players).
-- **Viewport Rescue**: Automatically pulls off-screen panels back into the viewing area during window resize events.
-- **Auto-Focus**: Clicking any floating panel dynamically increases its z-index (bringing it to the front).
+Receives mouse coordinates and hovered items from radarSketch.js.
 
-Startup Guide, Shortcuts, & Changelog:
-- Includes a "First Run" experience with a loading screen and Quick Start Guide modal (ui.js).
-- A **Changelog** modal ("What's New?") provides a history of updates and refactors (ui.js).
-- The **"Clear Cache and Reload"** button acts as a full factory reset, wiping all UI memory and cached data.
+Redraws a scaled and translated portion of the main scene, providing a high-fidelity zoom.
 
+Includes detailed tooltip drawing logic (drawZoomTooltip) showing extensive info for points, clusters, tracks (with speed), and predictions (with velocity).
+
+Handles mouse wheel events for adjusting appState.zoomFactor.
+
+drawUtils.js: Contains numerous helper functions responsible for the actual drawing logic (shapes, lines, colors, text) used by radarSketch.js and zoomSketch.js. Defines color palettes (snrColors, ttcColors, clusterColors). Refined tooltip data generation in handleCloseUpDisplay.
+
+Data Explorer (dataExplorer.js, main.js, index.html):
+
+A dedicated panel (#data-explorer-panel) for inspecting raw data of the current frame (appState.currentFrame).
+
+Activated by pressing the <kbd>I</kbd> key or clicking on the main radar canvas (#canvas-container).
+
+Features four views selectable via tabs:
+
+Tree View (#tab-panel-tree): Displays the current frame's data structure as a formatted JSON string.
+
+Grid View (#tab-panel-grid): Uses AG Grid (ag-grid-community.min.js) to display array data (e.g., pointCloud) in a sortable, filterable table. Populated via displayInGrid(data, title).
+
+Track Grid View (#tab-panel-track-grid): Displays object tracking data for the current frame in a dedicated grid.
+
+Plot View (#tab-panel-plot): Uses Chart.js (chart.js CDN) to generate a line plot of the numeric data from a column selected in the Grid View (by clicking the column header).
+
+Panel Features: The Data Explorer panel is **draggable** (via the header) and **resizable** (via edges/corners).
+
+Allows users to directly examine the underlying numerical values being visualized.
+
+Dynamic Filtering & Coloring (dom.js, drawUtils.js, state.js):
+
+Checkboxes in the sidebar (#collapsible-menu) control boolean flags in appState (via main.js event listeners).
+
+drawUtils.js functions read these flags (toggleSnrColor.checked, toggleConfirmedOnly.checked, etc.) to determine:
+
+Which color palette/logic to apply to points and tracks.
+
+Whether to show certain elements (tracks, velocity vectors, predicted positions, covariance).
+
+SNR range inputs (snrMinInput, snrMaxInput) update appState.globalMinSnr/MaxSnr for color scaling.
+
+TTC coloring mode (ttcModeDefault, ttcModeCustom) and custom inputs (ttcColorCritical, ttcTimeCritical, etc.) update appState.useCustomTtcScheme and appState.customTtcScheme respectively (dom.js event listeners). drawUtils.js::drawTrajectories uses this state to color tracks.
+
+Playback Controls & Navigation (sync.js, main.js, dom.js):
+
+Standard buttons (playPauseBtn, stopBtn) modify appState.isPlaying and call videoPlayer.play/pause/currentTime.
+
+timelineSlider input event updates appState.currentFrame and calls dom.js::updateFrame(frame, true) (forcing video seek). Throttled for performance during drag, debounced for final sync on release.
+
+timelineSlider wheel event calculates scroll speed and dynamically seeks frames, also debounced for final sync (sync.js).
+
+timelineSlider mousemove event calculates hover position to display frame/time in #timeline-tooltip (sync.js).
+
+speedSlider updates videoPlayer.playbackRate (main.js).
+
+UI Enhancements (ui.js, main.js, theme.js, dom.js, index.html):
+
+Sidebar (#collapsible-menu) visibility toggled by toggleMenuBtn, closeMenuBtn, and clicks on the #menu-scrim overlay (ui.js).
+
+Fullscreen toggled via fullscreenBtn and monitored using the fullscreenchange event (ui.js).
+
+Persistent overlays (#radar-info-overlay, #video-info-overlay) updated by dom.js::updatePersistentOverlays with frame index, absolute time, color mode, and sync drift.
+
+Dark/Light theme managed by theme.js::setTheme, saving preference to localStorage, and triggering redraws in p5 sketches.
+
+**Startup Guide, Shortcuts, & Changelog**:
+*   Includes a "First Run" experience with a loading screen and Quick Start Guide modal (ui.js).
+*   A "Shortcuts" modal (toggle with <kbd>K</kbd> or via the UI) provides a reference for all keyboard interactions (ui.js).
+*   A **Changelog** modal ("What's New?") provides a history of updates and refactors (ui.js).
 
 Session Management (session.js, main.js, db.js):
 
