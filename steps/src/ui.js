@@ -113,7 +113,7 @@ export function makeDraggableAndResizable(panel, header, minWidth = 400, minHeig
                 document.body.classList.remove('resizing');
                 window.removeEventListener('mousemove', resizeFunc);
                 if (panel.id === 'zoom-panel' && appState.zoomSketchInstance) {
-                    appState.zoomSketchInstance.handleResize();
+                    appState.zoomSketchInstance.handleContainerResize();
                 }
             });
         });
@@ -143,6 +143,31 @@ export function makeDraggableAndResizable(panel, header, minWidth = 400, minHeig
             }
         }
     }
+
+    // --- Viewport Constraint Logic ---
+    // This ensures that if the user resizes their browser, the panel doesn't get "lost" off-screen.
+    function constrainToViewport() {
+        const rect = panel.getBoundingClientRect();
+        const margin = 10; // Extra padding
+        
+        // Horizontal constraint
+        if (rect.right > window.innerWidth) {
+            panel.style.left = `${Math.max(margin, window.innerWidth - rect.width - margin)}px`;
+        }
+        if (rect.left < 0) {
+            panel.style.left = `${margin}px`;
+        }
+        
+        // Vertical constraint
+        if (rect.bottom > window.innerHeight) {
+            panel.style.top = `${Math.max(margin, window.innerHeight - rect.height - margin)}px`;
+        }
+        if (rect.top < 0) {
+            panel.style.top = `${margin}px`;
+        }
+    }
+
+    window.addEventListener('resize', constrainToViewport);
 }
 // --- END: Resizable and Draggable Panel Logic ---
 

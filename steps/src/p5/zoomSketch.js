@@ -256,9 +256,6 @@ export const zoomSketch = function (p) {
         canvas.parent(containerId);
         //console.log(`zoomSketch: Canvas CREATED with dimensions ${p.width}x${p.height}`); // debug
       } else {
-        console.warn(
-          "zoomSketch: updateAndDraw called, but container is not ready. Aborting draw."
-        ); //debug
         return;
       }
     }
