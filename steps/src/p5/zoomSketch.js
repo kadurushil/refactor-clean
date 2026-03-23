@@ -17,7 +17,7 @@ import {
   toggleCovariance,
 } from "../dom.js";
 
-function drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY, smoothedAvgX, smoothedAvgY) {
+function drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY, smoothedAvgX, smoothedAvgY, smoothedCamX, smoothedCamY) {
   if (!hoveredItems || hoveredItems.length === 0 || smoothedAvgX === null) return;
 
   // 1. Generate text content
@@ -153,10 +153,11 @@ function drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY, smoothedAvgX, 
   // Calculate the visible bounds in the current coordinate system (which is scaled and translated)
   const visibleW = p.width / zoomFactor;
   const visibleH = p.height / zoomFactor;
-  const minVisX = mainMouseX - visibleW / 2;
-  const maxVisX = mainMouseX + visibleW / 2;
-  const minVisY = mainMouseY - visibleH / 2;
-  const maxVisY = mainMouseY + visibleH / 2;
+  // Use camera center instead of raw mouse position to accurately represent the visible viewport
+  const minVisX = smoothedCamX - visibleW / 2;
+  const maxVisX = smoothedCamX + visibleW / 2;
+  const minVisY = smoothedCamY - visibleH / 2;
+  const maxVisY = smoothedCamY + visibleH / 2;
   const edgePad = 10 / zoomFactor;
 
   // Constrain X & Y to keep tooltip within the zoom view
@@ -229,6 +230,20 @@ export const zoomSketch = function (p) {
     p.frameRate(144);
     // We enable looping so the lerp smoothing can animate between frames
     p.loop();
+    
+    // --- START: ResizeObserver for ZoomSketch ---
+    let resizeDebounce = null;
+    const ro = new ResizeObserver(() => {
+      if (resizeDebounce) clearTimeout(resizeDebounce);
+      resizeDebounce = setTimeout(() => {
+        if (canvas) {
+           if(typeof p.handleContainerResize === 'function') p.handleContainerResize();
+        }
+      }, 100);
+    });
+    const container = document.getElementById(containerId);
+    if(container) ro.observe(container);
+    // --- END: ResizeObserver for ZoomSketch ---
   };
 
   p.updateAndDraw = function (mainMouseX, mainMouseY, hoveredItems, scales) {
@@ -251,14 +266,13 @@ export const zoomSketch = function (p) {
     // but it helps if updateAndDraw is called less frequently than the frame rate.
   };
 
-  p.handleResize = function () {
-    console.log("zoomSketch: handleResize triggered. Destroying old canvas.");
-    if (canvas) {
-      canvas.remove(); // p5.js function to properly remove the canvas from the DOM
-      canvas = null; // Set the internal reference to null
+  p.windowResized = function () {}; // Disable native p5 window resize
+  
+  p.handleContainerResize = function () {
+    const container = document.getElementById(containerId);
+    if (container && canvas) {
+      p.resizeCanvas(container.offsetWidth, container.offsetHeight);
     }
-    // The canvas will be recreated automatically the next time updateAndDraw() is called,
-    // at which point the container will have its correct, final dimensions.
   };
   p.draw = function () {
     if (!appState.vizData || !canvas) return;
@@ -393,7 +407,7 @@ export const zoomSketch = function (p) {
     p.pop(); // End radar transformations
 
     // --- Call the new, self-contained tooltip function with smoothed coords ---
-    drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY, smoothedAvgX, smoothedAvgY);
+    drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY, smoothedAvgX, smoothedAvgY, smoothedCamX, smoothedCamY);
 
     // --- START: Draw Purple Debug Circle ---
     // This circle represents the hover radius, drawn in the zoomed coordinate space.

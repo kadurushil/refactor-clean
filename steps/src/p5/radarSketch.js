@@ -186,6 +186,20 @@ export const radarSketch = function (p) {
     }
     // --- END: Radar Range Slider Logic ---
 
+    // --- START: ResizeObserver for GridStack ---
+    let resizeDebounce = null;
+    const ro = new ResizeObserver(() => {
+      // Debounce to prevent massive memory/CPU spikes during fast dragging
+      if (resizeDebounce) clearTimeout(resizeDebounce);
+      resizeDebounce = setTimeout(() => {
+        if (canvasContainer && canvasContainer.offsetWidth > 0 && canvasContainer.offsetHeight > 0) {
+           if(typeof p.handleContainerResize === 'function') p.handleContainerResize();
+        }
+      }, 100);
+    });
+    ro.observe(canvasContainer);
+    // --- END: ResizeObserver for GridStack ---
+
     p.noLoop();
     // Disable continuous looping, redraw will be called manually
   };
@@ -588,26 +602,24 @@ export const radarSketch = function (p) {
 
 
 
-  p.windowResized = function () {
-    console.log("radarSketch: windowResized triggered!");
+  p.windowResized = function () {}; // Disable native p5 window event to prevent multi-monitor dragging double-fires
+
+  p.handleContainerResize = function () {
+    console.log("radarSketch: handleContainerResize triggered!");
 
     // Immediately resize the elements that we know are stable.
     p.resizeCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight);
+    
+    // PREVENT MEMORY LEAK: Destroy old buffers to free memory
+    if (staticBackgroundBuffer) staticBackgroundBuffer.remove();
+    if (trackLegendBuffer) trackLegendBuffer.remove();
+    
     staticBackgroundBuffer = p.createGraphics(p.width, p.height);
     trackLegendBuffer = p.createGraphics(120, 120);
+    
     p.drawTrackLegendToBuffer();
     calculatePlotScales();
     drawStaticRegionsToBuffer(p, staticBackgroundBuffer, plotScales);
-
-    // Defer the call to destroy the zoom canvas.
-    if (appState.zoomSketchInstance && appState.isCloseUpMode) {
-      setTimeout(() => {
-        console.log(
-          "radarSketch: Executing deferred call to zoomSketch.handleResize()."
-        );
-        appState.zoomSketchInstance.handleResize();
-      }, 10); // A 10ms delay is slightly more robust than 0.
-    }
 
     if (appState.vizData) {
       p.redraw();

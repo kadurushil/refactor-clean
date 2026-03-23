@@ -956,12 +956,19 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
 
     const xOffset = 20;
     let boxX, lineAnchorX;
-    if (mouseX + xOffset + boxWidth > p.width) { // Use smoothed values
-      boxX = mouseX - boxWidth - xOffset;
-      lineAnchorX = boxX + boxWidth;
-    } else {
+    
+    // Strategy: Try placing on the right. If it overflows, try the left. If it still overflows, clamp it to screen edges.
+    if (mouseX + xOffset + boxWidth <= p.width) {
       boxX = mouseX + xOffset;
       lineAnchorX = boxX;
+    } else if (mouseX - xOffset - boxWidth >= 0) {
+      boxX = mouseX - xOffset - boxWidth;
+      lineAnchorX = boxX + boxWidth;
+    } else {
+      // Doesn't cleanly fit on either side. Clamp it to the canvas bounds.
+      boxX = Math.max(0, Math.min(mouseX + xOffset, p.width - boxWidth));
+      // Point the anchor to whichever side of the box is closer to the mouse
+      lineAnchorX = (boxX + boxWidth / 2 < mouseX) ? boxX + boxWidth : boxX;
     }
     let boxY = mouseY - boxHeight / 2;
     boxY = p.constrain(boxY, 0, p.height - boxHeight);

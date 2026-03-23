@@ -71,6 +71,9 @@
     })();
   </script>
   
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.1.2/gridstack.min.css" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.1.2/gridstack-all.js"></script>
+  
   <script>
     tailwind.config = {
       darkMode: "class",
@@ -473,49 +476,63 @@
   <!-- END: ADD THIS NEW SCRIM ELEMENT -->
 
   <!-- Main Content -->
-  <main class="flex-grow container mx-auto p-4 pt-8 flex flex-col lg:flex-row gap-6">
-    <div class="lg:w-1/2 flex flex-col gap-4">
-      <div class="relative">
-        <div id="canvas-container"
-          class="w-full h-[75vh] bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-inner flex items-center justify-center relative">
-          <p id="canvas-placeholder" class="hidden text-gray-500 dark:text-gray-400 text-lg">Load JSON data to start
-            visualization</p>
+  <main class="flex-grow w-full max-w-[1920px] mx-auto p-4 pt-8">
+    <div class="grid-stack grid-stack-12">
+      <!-- Radar Panel -->
+      <div class="grid-stack-item shadow-md rounded-lg" gs-x="0" gs-y="0" gs-w="6" gs-h="12">
+        <div class="grid-stack-item-content bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg overflow-visible flex flex-col relative group">
+          <div class="absolute top-0 left-0 w-full h-4 cursor-grab active:cursor-grabbing bg-transparent hover:bg-gray-300/30 z-[60] transition-colors rounded-t-lg" title="Drag to move panel"></div>
           
-          <!-- Range Slider (Vertical) -->
-          <div class="absolute bottom-8 left-2 flex flex-col items-center gap-2 z-20 group">
-            <span id="range-value-display" class="bg-black bg-opacity-60 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">80m</span>
-            <input type="range" id="range-slider" min="40" max="200" value="80" step="10"
-              class="h-32 cursor-pointer accent-blue-600" 
-              style="writing-mode: vertical-lr; direction: rtl; width: 8px;" />
-            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter" style="writing-mode: vertical-lr; transform: rotate(180deg);">Range</span>
+          <div class="relative w-full h-full flex-grow">
+            <div id="canvas-container" class="w-full h-full flex items-center justify-center relative">
+              <p id="canvas-placeholder" class="hidden text-gray-500 dark:text-gray-400 text-lg">Load JSON data to start visualization</p>
+              
+              <!-- Range Slider (Vertical) -->
+              <div class="absolute bottom-8 left-2 flex flex-col items-center gap-2 z-20 group">
+                <span id="range-value-display" class="bg-black bg-opacity-60 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">80m</span>
+                <input type="range" id="range-slider" min="40" max="200" value="80" step="10"
+                  class="h-32 cursor-pointer accent-blue-600" 
+                  style="writing-mode: vertical-lr; direction: rtl; width: 8px;" />
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter" style="writing-mode: vertical-lr; transform: rotate(180deg);">Range</span>
+              </div>
+            </div>
+            <div id="radar-info-overlay"
+              class="absolute top-4 left-0 right-0 z-10 bg-black bg-opacity-60 text-white font-mono text-xs p-2 rounded-md hidden pointer-events-none">
+            </div>
+            <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center gap-4 z-20 pointer-events-none">
+              <div id="ego-speed-display"
+                class="bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md hidden font-mono"></div>
+              <div id="can-speed-display"
+                class="bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md hidden font-mono"></div>
+            </div>
           </div>
         </div>
-        <div id="radar-info-overlay"
-          class="absolute top-[-35px] left-0 right-0 z-10 bg-black bg-opacity-60 text-white font-mono text-xs p-2 rounded-md hidden">
-        </div>
-        <div class="absolute bottom left-1/2 -translate-x-1/2 flex items-center justify-center gap-4">
-          <div id="ego-speed-display"
-            class="bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md hidden font-mono"></div>
-          <div id="can-speed-display"
-            class="bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md hidden font-mono"></div>
+      </div>
+      
+      <!-- Video Panel -->
+      <div class="grid-stack-item shadow-md rounded-lg" gs-x="6" gs-y="0" gs-w="6" gs-h="8">
+        <div class="grid-stack-item-content bg-black rounded-lg overflow-hidden flex items-center justify-center relative group">
+          <div class="absolute top-0 left-0 w-full h-4 cursor-grab active:cursor-grabbing bg-transparent hover:bg-white/20 z-[60] transition-colors rounded-t-lg" title="Drag to move panel"></div>
+          
+          <video id="video-player" class="w-full h-full object-contain hidden" muted playsinline></video>
+          <p id="video-placeholder" class="hidden text-gray-500 text-lg">Load a video file</p>
+          <div id="video-info-overlay"
+            class="absolute top-4 left-2 z-[20] bg-black bg-opacity-60 text-white font-mono text-xs p-2 rounded-md hidden pointer-events-none">
+          </div>
+          <div id="debug-overlay"
+            class="absolute top-0 left-0 bg-black bg-opacity-60 text-white p-2 font-mono text-xs hidden w-full z-[20] pointer-events-none"></div>
         </div>
       </div>
-    </div>
-    <div class="lg:w-1/2 flex flex-col gap-4">
-      <div class="w-full h-[50vh] bg-black rounded-lg shadow-inner flex items-center justify-center relative">
-        <video id="video-player" class="w-full h-full object-contain hidden" muted playsinline></video>
-        <p id="video-placeholder" class="hidden text-gray-500 dark:text-gray-400 text-lg">Load a video file</p>
-        <div id="video-info-overlay"
-          class="absolute top-1 left-2 z-10 bg-black bg-opacity-60 text-white font-mono text-xs p-2 rounded-md hidden">
+      
+      <!-- SpeedGraph Panel -->
+      <div class="grid-stack-item shadow-md rounded-lg" gs-x="6" gs-y="8" gs-w="6" gs-h="4">
+        <div class="grid-stack-item-content bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden flex items-center justify-center relative group">
+          <div class="absolute top-0 left-0 w-full h-4 cursor-grab active:cursor-grabbing bg-transparent hover:bg-gray-300/30 z-[60] transition-colors rounded-t-lg" title="Drag to move panel"></div>
+          
+          <div id="speed-graph-container" class="w-full h-full flex items-center justify-center p-1 relative">
+            <p id="speed-graph-placeholder" class="text-gray-500 dark:text-gray-400 text-lg text-center absolute pointer-events-none">Load JSON & Video to see speed graph</p>
+          </div>
         </div>
-        <div id="debug-overlay"
-          class="absolute top-0 left-0 bg-black bg-opacity-60 text-white p-2 font-mono text-xs hidden w-full"></div>
-      </div>
-      <div id="speed-graph-container"
-        class="w-full h-[25vh] bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-inner flex items-center justify-center">
-        <p id="speed-graph-placeholder" class="text-gray-500 dark:text-gray-400 text-lg">Load JSON & Video to see speed
-          graph
-        </p>
       </div>
     </div>
     <div id="data-explorer-panel"

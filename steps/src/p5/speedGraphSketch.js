@@ -402,6 +402,21 @@ export const speedGraphSketch = function (p) {
     });
 
     staticBuffer = p.createGraphics(p.width, p.height);
+
+    // --- START: ResizeObserver for GridStack ---
+    let resizeDebounce = null;
+    const ro = new ResizeObserver(() => {
+      // Debounce to prevent massive memory/CPU spikes during fast dragging
+      if (resizeDebounce) clearTimeout(resizeDebounce);
+      resizeDebounce = setTimeout(() => {
+        if (speedGraphContainer && speedGraphContainer.offsetWidth > 0 && speedGraphContainer.offsetHeight > 0) {
+           if(typeof p.handleContainerResize === 'function') p.handleContainerResize();
+        }
+      }, 100);
+    });
+    ro.observe(speedGraphContainer);
+    // --- END: ResizeObserver for GridStack ---
+
     p.noLoop();
   };
 
@@ -479,6 +494,7 @@ export const speedGraphSketch = function (p) {
       // compute box position (avoid overflowing right edge)
       let boxX = hoverX + 12;
       if (boxX + boxW > p.width) boxX = hoverX - 12 - boxW;
+      boxX = Math.max(0, boxX); // avoid overflowing left edge
       const boxY = pad.top + 6;
 
       // Draw background box
@@ -527,9 +543,15 @@ export const speedGraphSketch = function (p) {
     }
   }
 
-  p.windowResized = function () {
+  p.windowResized = function () {}; // Disable native p5 window event
+
+  p.handleContainerResize = function () {
     p.resizeCanvas(speedGraphContainer.offsetWidth, speedGraphContainer.offsetHeight);
+    
+    // PREVENT MEMORY LEAK: Destroy old buffer before recreating
+    if (staticBuffer) staticBuffer.remove();
     staticBuffer = p.createGraphics(p.width, p.height);
+    
     hoverX = null; // reset hover on resize
     if (appState.vizData && videoDuration > 0) {
       p.drawStaticGraphToBuffer(appState.vizData);

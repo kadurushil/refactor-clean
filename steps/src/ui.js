@@ -119,6 +119,17 @@ function handleColorToggles(e) {
 }
 
 export function initUIEventListeners() {
+  // --- Initialize GridStack ---
+  if (typeof GridStack !== 'undefined') {
+    GridStack.init({
+      margin: 10,
+      cellHeight: '6vh', // Radar is 12h=72vh, Video is 8h=48vh, Graph is 4h=24vh
+      disableOneColumnMode: true,
+      animate: true,
+      handle: '.grid-stack-item-content > .cursor-grab', // use the specific drag handle we added
+    });
+  }
+
   // --- Shortcuts Modal ---
   shortcutsBtn.addEventListener("click", (e) => {
       e.preventDefault();
