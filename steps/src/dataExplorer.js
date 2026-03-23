@@ -2,6 +2,7 @@
 
 import { appState } from './state.js';
 import { throttle } from './utils.js';
+import { makeDraggableAndResizable } from './ui.js';
 import { 
     canvasContainer, 
     explorerBtn,
@@ -268,97 +269,6 @@ export function throttledUpdateExplorer() {
 }
 // --- END: New Robust Update Logic ---
 
-// --- START: Resizable and Draggable Panel Logic ---
-function makePanelInteractive(panel) {
-    const header = document.getElementById('data-explorer-header');
-    const resizers = panel.querySelectorAll('.resizer');
-    const minWidth = 400;
-    const minHeight = 300;
-
-    let original_width = 0;
-    let original_height = 0;
-    let original_x = 0;
-    let original_y = 0;
-    let original_mouse_x = 0;
-    let original_mouse_y = 0;
-
-    // --- Dragging Logic ---
-    header.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        original_x = panel.offsetLeft;
-        original_y = panel.offsetTop;
-        original_mouse_x = e.pageX;
-        original_mouse_y = e.pageY;
-        document.body.classList.add('dragging');
-        window.addEventListener('mousemove', dragPanel);
-        window.addEventListener('mouseup', stopDrag);
-    });
-
-    function dragPanel(e) {
-        const dx = e.pageX - original_mouse_x;
-        const dy = e.pageY - original_mouse_y;
-        panel.style.left = `${original_x + dx}px`;
-        panel.style.top = `${original_y + dy}px`;
-    }
-
-    function stopDrag() {
-        document.body.classList.remove('dragging');
-        window.removeEventListener('mousemove', dragPanel);
-        window.removeEventListener('mouseup', stopDrag);
-    }
-
-    // --- Resizing Logic ---
-    resizers.forEach(resizer => {
-        resizer.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            original_width = parseFloat(getComputedStyle(panel, null).getPropertyValue('width').replace('px', ''));
-            original_height = parseFloat(getComputedStyle(panel, null).getPropertyValue('height').replace('px', ''));
-            original_x = panel.getBoundingClientRect().left;
-            original_y = panel.getBoundingClientRect().top;
-            original_mouse_x = e.pageX;
-            original_mouse_y = e.pageY;
-            
-            const resizeFunc = (event) => resizePanel(event, resizer.classList);
-            
-            document.body.classList.add('resizing');
-            window.addEventListener('mousemove', resizeFunc);
-            window.addEventListener('mouseup', () => {
-                document.body.classList.remove('resizing');
-                window.removeEventListener('mousemove', resizeFunc);
-            });
-        });
-    });
-
-    function resizePanel(e, direction) {
-        // --- START: Fix for Resizing Logic ---
-        // The logic is updated to handle corners correctly by checking for 't', 'b', 'l', 'r' substrings.
-        // This allows a corner like 'resizer-br' to trigger both bottom and right resizing logic.
-        if (direction.toString().includes('r')) { // Check for right edge
-            const width = original_width + (e.pageX - original_mouse_x);
-            if (width > minWidth) panel.style.width = `${width}px`;
-        }
-        if (direction.toString().includes('b')) { // Check for bottom edge
-            const height = original_height + (e.pageY - original_mouse_y);
-            if (height > minHeight) panel.style.height = `${height}px`;
-        }
-        if (direction.toString().includes('l')) { // Check for left edge
-            const newWidth = original_width - (e.pageX - original_mouse_x);
-            if (newWidth > minWidth) {
-                panel.style.width = `${newWidth}px`;
-                panel.style.left = `${original_x + (e.pageX - original_mouse_x)}px`;
-            }
-        }
-        if (direction.toString().includes('t')) { // Check for top edge
-            const newHeight = original_height - (e.pageY - original_mouse_y);
-            if (newHeight > minHeight) {
-                panel.style.height = `${newHeight}px`;
-                panel.style.top = `${original_y + (e.pageY - original_mouse_y)}px`;
-            }
-        }
-        // --- END: Fix for Resizing Logic ---
-    }
-}
-
 function initializePanelPosition(panel) {
     // Remove Tailwind classes that conflict with dynamic positioning/sizing
     panel.classList.remove('bottom-24', 'right-4', 'w-full', 'max-w-2xl', 'h-1/2');
@@ -388,7 +298,7 @@ export function initializeDataExplorer() {
 
     // --- START: Make panel interactive ---
     initializePanelPosition(panel);
-    makePanelInteractive(panel);
+    makeDraggableAndResizable(panel, document.getElementById('data-explorer-header'));
     // --- END: Make panel interactive ---
     // --- Wire up all event listeners ---
 

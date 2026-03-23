@@ -409,6 +409,12 @@ export const radarSketch = function (p) {
       // --- END: Frame-Rate Independent Smoothing ---
 
       // Use the smoothed coordinates for all subsequent zoom-related calculations.
+      
+      // Store current transformed mouse coordinates (un-scaled back by original zoom factor)
+      // because zoomedMouseX is transformed by zoom and translation.
+      // Easiest is to check actual raw cursor coords on the canvas.
+      appState.isMouseOutOfBounds = p.mouseX < 0 || p.mouseX > p.width || p.mouseY < 0 || p.mouseY > p.height;
+
       const hoveredItems = handleCloseUpDisplay(p, plotScales, smoothedMouseX, smoothedMouseY);
       // --- END: Mouse Smoothing Logic ---
 
@@ -451,18 +457,21 @@ export const radarSketch = function (p) {
       p.ellipse(smoothedMouseX, smoothedMouseY, hoverRadius * 2, hoverRadius * 2); // Use smoothed values
       p.pop();
       // --- END: Draw Zoom Area Rectangle & Debug Circle ---
-
       if (hoveredItems.length > 0) {
-        // If we are hovering, cancel any existing countdown.
-        clearTimeout(appState.zoomHideDelayTimeout);
-        appState.zoomHideDelayTimeout = null;
-        clearInterval(appState.zoomCountdownInterval);
-        appState.zoomCountdownInterval = null;
+        if (appState.zoomHideDelayTimeout) {
+           clearTimeout(appState.zoomHideDelayTimeout);
+           appState.zoomHideDelayTimeout = null;
+        }
+        if (appState.zoomCountdownInterval) {
+           clearInterval(appState.zoomCountdownInterval);
+           appState.zoomCountdownInterval = null;
+        }
         appState.zoomCountdown = null;
 
-        if (zoomPanel.style.display !== "block") {
-          zoomPanel.style.display = "block";
+        if (zoomPanel && zoomPanel.classList.contains("hidden") && !appState.zoomPanelExplicitlyClosed) {
+           zoomPanel.classList.remove("hidden");
         }
+        
         if (
           appState.zoomSketchInstance &&
           appState.zoomSketchInstance.updateAndDraw
@@ -474,11 +483,30 @@ export const radarSketch = function (p) {
             plotScales
           );
         }
-      } else if (zoomPanel.style.display === "block") {
+      } else {
         // --- START: FIX for Grace Period Freeze ---
-        // If NOT hovering, but the panel is still visible, we must continue
-        // to update the zoom sketch so it follows the mouse.
+        // If NOT hovering, we must continue to update the zoom sketch 
+        // so it follows the mouse. 
         // We pass an empty array for hoveredItems, so no tooltip is drawn.
+        
+        // Auto-hide the panel after 5 seconds of inactivity with countdown
+        if (zoomPanel && !zoomPanel.classList.contains("hidden")) {
+            if (!appState.zoomHideDelayTimeout && !appState.zoomCountdownInterval) {
+                appState.zoomHideDelayTimeout = setTimeout(() => {
+                    appState.zoomHideDelayTimeout = null;
+                    appState.zoomCountdown = 3;
+                    appState.zoomCountdownInterval = setInterval(() => {
+                        appState.zoomCountdown--;
+                        if (appState.zoomCountdown <= 0) {
+                            clearInterval(appState.zoomCountdownInterval);
+                            appState.zoomCountdownInterval = null;
+                            appState.zoomCountdown = null;
+                            zoomPanel.classList.add("hidden");
+                        }
+                    }, 1000);
+                }, 5000);
+            }
+        }
         if (
           appState.zoomSketchInstance &&
           appState.zoomSketchInstance.updateAndDraw
@@ -491,51 +519,21 @@ export const radarSketch = function (p) {
           );
         }
         // --- END: FIX for Grace Period Freeze ---
-        // 2. If a "hide" timer isn't already running, start one.
-        if (!appState.zoomHideDelayTimeout && !appState.zoomCountdownInterval) {
-          // Start a 2-second delay before the countdown begins.
-          appState.zoomHideDelayTimeout = setTimeout(() => {
-            appState.zoomHideDelayTimeout = null; // Clear the delay timer ID
-            // Now, start the actual 3-second countdown interval.
-            appState.zoomCountdown = Math.floor(COOLING_PERIOD_MS / 1000);
-            appState.zoomCountdownInterval = setInterval(() => {
-              appState.zoomCountdown--;
-              if (appState.zoomCountdown <= 0) {
-                // When countdown finishes, hide panel and clear interval.
-                clearInterval(appState.zoomCountdownInterval);
-                appState.zoomCountdownInterval = null;
-                appState.zoomCountdown = null;
-                zoomPanel.style.display = "none";
-              } else {
-                // Force a redraw of the zoom sketch to show the new countdown value.
-                // This call is still needed inside the interval to update the countdown text.
-                if (appState.zoomSketchInstance && appState.zoomSketchInstance.updateAndDraw) {
-                  // Pass empty hoveredItems to show the countdown text.
-                  appState.zoomSketchInstance.updateAndDraw(
-                    smoothedMouseX,
-                    smoothedMouseY,
-                    [],
-                    plotScales);
-                }
-              }
-            }, 1000);
-          }, 1000); // 1000ms = 1 second delay
-        }
       }
     } else {
-      // --- START: Cleanup Logic ---
-      // When zoom mode is turned off, ensure all timers are cleared.
+      p.cursor(p.AUTO); // Reset cursor when exiting god mode
+      
+      // Clear timers when explicitly turned off
       if (appState.zoomHideDelayTimeout) {
-        clearTimeout(appState.zoomHideDelayTimeout);
-        appState.zoomHideDelayTimeout = null;
+          clearTimeout(appState.zoomHideDelayTimeout);
+          appState.zoomHideDelayTimeout = null;
       }
       if (appState.zoomCountdownInterval) {
-        clearInterval(appState.zoomCountdownInterval);
-        appState.zoomCountdownInterval = null;
+          clearInterval(appState.zoomCountdownInterval);
+          appState.zoomCountdownInterval = null;
       }
-      // --- END: Cleanup Logic ---
-      p.cursor(p.AUTO); // Reset cursor when exiting god mode
-      zoomPanel.style.display = "none";
+      appState.zoomCountdown = null;
+      
       isFirstFrame = true; // Reset for the next time zoom mode is enabled
     }
     // --- Legend Drawing ---

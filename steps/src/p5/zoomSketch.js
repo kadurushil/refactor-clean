@@ -454,8 +454,34 @@ export const zoomSketch = function (p) {
     p.pop();
     // --- END: DRAW TITLE OVERLAY ---
 
+    // --- START: Draw Out of Bounds Overlay ---
+    if (appState.isMouseOutOfBounds && appState.isCloseUpMode) {
+      p.push();
+      // Semi-transparent black background
+      p.fill(0, 0, 0, 150);
+      p.noStroke();
+      p.rectMode(p.CENTER);
+      p.rect(p.width / 2, p.height / 2, p.width, p.height);
+
+      // Draw the text
+      p.fill(255, 100, 100); // Red warning color
+      p.textAlign(p.CENTER, p.CENTER);
+      p.textSize(18);
+      p.textStyle(p.BOLD);
+      
+      const yOffsetOffset = (appState.zoomCountdown !== null && appState.zoomCountdown > 0) ? 20 : 0;
+      p.text("Mouse pointer Out of Bounds", p.width / 2, p.height / 2 - yOffsetOffset);
+      
+      if (appState.zoomCountdown !== null && appState.zoomCountdown > 0) {
+        p.fill(255);
+        p.textStyle(p.NORMAL);
+        p.text(`Closing in ${appState.zoomCountdown}...`, p.width / 2, p.height / 2 + 20);
+      }
+      p.pop();
+    }
+    // --- END: Draw Out of Bounds Overlay ---
     // --- START: Draw Countdown Overlay ---
-    if (appState.zoomCountdown !== null && appState.zoomCountdown > 0) {
+    else if (appState.zoomCountdown !== null && appState.zoomCountdown > 0) {
       p.push();
       // Semi-transparent black background for readability
       p.fill(0, 0, 0, 150);

@@ -50,6 +50,102 @@ import {
   startChangelogBtn,
 } from "./dom.js";
 
+// --- START: Resizable and Draggable Panel Logic ---
+export function makeDraggableAndResizable(panel, header, minWidth = 400, minHeight = 300) {
+    if (!panel || !header) return;
+    const resizers = panel.querySelectorAll('.resizer');
+
+    let original_width = 0;
+    let original_height = 0;
+    let original_x = 0;
+    let original_y = 0;
+    let original_mouse_x = 0;
+    let original_mouse_y = 0;
+
+    // --- Dragging Logic ---
+    header.addEventListener('mousedown', (e) => {
+        // Prevent drag if clicking buttons
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+        e.preventDefault();
+        
+        // Ensure panel floats on top
+        panel.style.zIndex = 100;
+        
+        original_x = panel.offsetLeft;
+        original_y = panel.offsetTop;
+        original_mouse_x = e.pageX;
+        original_mouse_y = e.pageY;
+        document.body.classList.add('dragging');
+        window.addEventListener('mousemove', dragPanel);
+        window.addEventListener('mouseup', stopDrag);
+    });
+
+    function dragPanel(e) {
+        const dx = e.pageX - original_mouse_x;
+        const dy = e.pageY - original_mouse_y;
+        panel.style.left = `${original_x + dx}px`;
+        panel.style.top = `${original_y + dy}px`;
+    }
+
+    function stopDrag() {
+        document.body.classList.remove('dragging');
+        window.removeEventListener('mousemove', dragPanel);
+        window.removeEventListener('mouseup', stopDrag);
+    }
+
+    // --- Resizing Logic ---
+    resizers.forEach(resizer => {
+        resizer.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            panel.style.zIndex = 100;
+            original_width = parseFloat(getComputedStyle(panel, null).getPropertyValue('width').replace('px', ''));
+            original_height = parseFloat(getComputedStyle(panel, null).getPropertyValue('height').replace('px', ''));
+            original_x = panel.getBoundingClientRect().left;
+            original_y = panel.getBoundingClientRect().top;
+            original_mouse_x = e.pageX;
+            original_mouse_y = e.pageY;
+            
+            const resizeFunc = (event) => resizePanel(event, resizer.classList);
+            
+            document.body.classList.add('resizing');
+            window.addEventListener('mousemove', resizeFunc);
+            window.addEventListener('mouseup', () => {
+                document.body.classList.remove('resizing');
+                window.removeEventListener('mousemove', resizeFunc);
+                if (panel.id === 'zoom-panel' && appState.zoomSketchInstance) {
+                    appState.zoomSketchInstance.handleResize();
+                }
+            });
+        });
+    });
+
+    function resizePanel(e, direction) {
+        if (direction.toString().includes('r')) {
+            const width = original_width + (e.pageX - original_mouse_x);
+            if (width > minWidth) panel.style.width = `${width}px`;
+        }
+        if (direction.toString().includes('b')) {
+            const height = original_height + (e.pageY - original_mouse_y);
+            if (height > minHeight) panel.style.height = `${height}px`;
+        }
+        if (direction.toString().includes('l')) {
+            const newWidth = original_width - (e.pageX - original_mouse_x);
+            if (newWidth > minWidth) {
+                panel.style.width = `${newWidth}px`;
+                panel.style.left = `${original_x + (e.pageX - original_mouse_x)}px`;
+            }
+        }
+        if (direction.toString().includes('t')) {
+            const newHeight = original_height - (e.pageY - original_mouse_y);
+            if (newHeight > minHeight) {
+                panel.style.height = `${newHeight}px`;
+                panel.style.top = `${original_y + (e.pageY - original_mouse_y)}px`;
+            }
+        }
+    }
+}
+// --- END: Resizable and Draggable Panel Logic ---
+
 function toggleMenu(show) {
   if (show) {
     collapsibleMenu.classList.remove("-translate-x-full");
@@ -121,13 +217,29 @@ function handleColorToggles(e) {
 export function initUIEventListeners() {
   // --- Initialize GridStack ---
   if (typeof GridStack !== 'undefined') {
-    GridStack.init({
+    appState.gridStackInstance = GridStack.init({
       margin: 10,
-      cellHeight: '6vh', // Radar is 12h=72vh, Video is 8h=48vh, Graph is 4h=24vh
+      cellHeight: '6vh',
       disableOneColumnMode: true,
       animate: true,
-      handle: '.grid-stack-item-content > .cursor-grab', // use the specific drag handle we added
+      handle: '.grid-stack-item-content > .cursor-grab',
     });
+  }
+
+  // --- Initialize Floating Zoom Panel ---
+  const zoomPanel = document.getElementById("zoom-panel");
+  const zoomHeader = document.getElementById("zoom-panel-header");
+  const closeZoomBtn = document.getElementById("close-zoom-btn");
+  
+  if (zoomPanel && zoomHeader) {
+      makeDraggableAndResizable(zoomPanel, zoomHeader, 300, 200);
+      
+      if (closeZoomBtn) {
+          closeZoomBtn.addEventListener("click", () => {
+              zoomPanel.classList.add("hidden");
+              appState.zoomPanelExplicitlyClosed = true;
+          });
+      }
   }
 
   // --- Shortcuts Modal ---
@@ -285,6 +397,15 @@ export function initUIEventListeners() {
 
   toggleCloseUp.addEventListener("change", () => {
     appState.isCloseUpMode = toggleCloseUp.checked;
+    appState.zoomPanelExplicitlyClosed = false; // Reset the close flag so it can reappear
+    
+    // Auto-hide the panel when the user disables Close-Up mode (e.g. by pressing 'g')
+    if (!appState.isCloseUpMode) {
+        const zoomPanel = document.getElementById("zoom-panel");
+        if (zoomPanel && !zoomPanel.classList.contains("hidden")) {
+            zoomPanel.classList.add("hidden");
+        }
+    }
     if (appState.isCloseUpMode && appState.isPlaying) {
       // If entering close-up mode while playing, automatically pause.
       pausePlayback();

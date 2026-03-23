@@ -13,6 +13,9 @@ export const appState = {
   isRawOnlyMode: false, // <-- ADD THIS LINE
   videoReadyByFallback: false, // True if video resolved via loadedmetadata timeout
   videoMissing: false, // True if user opts to continue without a video
+  isMouseOutOfBounds: false, // True when the mouse is outside the radar sketch canvas
+  zoomPanelExplicitlyClosed: false, // True if user clicked X on the zoom panel during zoom mode
+  gridStackInstance: null, // Holds reference to the main GridStack instance
 
 
   // Stores the parsed visualization data (radar frames, tracks, etc.)

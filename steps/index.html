@@ -10,11 +10,11 @@
   <!-- <script src="https://cdn.tailwindcss.com"></script>  -->
   <script>
     // Silence Tailwind CDN production warning
-    (function() {
+    (function () {
       const suppress = (msg) => typeof msg === 'string' && (msg.includes('cdn.tailwindcss.com') || msg.includes('Tailwind CSS in production'));
       ['log', 'info', 'warn', 'error'].forEach(method => {
         const original = console[method];
-        console[method] = function() {
+        console[method] = function () {
           if (arguments[0] && suppress(arguments[0])) return;
           original.apply(console, arguments);
         };
@@ -23,70 +23,70 @@
   </script>
   <script src="./vendor/tailwind-cdn.js"></script>
   <script>
-    !window.tailwind && (function() {
+    !window.tailwind && (function () {
       var s = document.createElement('script');
       s.src = 'https://cdn.tailwindcss.com';
       document.head.appendChild(s);
     })();
   </script>
-  
+
   <!-- <script src="https://unpkg.com/oboe@2.1.5/dist/oboe-browser.min.js"></script> -->
   <script src="./vendor/oboe.min.js"></script>
   <script>
-    !window.oboe && (function() {
+    !window.oboe && (function () {
       var s = document.createElement('script');
       s.src = 'https://unpkg.com/oboe@2.1.5/dist/oboe-browser.min.js';
       document.head.appendChild(s);
     })();
   </script>
-  
+
   <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
   <script src="./vendor/chart.min.js"></script>
   <script>
-    !window.Chart && (function() {
+    !window.Chart && (function () {
       var s = document.createElement('script');
       s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
       document.head.appendChild(s);
     })();
   </script>
 
-  
+
   <!-- <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script> -->
   <script src="./vendor/ag-grid-community.min.js"></script>
   <script>
-    !window.agGrid && (function() {
+    !window.agGrid && (function () {
       var s = document.createElement('script');
       s.src = 'https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js';
       document.head.appendChild(s);
     })();
   </script>
-  
+
   <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script> -->
   <script src="./vendor/p5.js"></script>
   <script>
-    !window.p5 && (function() {
+    !window.p5 && (function () {
       var s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js';
       document.head.appendChild(s);
     })();
   </script>
-  
-  <link rel="stylesheet" href="./vendor/gridstack.min.css"/>
+
+  <link rel="stylesheet" href="./vendor/gridstack.min.css" />
   <script src="./vendor/gridstack-all.js"></script>
   <script>
-    !window.GridStack && (function() {
+    !window.GridStack && (function () {
       // If local GridStack for some reason didn't load, try the CDN
       var s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.1.2/gridstack-all.js';
       document.head.appendChild(s);
-      
+
       var l = document.createElement('link');
       l.rel = 'stylesheet';
       l.href = 'https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.1.2/gridstack.min.css';
       document.head.appendChild(l);
     })();
   </script>
-  
+
   <script>
     tailwind.config = {
       darkMode: "class",
@@ -254,8 +254,9 @@
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col min-h-screen">
 
   <!-- START SCREEN MODAL -->
-  <div id="start-screen-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-100 dark:bg-gray-900 transition-opacity duration-300">
-    
+  <div id="start-screen-modal"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-gray-100 dark:bg-gray-900 transition-opacity duration-300">
+
     <!-- Header buttons on start screen -->
     <div class="absolute top-4 right-4 flex items-center gap-2">
       <button id="start-user-manual-btn" type="button"
@@ -270,53 +271,76 @@
         class="bg-cyan-100 dark:bg-cyan-700 text-cyan-800 dark:text-cyan-100 border border-cyan-300 dark:border-cyan-600 shadow-sm hover:bg-cyan-200 dark:hover:bg-cyan-600 active:scale-95 active:shadow-inner font-medium rounded-lg text-xs px-4 py-2 transition-all text-center">
         What's<br>New?
       </button>
-      <button id="start-theme-toggle" type="button" class="bg-indigo-900 dark:bg-amber-100 text-indigo-100 dark:text-amber-800 border border-indigo-700 dark:border-amber-300 shadow-sm hover:bg-indigo-800 dark:hover:bg-amber-200 active:scale-95 active:shadow-inner flex flex-row items-center gap-2 rounded-lg text-xs px-4 py-3.5 transition-all">
+      <button id="start-theme-toggle" type="button"
+        class="bg-indigo-900 dark:bg-amber-100 text-indigo-100 dark:text-amber-800 border border-indigo-700 dark:border-amber-300 shadow-sm hover:bg-indigo-800 dark:hover:bg-amber-200 active:scale-95 active:shadow-inner flex flex-row items-center gap-2 rounded-lg text-xs px-4 py-3.5 transition-all">
         <svg id="start-theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
           <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
         </svg>
         <svg id="start-theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm2 0a1 1 0 112 0v-1a1 1 0 00-2 0v1zm-14 0a1 1 0 112 0v-1a1 1 0 00-2 0v1zm8 6a1 1 0 100 2 1 1 0 000-2zm5.657-11.657a1 1 0 010 1.414l-1.414 1.414a1 1 0 11-1.414-1.414l1.414-1.414a1 1 0 011.414 0zm-11.314 0a1 1 0 011.414 0l1.414 1.414a1 1 0 11-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zm11.314 11.314a1 1 0 01-1.414 0l-1.414-1.414a1 1 0 011.414-1.414l1.414 1.414a1 1 0 010 1.414zm-11.314 0a1 1 0 010-1.414l1.414-1.414a1 1 0 011.414 1.414l-1.414 1.414a1 1 0 01-1.414 0z" fill-rule="evenodd" clip-rule="evenodd"></path>
+          <path
+            d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm2 0a1 1 0 112 0v-1a1 1 0 00-2 0v1zm-14 0a1 1 0 112 0v-1a1 1 0 00-2 0v1zm8 6a1 1 0 100 2 1 1 0 000-2zm5.657-11.657a1 1 0 010 1.414l-1.414 1.414a1 1 0 11-1.414-1.414l1.414-1.414a1 1 0 011.414 0zm-11.314 0a1 1 0 011.414 0l1.414 1.414a1 1 0 11-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zm11.314 11.314a1 1 0 01-1.414 0l-1.414-1.414a1 1 0 011.414-1.414l1.414 1.414a1 1 0 010 1.414zm-11.314 0a1 1 0 010-1.414l1.414-1.414a1 1 0 011.414 1.414l-1.414 1.414a1 1 0 01-1.414 0z"
+            fill-rule="evenodd" clip-rule="evenodd"></path>
         </svg>
       </button>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.2)] p-10 w-full max-w-4xl text-center border border-gray-200 dark:border-gray-700 relative z-10">
+    <div
+      class="bg-white dark:bg-gray-800 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.2)] p-10 w-full max-w-4xl text-center border border-gray-200 dark:border-gray-700 relative z-10">
       <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">Data Synchronizer</h1>
-      <p class="text-gray-500 dark:text-gray-400 mb-8 text-lg">Provide radar dataset and video parameters to initialize workspace</p>
-      
-      <div id="start-drop-zone" class="border-4 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-20 mb-8 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group">
-        <svg class="mx-auto h-16 w-16 text-gray-400 group-hover:text-blue-500 transition-colors mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+      <p class="text-gray-500 dark:text-gray-400 mb-8 text-lg">Provide radar dataset and video parameters to initialize
+        workspace</p>
+
+      <div id="start-drop-zone"
+        class="border-4 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-20 mb-8 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors cursor-pointer group">
+        <svg class="mx-auto h-16 w-16 text-gray-400 group-hover:text-blue-500 transition-colors mb-4" fill="none"
+          viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
         </svg>
         <p class="text-xl font-medium text-gray-700 dark:text-gray-300">Drag & Drop files here</p>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">Requires .json (and optionally video) format</p>
       </div>
 
       <div class="flex items-center justify-center gap-6">
-        <button id="start-load-json-btn" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-all text-lg font-semibold w-48 shadow-lg active:scale-95 active:shadow-inner flex items-center justify-center gap-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        <button id="start-load-json-btn"
+          class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-all text-lg font-semibold w-48 shadow-lg active:scale-95 active:shadow-inner flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+            </path>
+          </svg>
           Select JSON
         </button>
-        <button id="start-load-video-btn" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-all text-lg font-semibold w-48 shadow-lg active:scale-95 active:shadow-inner flex items-center justify-center gap-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+        <button id="start-load-video-btn"
+          class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-all text-lg font-semibold w-48 shadow-lg active:scale-95 active:shadow-inner flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z">
+            </path>
+          </svg>
           Select Video
         </button>
       </div>
-      
+
       <div class="mt-8 text-sm text-gray-500 dark:text-gray-400">
-          <button id="start-clear-cache-btn" class="hover:text-red-500 dark:hover:text-red-400 transition-colors uppercase tracking-wider text-xs font-bold">Clear Cached Session</button>
+        <button id="start-clear-cache-btn"
+          class="hover:text-red-500 dark:hover:text-red-400 transition-colors uppercase tracking-wider text-xs font-bold">Clear
+          Cached Session</button>
       </div>
 
       <!-- INTEGRATED LOADER UI (Hidden by default) -->
       <div id="start-progress-container" class="hidden mt-6 w-full max-w-md mx-auto">
         <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-          <div id="start-progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+          <div id="start-progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+            style="width: 0%"></div>
         </div>
-        <div id="start-progress-text" class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-2 text-center animate-pulse">Initializing...</div>
+        <div id="start-progress-text"
+          class="text-sm font-medium text-gray-700 dark:text-gray-300 mt-2 text-center animate-pulse">Initializing...
+        </div>
       </div>
     </div>
 
-    </div>
+  </div>
   </div>
   <header class="bg-white dark:bg-gray-800 shadow-md pt-0 px-4 pb-4 z-20 relative">
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
@@ -329,7 +353,8 @@
       <button id="fullscreen-btn" type="button"
         class="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 shadow-sm hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95 active:shadow-inner font-medium rounded-lg text-xs px-4 py-2 transition-all">
         FULLSCREEN<br>
-        <span class="text-xs font-mono bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-1.5 py-0.5 rounded">(F11)
+        <span
+          class="text-xs font-mono bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-1.5 py-0.5 rounded">(F11)
         </span>
       </button>
       <button id="explorer-btn" type="button"
@@ -356,13 +381,16 @@
         class="bg-cyan-100 dark:bg-cyan-700 text-cyan-800 dark:text-cyan-100 border border-cyan-300 dark:border-cyan-600 shadow-sm hover:bg-cyan-200 dark:hover:bg-cyan-600 active:scale-95 active:shadow-inner font-medium rounded-lg text-xs px-4 py-2 transition-all text-center">
         What's<br>New?
       </button>
-            <button id="theme-toggle" type="button" class="bg-indigo-900 dark:bg-amber-100 text-indigo-100 dark:text-amber-800 border border-indigo-700 dark:border-amber-300 shadow-sm hover:bg-indigo-800 dark:hover:bg-amber-200 active:scale-95 active:shadow-inner flex flex-row items-center gap-2 rounded-lg text-xs px-4 py-3.5 transition-all">
-              <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
-              </svg>
-                              <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                  <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm2 0a1 1 0 112 0v-1a1 1 0 00-2 0v1zm-14 0a1 1 0 112 0v-1a1 1 0 00-2 0v1zm8 6a1 1 0 100 2 1 1 0 000-2zm5.657-11.657a1 1 0 010 1.414l-1.414 1.414a1 1 0 11-1.414-1.414l1.414-1.414a1 1 0 011.414 0zm-11.314 0a1 1 0 011.414 0l1.414 1.414a1 1 0 11-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zm11.314 11.314a1 1 0 01-1.414 0l-1.414-1.414a1 1 0 011.414-1.414l1.414 1.414a1 1 0 010 1.414zm-11.314 0a1 1 0 010-1.414l1.414-1.414a1 1 0 011.414 1.414l-1.414 1.414a1 1 0 01-1.414 0z" fill-rule="evenodd" clip-rule="evenodd"></path>
-                              </svg>            </button>
+      <button id="theme-toggle" type="button"
+        class="bg-indigo-900 dark:bg-amber-100 text-indigo-100 dark:text-amber-800 border border-indigo-700 dark:border-amber-300 shadow-sm hover:bg-indigo-800 dark:hover:bg-amber-200 active:scale-95 active:shadow-inner flex flex-row items-center gap-2 rounded-lg text-xs px-4 py-3.5 transition-all">
+        <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+        </svg>
+        <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm2 0a1 1 0 112 0v-1a1 1 0 00-2 0v1zm-14 0a1 1 0 112 0v-1a1 1 0 00-2 0v1zm8 6a1 1 0 100 2 1 1 0 000-2zm5.657-11.657a1 1 0 010 1.414l-1.414 1.414a1 1 0 11-1.414-1.414l1.414-1.414a1 1 0 011.414 0zm-11.314 0a1 1 0 011.414 0l1.414 1.414a1 1 0 11-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zm11.314 11.314a1 1 0 01-1.414 0l-1.414-1.414a1 1 0 011.414-1.414l1.414 1.414a1 1 0 010 1.414zm-11.314 0a1 1 0 010-1.414l1.414-1.414a1 1 0 011.414 1.414l-1.414 1.414a1 1 0 01-1.414 0z"
+            fill-rule="evenodd" clip-rule="evenodd"></path>
+        </svg> </button>
     </div>
   </header>
 
@@ -414,8 +442,9 @@
             (P)</label>
           <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-covariance"
               class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" /> Show Covariance</label>
-          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="toggle-vehicle-dimensions"
-              class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500" checked /> Show Dimensions</label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
+              id="toggle-vehicle-dimensions" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+              checked /> Show Dimensions</label>
           <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox"
               id="toggle-confirmed-only" class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
               checked />
@@ -472,10 +501,6 @@
     </div>
   </aside>
 
-  <div id="zoom-panel"
-    class="hidden fixed bottom-11 right-5 h-[50%] w-1/2 bg-white dark:bg-gray-800 z-20 shadow-2xl border-l-2 border-t-2 border-gray-300 dark:border-gray-600">
-    <div id="zoom-canvas-container" class="w-full h-full"></div>
-  </div>
   <!-- Open Menu Button -->
   <button id="toggle-menu-btn"
     class="fixed top-20 left-3 z-20 bg-white dark:bg-gray-700 p-2 rounded-md shadow-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all">
@@ -493,26 +518,33 @@
     <div class="grid-stack grid-stack-12">
       <!-- Radar Panel -->
       <div class="grid-stack-item shadow-md rounded-lg" gs-x="0" gs-y="0" gs-w="6" gs-h="12">
-        <div class="grid-stack-item-content bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg overflow-visible flex flex-col relative group">
-          <div class="absolute top-0 left-0 w-full h-4 cursor-grab active:cursor-grabbing bg-transparent hover:bg-gray-300/30 z-[60] transition-colors rounded-t-lg" title="Drag to move panel"></div>
-          
+        <div
+          class="grid-stack-item-content bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg overflow-visible flex flex-col relative group">
+          <div
+            class="absolute top-0 left-0 w-full h-4 cursor-grab active:cursor-grabbing bg-transparent hover:bg-gray-300/30 z-[60] transition-colors rounded-t-lg"
+            title="Drag to move panel"></div>
+
           <div class="relative w-full h-full flex-grow">
             <div id="canvas-container" class="w-full h-full flex items-center justify-center relative">
-              <p id="canvas-placeholder" class="hidden text-gray-500 dark:text-gray-400 text-lg">Load JSON data to start visualization</p>
-              
+              <p id="canvas-placeholder" class="hidden text-gray-500 dark:text-gray-400 text-lg">Load JSON data to start
+                visualization</p>
+
               <!-- Range Slider (Vertical) -->
               <div class="absolute bottom-8 left-2 flex flex-col items-center gap-2 z-20 group">
-                <span id="range-value-display" class="bg-black bg-opacity-60 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">80m</span>
+                <span id="range-value-display"
+                  class="bg-black bg-opacity-60 text-white text-[10px] px-1.5 py-0.5 rounded font-mono">80m</span>
                 <input type="range" id="range-slider" min="40" max="200" value="80" step="10"
-                  class="h-32 cursor-pointer accent-blue-600" 
+                  class="h-32 cursor-pointer accent-blue-600"
                   style="writing-mode: vertical-lr; direction: rtl; width: 8px;" />
-                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter" style="writing-mode: vertical-lr; transform: rotate(180deg);">Range</span>
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter"
+                  style="writing-mode: vertical-lr; transform: rotate(180deg);">Range</span>
               </div>
             </div>
             <div id="radar-info-overlay"
               class="absolute top-4 left-0 right-0 z-10 bg-black bg-opacity-60 text-white font-mono text-xs p-2 rounded-md hidden pointer-events-none">
             </div>
-            <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center gap-4 z-20 pointer-events-none">
+            <div
+              class="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center gap-4 z-20 pointer-events-none">
               <div id="ego-speed-display"
                 class="bg-black bg-opacity-60 text-white text-sm px-3 py-1.5 rounded-md hidden font-mono"></div>
               <div id="can-speed-display"
@@ -521,33 +553,72 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Video Panel -->
       <div class="grid-stack-item shadow-md rounded-lg" gs-x="6" gs-y="0" gs-w="6" gs-h="8">
-        <div class="grid-stack-item-content bg-black rounded-lg overflow-hidden flex items-center justify-center relative group">
-          <div class="absolute top-0 left-0 w-full h-4 cursor-grab active:cursor-grabbing bg-transparent hover:bg-white/20 z-[60] transition-colors rounded-t-lg" title="Drag to move panel"></div>
-          
+        <div
+          class="grid-stack-item-content bg-black rounded-lg overflow-hidden flex items-center justify-center relative group">
+          <div
+            class="absolute top-0 left-0 w-full h-4 cursor-grab active:cursor-grabbing bg-transparent hover:bg-white/20 z-[60] transition-colors rounded-t-lg"
+            title="Drag to move panel"></div>
+
           <video id="video-player" class="w-full h-full object-contain hidden" muted playsinline></video>
           <p id="video-placeholder" class="hidden text-gray-500 text-lg">Load a video file</p>
           <div id="video-info-overlay"
             class="absolute top-4 left-2 z-[20] bg-black bg-opacity-60 text-white font-mono text-xs p-2 rounded-md hidden pointer-events-none">
           </div>
           <div id="debug-overlay"
-            class="absolute top-0 left-0 bg-black bg-opacity-60 text-white p-2 font-mono text-xs hidden w-full z-[20] pointer-events-none"></div>
-        </div>
-      </div>
-      
-      <!-- SpeedGraph Panel -->
-      <div class="grid-stack-item shadow-md rounded-lg" gs-x="6" gs-y="8" gs-w="6" gs-h="4">
-        <div class="grid-stack-item-content bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden flex items-center justify-center relative group">
-          <div class="absolute top-0 left-0 w-full h-4 cursor-grab active:cursor-grabbing bg-transparent hover:bg-gray-300/30 z-[60] transition-colors rounded-t-lg" title="Drag to move panel"></div>
-          
-          <div id="speed-graph-container" class="w-full h-full flex items-center justify-center p-1 relative">
-            <p id="speed-graph-placeholder" class="text-gray-500 dark:text-gray-400 text-lg text-center absolute pointer-events-none">Load JSON & Video to see speed graph</p>
+            class="absolute top-0 left-0 bg-black bg-opacity-60 text-white p-2 font-mono text-xs hidden w-full z-[20] pointer-events-none">
           </div>
         </div>
       </div>
+
+      <!-- SpeedGraph Panel -->
+      <div class="grid-stack-item shadow-md rounded-lg" gs-x="6" gs-y="8" gs-w="6" gs-h="4">
+        <div
+          class="grid-stack-item-content bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden flex items-center justify-center relative group">
+          <div
+            class="absolute top-0 left-0 w-full h-4 cursor-grab active:cursor-grabbing bg-transparent hover:bg-gray-300/30 z-[60] transition-colors rounded-t-lg"
+            title="Drag to move panel"></div>
+
+          <div id="speed-graph-container" class="w-full h-full flex items-center justify-center p-1 relative">
+            <p id="speed-graph-placeholder"
+              class="text-gray-500 dark:text-gray-400 text-lg text-center absolute pointer-events-none">Load JSON &
+              Video to see speed graph</p>
+          </div>
+        </div>
+      </div>
+
+
     </div>
+
+    <!-- START: Floating Zoom Panel -->
+    <div id="zoom-panel"
+      class="hidden fixed bottom-11 right-5 bg-white dark:bg-gray-800 shadow-2xl rounded-lg z-30 flex flex-col border dark:border-gray-600"
+      style="width: 900px; height: 455px;">
+
+      <div id="zoom-panel-header"
+        class="flex items-center justify-between p-2 border-b dark:border-gray-700 cursor-move bg-gray-100 dark:bg-gray-700 rounded-t-lg">
+        <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wider ml-2 pointer-events-none">God Mode</h2>
+        <button id="close-zoom-btn"
+          class="text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg p-1 px-2">&times;</button>
+      </div>
+
+      <div class="resizer resizer-t"></div>
+      <div class="resizer resizer-r"></div>
+      <div class="resizer resizer-b"></div>
+      <div class="resizer resizer-l"></div>
+      <div class="resizer resizer-tl"></div>
+      <div class="resizer resizer-tr"></div>
+      <div class="resizer resizer-br"></div>
+      <div class="resizer resizer-bl"></div>
+
+      <div id="zoom-canvas-container"
+        class="flex-grow relative flex items-center justify-center overflow-hidden rounded-b-lg">
+      </div>
+    </div>
+    <!-- END: Floating Zoom Panel -->
+
     <div id="data-explorer-panel"
       class="hidden fixed bottom-24 right-4 bg-white dark:bg-gray-800 shadow-2xl rounded-lg z-30 flex flex-col w-full max-w-2xl h-1/2 border dark:border-gray-600">
 
@@ -651,11 +722,14 @@
   </footer>
 
   <!-- SHORTCUTS MODAL -->
-  <div id="shortcuts-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-80 backdrop-blur-sm p-4">
-    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto relative flex flex-col">
-      
+  <div id="shortcuts-modal"
+    class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-80 backdrop-blur-sm p-4">
+    <div
+      class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto relative flex flex-col">
+
       <!-- Header -->
-      <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-900 z-10">
+      <div
+        class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-900 z-10">
         <div class="flex items-center gap-3">
           <span class="text-3xl">⌨️</span>
           <div>
@@ -663,17 +737,20 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">Press <kbd>ESC</kbd> or click outside to close</p>
           </div>
         </div>
-        <button id="shortcuts-modal-close-btn" class="px-6 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 font-semibold text-lg transition-colors">
+        <button id="shortcuts-modal-close-btn"
+          class="px-6 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 font-semibold text-lg transition-colors">
           Skip
         </button>
       </div>
 
       <!-- Content Grid -->
       <div class="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        
+
         <!-- Playback -->
         <div class="feature-card p-6 bg-gray-50 dark:bg-gray-800">
-          <h3 class="mb-4 text-lg font-bold text-blue-600 dark:text-blue-400 border-b pb-2 border-gray-200 dark:border-gray-700">Playback & Navigation</h3>
+          <h3
+            class="mb-4 text-lg font-bold text-blue-600 dark:text-blue-400 border-b pb-2 border-gray-200 dark:border-gray-700">
+            Playback & Navigation</h3>
           <ul class="space-y-3 text-sm text-gray-700 dark:text-gray-300">
             <li class="flex justify-between items-center"><span>Play / Pause</span> <kbd>Space</kbd></li>
             <li class="flex justify-between items-center"><span>Next Frame</span> <kbd>→</kbd></li>
@@ -686,7 +763,9 @@
 
         <!-- View & Toggles -->
         <div class="feature-card p-6 bg-gray-50 dark:bg-gray-800">
-          <h3 class="mb-4 text-lg font-bold text-emerald-600 dark:text-emerald-400 border-b pb-2 border-gray-200 dark:border-gray-700">View & UI Toggles</h3>
+          <h3
+            class="mb-4 text-lg font-bold text-emerald-600 dark:text-emerald-400 border-b pb-2 border-gray-200 dark:border-gray-700">
+            View & UI Toggles</h3>
           <ul class="space-y-3 text-sm text-gray-700 dark:text-gray-300">
             <li class="flex justify-between items-center"><span>Sidebar Menu</span> <kbd>M</kbd></li>
             <li class="flex justify-between items-center"><span>Data Explorer</span> <kbd>I</kbd></li>
@@ -699,7 +778,9 @@
 
         <!-- Data Display -->
         <div class="feature-card p-6 bg-gray-50 dark:bg-gray-800">
-          <h3 class="mb-4 text-lg font-bold text-pink-600 dark:text-pink-400 border-b pb-2 border-gray-200 dark:border-gray-700">Data Visualization</h3>
+          <h3
+            class="mb-4 text-lg font-bold text-pink-600 dark:text-pink-400 border-b pb-2 border-gray-200 dark:border-gray-700">
+            Data Visualization</h3>
           <ul class="space-y-3 text-sm text-gray-700 dark:text-gray-300">
             <li class="flex justify-between items-center"><span>Toggle Tracks</span> <kbd>T</kbd></li>
             <li class="flex justify-between items-center"><span>Object Details</span> <kbd>D</kbd></li>
@@ -715,7 +796,8 @@
       </div>
 
       <!-- Footer Tip -->
-      <div class="p-6 bg-gray-50 dark:bg-gray-800 text-center border-t border-gray-200 dark:border-gray-700 rounded-b-2xl">
+      <div
+        class="p-6 bg-gray-50 dark:bg-gray-800 text-center border-t border-gray-200 dark:border-gray-700 rounded-b-2xl">
         <p class="text-sm text-gray-500">Pro Tip: You can also press <kbd>K</kbd> anytime to toggle this screen.</p>
       </div>
 
@@ -723,11 +805,13 @@
   </div>
 
   <!-- USER GUIDE MODAL -->
-  <div id="guide-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-80 backdrop-blur-sm p-4">
+  <div id="guide-modal"
+    class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-80 backdrop-blur-sm p-4">
     <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full h-full mx-8 my-4 relative flex flex-col">
-      
+
       <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-1 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-900 z-10 rounded-t-2xl">
+      <div
+        class="flex items-center justify-between px-6 py-1 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-900 z-10 rounded-t-2xl">
         <div class="flex items-center gap-3">
           <span class="text-3xl">📚</span>
           <div>
@@ -739,16 +823,19 @@
       </div>
 
       <!-- Iframe Content -->
-      <iframe id="user-manual-iframe" src="annex/User_Manual.html?v=3.3.0" class="flex-grow w-full border-0 rounded-b-2xl" style="min-height: 400px;"></iframe>
-      </div>
-      </div>
+      <iframe id="user-manual-iframe" src="annex/User_Manual.html?v=3.3.0"
+        class="flex-grow w-full border-0 rounded-b-2xl" style="min-height: 400px;"></iframe>
+    </div>
+  </div>
 
-      <!-- CODEBASE OVERVIEW MODAL -->
-      <div id="codebase-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-80 backdrop-blur-sm p-4">
-      <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full h-full mx-8 my-4 relative flex flex-col">
+  <!-- CODEBASE OVERVIEW MODAL -->
+  <div id="codebase-modal"
+    class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-80 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full h-full mx-8 my-4 relative flex flex-col">
 
       <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-1 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-900 z-10 rounded-t-2xl">
+      <div
+        class="flex items-center justify-between px-6 py-1 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-900 z-10 rounded-t-2xl">
         <div class="flex items-center gap-3">
           <span class="text-3xl"></span>
           <div>
@@ -760,16 +847,19 @@
       </div>
 
       <!-- Iframe Content -->
-      <iframe id="codebase-iframe" src="annex/code-base-overview.html?v=3.3.0" class="flex-grow w-full border-0 rounded-b-2xl" style="min-height: 400px;"></iframe>
-      </div>
-      </div>
+      <iframe id="codebase-iframe" src="annex/code-base-overview.html?v=3.3.0"
+        class="flex-grow w-full border-0 rounded-b-2xl" style="min-height: 400px;"></iframe>
+    </div>
+  </div>
 
-      <!-- CHANGELOG MODAL -->
-      <div id="changelog-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-80 backdrop-blur-sm p-4">
-      <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full h-full mx-8 my-4 relative flex flex-col">
+  <!-- CHANGELOG MODAL -->
+  <div id="changelog-modal"
+    class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-80 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full h-full mx-8 my-4 relative flex flex-col">
 
       <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-1 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-900 z-10 rounded-t-2xl">
+      <div
+        class="flex items-center justify-between px-6 py-1 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-900 z-10 rounded-t-2xl">
         <div class="flex items-center gap-3">
           <span class="text-3xl">🚀</span>
           <div>
@@ -781,9 +871,10 @@
       </div>
 
       <!-- Iframe Content -->
-      <iframe id="changelog-iframe" src="annex/Changelog_3.3.0.html" class="flex-grow w-full border-0 rounded-b-2xl" style="min-height: 400px;"></iframe>
-      </div>
-      </div>
+      <iframe id="changelog-iframe" src="annex/Changelog_3.3.0.html" class="flex-grow w-full border-0 rounded-b-2xl"
+        style="min-height: 400px;"></iframe>
+    </div>
+  </div>
   <div id="modal-container" class="fixed inset-0 z-50 flex items-center justify-center hidden">
     <div id="modal-overlay" class="absolute inset-0 bg-black bg-opacity-50"></div>
     <div id="modal-content"
@@ -808,10 +899,13 @@
   <input type="file" id="session-file-input" class="hidden" accept=".json" />
 
   <!-- Global drag-and-drop overlay -->
-  <div id="global-drag-overlay" class="fixed inset-0 z-[60] flex items-center justify-center bg-blue-600/30 backdrop-blur-sm border-8 border-dashed border-blue-500 rounded-3xl m-4 pointer-events-none opacity-0 transition-opacity duration-300">
-    <div class="bg-blue-600 text-white px-10 py-5 rounded-2xl shadow-2xl flex items-center gap-6 border-4 border-blue-400">
+  <div id="global-drag-overlay"
+    class="fixed inset-0 z-[60] flex items-center justify-center bg-blue-600/30 backdrop-blur-sm border-8 border-dashed border-blue-500 rounded-3xl m-4 pointer-events-none opacity-0 transition-opacity duration-300">
+    <div
+      class="bg-blue-600 text-white px-10 py-5 rounded-2xl shadow-2xl flex items-center gap-6 border-4 border-blue-400">
       <svg class="h-16 w-16 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
       </svg>
       <div class="text-left">
         <span class="text-4xl font-extrabold block">Drop to Load Data</span>
