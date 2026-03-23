@@ -248,7 +248,9 @@ export const radarSketch = function (p) {
     if (!appState.vizData) return;
 
     // Draw the pre-rendered static background elements
-    p.image(staticBackgroundBuffer, 0, 0);
+    if (staticBackgroundBuffer && staticBackgroundBuffer.width > 0 && staticBackgroundBuffer.height > 0) {
+      p.image(staticBackgroundBuffer, 0, 0);
+    }
 
     // Apply transformations for radar coordinate system (origin at bottom-center, Y-axis inverted)
     p.push();
@@ -365,7 +367,7 @@ export const radarSketch = function (p) {
 
     // 4. Draw the new legend buffer onto the main canvas
     // This is placed at the bottom-right corner.
-    if (toggleTracks.checked && !appState.isRawOnlyMode) {
+    if (toggleTracks.checked && !appState.isRawOnlyMode && trackLegendBuffer && trackLegendBuffer.width > 0) {
       p.image(
         trackLegendBuffer,
         p.width - trackLegendBuffer.width - 10,
@@ -537,8 +539,8 @@ export const radarSketch = function (p) {
       isFirstFrame = true; // Reset for the next time zoom mode is enabled
     }
     // --- Legend Drawing ---
-    // Draw the SNR legend if enabled
-    if (toggleSnrColor.checked) {
+    // Draw the legend buffer if requested
+    if (toggleSnrColor.checked && snrLegendBuffer && snrLegendBuffer.width > 0) {
       p.image(snrLegendBuffer, 10, p.height - snrLegendBuffer.height - 10);
     }
   };

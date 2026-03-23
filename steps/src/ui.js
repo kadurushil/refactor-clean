@@ -62,6 +62,50 @@ export function makeDraggableAndResizable(panel, header, minWidth = 400, minHeig
     let original_mouse_x = 0;
     let original_mouse_y = 0;
 
+    // --- Persistence Logic ---
+    const storageKey = `panel_pos_${panel.id}`;
+
+    function savePosition() {
+        if (!panel.id) return;
+        const state = {
+            left: panel.style.left,
+            top: panel.style.top,
+            width: panel.style.width,
+            height: panel.style.height
+        };
+        console.log(`Saving position for ${panel.id}`, state);
+        localStorage.setItem(storageKey, JSON.stringify(state));
+    }
+
+    function loadPosition() {
+        if (!panel.id) return;
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+            try {
+                const state = JSON.parse(saved);
+                console.log(`Loading position for ${panel.id}`, state);
+                if (state.left) panel.style.left = state.left;
+                if (state.top) panel.style.top = state.top;
+                if (state.width) panel.style.width = state.width;
+                if (state.height) panel.style.height = state.height;
+                // Ensure it's still in view
+                requestAnimationFrame(() => constrainToViewport());
+            } catch (e) { console.error(`Failed to load position for ${panel.id}`, e); }
+        } else {
+            console.log(`No saved position found for ${panel.id}`);
+        }
+    }
+
+    // --- Auto-Focus (Bring to Front) ---
+    panel.addEventListener('mousedown', () => {
+        document.querySelectorAll('#zoom-panel, #data-explorer-panel').forEach(p => {
+            p.style.zIndex = "30"; 
+        });
+        panel.style.zIndex = "40"; 
+    });
+
+    loadPosition();
+
     // --- Dragging Logic ---
     header.addEventListener('mousedown', (e) => {
         // Prevent drag if clicking buttons
@@ -91,6 +135,7 @@ export function makeDraggableAndResizable(panel, header, minWidth = 400, minHeig
         document.body.classList.remove('dragging');
         window.removeEventListener('mousemove', dragPanel);
         window.removeEventListener('mouseup', stopDrag);
+        savePosition();
     }
 
     // --- Resizing Logic ---
@@ -112,6 +157,7 @@ export function makeDraggableAndResizable(panel, header, minWidth = 400, minHeig
             window.addEventListener('mouseup', () => {
                 document.body.classList.remove('resizing');
                 window.removeEventListener('mousemove', resizeFunc);
+                savePosition();
                 if (panel.id === 'zoom-panel' && appState.zoomSketchInstance) {
                     appState.zoomSketchInstance.handleContainerResize();
                 }
@@ -249,6 +295,39 @@ export function initUIEventListeners() {
       animate: true,
       handle: '.grid-stack-item-content > .cursor-grab',
     });
+
+    // Load saved layout with a small delay to ensure DOM is ready
+    let isInitialLoad = true;
+    setTimeout(() => {
+        const savedLayout = localStorage.getItem('gridstack_layout');
+        if (savedLayout) {
+            try {
+                const layout = JSON.parse(savedLayout);
+                console.log("Restoring GridStack positions", layout);
+                // Use "soft load" to updates positions by id without replacing DOM
+                layout.forEach(item => {
+                    const id = item.id || item.gsId;
+                    if (id) {
+                        const el = document.querySelector(`.grid-stack-item[gs-id="${id}"]`);
+                        if (el) appState.gridStackInstance.update(el, { x: item.x, y: item.y, w: item.w, h: item.h });
+                    }
+                });
+            } catch (e) { }
+        }
+        isInitialLoad = false;
+    }, 100);
+
+    // Save layout on changes
+    const saveGrid = () => {
+        if (isInitialLoad) return; // Don't save while loading
+        // save(true, false) saves all items with their current positions/sizes
+        const layout = appState.gridStackInstance.save(true, false);
+        console.log("Saving GridStack layout", layout);
+        localStorage.setItem('gridstack_layout', JSON.stringify(layout));
+    };
+    appState.gridStackInstance.on('change', saveGrid);
+    appState.gridStackInstance.on('dragstop', saveGrid);
+    appState.gridStackInstance.on('resizestop', saveGrid);
   }
 
   // --- Initialize Floating Zoom Panel ---

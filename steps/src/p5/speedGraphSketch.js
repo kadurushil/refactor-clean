@@ -459,7 +459,9 @@ export const speedGraphSketch = function (p) {
       p.text("No data to display", p.width / 2, p.height / 2);
       return;
     }
-    p.image(staticBuffer, 0, 0);
+    if (staticBuffer && staticBuffer.width > 0 && staticBuffer.height > 0) {
+      p.image(staticBuffer, 0, 0);
+    }
     drawTimeIndicator();
 
     // draw hover vertical line and tooltip if applicable

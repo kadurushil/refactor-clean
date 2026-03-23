@@ -325,7 +325,8 @@ export const zoomSketch = function (p) {
     p.scale(appState.zoomFactor);
 
     // --- Redraw the scene from scratch ---
-    if (appState.p5_instance && appState.p5_instance.getStaticBackground) {
+    // Performance fix: Check if source has valid dimensions before drawing
+    if (appState.p5_instance && appState.p5_instance.width > 0 && appState.p5_instance.height > 0 && appState.p5_instance.getStaticBackground) {
       const bg = appState.p5_instance.getStaticBackground();
       // Optimization: Only draw the visible slice of the background
       // Drawing the full 1920x1080 texture every frame is expensive if we only see a tiny part.
@@ -345,7 +346,7 @@ export const zoomSketch = function (p) {
       const dW = Math.min(imgW, sX + visibleW) - dX;
       const dH = Math.min(imgH, sY + visibleH) - dY;
 
-      if (dW > 0 && dH > 0) {
+      if (dW > 0 && dH > 0 && bg.width > 0 && bg.height > 0) {
         // Draw only the visible sub-rectangle
         // Since we are transformed to World Space, destination (dx,dy) matches source (dx,dy)
         p.image(bg, dX, dY, dW, dH, dX, dY, dW, dH);
