@@ -436,23 +436,6 @@ export const zoomSketch = function (p) {
     // --- END: Draw Purple Debug Circle ---
 
     p.pop(); // End zoom transformations
-    // --- START: DRAW TITLE OVERLAY ---
-    // This code runs *after* the zoom transformations have been popped,
-    // so it draws directly onto the canvas as a fixed UI element.
-    p.push();
-    const titleLabel = document.getElementById("toggle-close-up").parentElement;
-    const titleText = titleLabel ? titleLabel.textContent.trim() : "Zoom Mode";
-    const textColor = document.documentElement.classList.contains("dark")
-      ? 220
-      : 80;
-    p.fill(textColor);
-    p.noStroke();
-    p.textSize(16);
-    p.textAlign(p.LEFT, p.TOP);
-    p.textStyle(p.BOLD);
-    p.text(titleText, 10, 10);
-    p.pop();
-    // --- END: DRAW TITLE OVERLAY ---
 
     // --- START: Draw Out of Bounds Overlay ---
     if (appState.isMouseOutOfBounds && appState.isCloseUpMode) {
