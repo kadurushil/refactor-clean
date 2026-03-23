@@ -71,8 +71,21 @@
     })();
   </script>
   
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.1.2/gridstack.min.css" rel="stylesheet"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.1.2/gridstack-all.js"></script>
+  <link rel="stylesheet" href="./vendor/gridstack.min.css"/>
+  <script src="./vendor/gridstack-all.js"></script>
+  <script>
+    !window.GridStack && (function() {
+      // If local GridStack for some reason didn't load, try the CDN
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.1.2/gridstack-all.js';
+      document.head.appendChild(s);
+      
+      var l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = 'https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/10.1.2/gridstack.min.css';
+      document.head.appendChild(l);
+    })();
+  </script>
   
   <script>
     tailwind.config = {
