@@ -51,6 +51,12 @@ The application uses a modular ES6 structure. All source code resides in the `/s
 
 - **`/src/dataExplorer.js`**: **The Inspector**. Manages the "Data Explorer" panel. It uses AG-Grid to display data in a table and Chart.js to plot selected columns. It includes `throttledUpdateExplorer` to efficiently update the view during playback.
 
+- **`/src/ui.js`**: **The UI Engine**. Manages all advanced interface interactions.
+  - `makeDraggableAndResizable()`: A unified utility that transforms any DOM element into a floating window with persistent memory.
+  - **Memory & Persistence**: Saves/Loads panel coordinates and GridStack layouts to `localStorage`.
+  - **Viewport Rescue**: Automatically recovers off-screen windows during browser resizing.
+  - **Auto-Focus**: Dynamically manages `z-index` to bring active windows to the front on click.
+
 - **`/src/debug.js`**: **Debug Configuration**. Exports `debugFlags` to toggle logging for various subsystems (sync, drawing, file loading) and configure constants like video load timeouts.
 
 - **`/src/utils.js`**: **Toolbox**. A collection of pure, reusable helper functions (e.g., `findRadarFrameIndexForTime` (binary search), timestamp parsers, `throttle`, `precomputeRadarVideoSync`).
@@ -62,9 +68,9 @@ The application uses a modular ES6 structure. All source code resides in the `/s
 - **`/src/constants.js`**: **Configuration**. Stores shared, static values like `VIDEO_FPS` and radar plot boundaries.
 
 - **`/src/p5/`**: **Visualization Modules**.
-  - **`radarSketch.js`**: The main radar visualization (point cloud, tracks, axes, ego vehicle).
-  - **`speedGraphSketch.js`**: The time-series speed graph.
-  - **`zoomSketch.js`**: The "GOD MODE" magnified view.
+  - **`radarSketch.js`**: Master timer for God Mode auto-visibility (5s delay). Hardened with guards against 0-width crashes.
+  - **`zoomSketch.js`**: "GOD MODE" view. Includes the "Closing in..." countdown (3s) and "Out of Bounds" safety indicators.
+  - **`speedGraphSketch.js`**: Refined with initialization guards to handle rapid layout shifts.
 
 - **`/src/drawUtils.js`**: **The Artist's Toolkit**. Contains pure drawing functions called by the p5 sketches (e.g., `drawPointCloud`, `drawTrajectories`). This is where the visual appearance of radar objects is defined.
 
@@ -111,6 +117,15 @@ The `appState` object in `state.js` is the central hub. Key properties include:
 -   Activated by `I` key or canvas click.
 -   Shows Tree, Grid, and Plot views.
 -   Updates are throttled to prevent performance degradation during playback.
+
+**God Mode Auto-Hide (`p5/*.js`)**:
+-   **Sequence**: The panel appears on hover. If the mouse stops moving over a relevant point, a 5-second "Analysis Period" begins. After 5s, a visual 3-second countdown appears. Total 8s before hiding.
+-   **Override**: Any new interaction or mouse movement resets the full 8-second timer.
+
+**Layout Persistence (`ui.js` & `main.js`)**:
+-   **GridStack**: Uses a "Soft Restore" loop to update panel positions by ID, ensuring p5 canvases and Video elements are not destroyed during layout changes.
+-   **Floating Panels**: Tracks `top/left/width/height` individually per panel ID.
+-   **Nuclear Reset**: The "Clear Cache and Reload" button wipes all UI memory, returning the app to factory defaults.
 
 **Session Management (`main.js` & `db.js`)**:
 -   `saveSessionBtn` saves current filenames, offset, and toggles to a JSON file.
