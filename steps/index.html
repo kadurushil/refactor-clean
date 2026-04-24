@@ -620,33 +620,30 @@
     <!-- END: Floating Zoom Panel -->
 
     <div id="data-explorer-panel"
+      /* flex-col is critical for the header/tabs/content stack */
       class="hidden fixed bottom-24 right-4 bg-white dark:bg-gray-800 shadow-2xl rounded-lg z-30 flex flex-col w-full max-w-2xl h-1/2 border dark:border-gray-600">
 
       <!-- START: Add Draggable Header and Resizer Handles -->
+      <!-- Draggable Header: flex-shrink-0 prevents it from being squashed during vertical resize -->
       <div id="data-explorer-header"
-        class="flex items-center justify-between p-2 border-b dark:border-gray-700 cursor-move">
+        class="flex items-center justify-between p-2 border-b dark:border-gray-700 cursor-move flex-shrink-0">
         <h2 class="text-lg font-bold ml-2">Data Explorer</h2>
         <button id="close-explorer-btn"
           class="text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg p-1.5">&times;</button>
       </div>
-      <div class="resizer resizer-t"></div>
-      <div class="resizer resizer-r"></div>
-      <div class="resizer resizer-b"></div>
-      <div class="resizer resizer-l"></div>
-      <div class="resizer resizer-tl"></div>
-      <div class="resizer resizer-tr"></div>
-      <div class="resizer resizer-br"></div>
-      <div class="resizer resizer-bl"></div>
       <!-- END: Add Draggable Header and Resizer Handles -->
 
 
-      <div class="flex border-b dark:border-gray-700">
-        <button id="tab-btn-tree" class="px-4 py-2 text-sm font-medium border-b-2 border-blue-500">Tree View</button>
-        <button id="tab-btn-grid" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400">Grid
+      <!-- Scrollable Tab Row: overflow-x-auto allows navigation at narrow widths. flex-shrink-0 is required to keep it visible. -->
+      <div class="flex border-b dark:border-gray-700 overflow-x-auto overflow-y-hidden whitespace-nowrap flex-shrink-0">
+        <button id="tab-btn-tree" class="px-4 py-2 text-sm font-medium border-b-2 border-blue-500 flex-shrink-0">Tree View</button>
+        <button id="tab-btn-grid" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 flex-shrink-0">Grid
           View</button>
-        <button id="tab-btn-track-grid" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400">Track
+        <button id="tab-btn-track-grid" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 flex-shrink-0">Track
           Grid</button>
-        <button id="tab-btn-plot" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400">Plot
+        <button id="tab-btn-adas" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 flex-shrink-0">ADAS
+          Data</button>
+        <button id="tab-btn-plot" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 flex-shrink-0">Plot
           View</button>
       </div>
 
@@ -657,6 +654,9 @@
         </div>
         <div id="tab-panel-track-grid" class="hidden h-full p-2">
           <div id="track-data-grid" class="ag-theme-alpine-dark h-full w-full"></div>
+        </div>
+        <div id="tab-panel-adas" class="hidden h-full p-2 overflow-y-auto">
+          <div id="adas-vertical-view" class="space-y-4"></div>
         </div>
         <div id="tab-panel-plot" class="hidden p-2">
           <canvas id="data-chart"></canvas>

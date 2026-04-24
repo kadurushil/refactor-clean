@@ -12,7 +12,7 @@ This project is a modular ES6 JavaScript application refactored from a monolithi
 - **Storage**: **IndexedDB** for persistent file caching; **localStorage** for user workspace state and layout persistence.
 - **Layout Engine**: [GridStack.js](https://gridstackjs.com/) for the modular, resizable dashboard interface.
 - **Styling**: Tailwind CSS for a premium, dark-mode-first UI.
-- **Data Exploration**: [AG Grid](https://www.ag-grid.com/) and [Chart.js](https://www.chartjs.org/) for forensic data inspection.
+- **Data Exploration**: [AG Grid](https://www.ag-grid.com/), **Custom Vertical Property View**, and [Chart.js](https://www.chartjs.org/) for forensic data inspection.
 
 ### Architecture
 - **State Management**: Centralized in `src/state.js` via the `appState` object.
@@ -40,7 +40,8 @@ Since this is a static project using ES6 modules directly in the browser:
 ## Key Directories and Files
 - `src/`: Main source code directory.
   - `p5/`: p5.js sketches for Radar, Speed Graph, and Standalone "GOD MODE" Zoom.
-  - `ui.js`: Unified UI/Workspace engine with layout memory.
+  - `dataExplorer.js`: Logic for the Data Explorer panel (AG Grid, Vertical Property View, Chart.js).
+  - `ui.js`: Unified UI/Workspace engine with layout memory and resizable panel logic.
   - `sync.js`: High-precision synchronization logic.
   - `parser.worker.js`: Off-thread streaming JSON parser.
 - `vendor/`: Local copies of 3rd party libraries ensuring offline functionality.

@@ -19,11 +19,13 @@ const tabs = {
     tree: { btn: document.getElementById('tab-btn-tree'), panel: document.getElementById('tab-panel-tree') },
     grid: { btn: document.getElementById('tab-btn-grid'), panel: document.getElementById('tab-panel-grid') },
     trackGrid: { btn: document.getElementById('tab-btn-track-grid'), panel: document.getElementById('tab-panel-track-grid') },
+    adas: { btn: document.getElementById('tab-btn-adas'), panel: document.getElementById('tab-panel-adas') },
     plot: { btn: document.getElementById('tab-btn-plot'), panel: document.getElementById('tab-panel-plot') },
 };
 
 const gridDiv = document.getElementById('data-grid');
 const trackGridDiv = document.getElementById('track-data-grid');
+const adasContainer = document.getElementById('adas-vertical-view');
 const chartCanvas = document.getElementById('data-chart');
 
 // --- Module-Local State ---
@@ -170,6 +172,7 @@ function updateExplorer() {
     displayInGrid(frame.pointCloud, `${appState.currentFrame + 1}`);
     // --- END: Auto-update Point Cloud Grid ---
     displayTracksInGrid(tracksForCurrentFrame);
+    displayAdasData(frame.adas);
 
 }
 
@@ -249,6 +252,74 @@ function displayTracksInGrid(trackData) {
     trackGridApi.setGridOption('rowData', trackData);
 }
 
+/**
+ * Renders ADAS data as a vertical property list (cards).
+ * Rationale: ADAS objects have many properties but few entries per frame.
+ * A vertical layout is much more readable than a wide horizontal grid.
+ */
+function displayAdasData(adasData) {
+    if (!adasContainer) return;
+    adasContainer.innerHTML = '';
+
+    if (!Array.isArray(adasData) || adasData.length === 0) {
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'text-gray-500 text-center p-4';
+        emptyMsg.textContent = 'No ADAS data for this frame';
+        adasContainer.appendChild(emptyMsg);
+        return;
+    }
+
+    tabs.adas.btn.textContent = `ADAS Data: Frame ${appState.currentFrame + 1}`;
+
+    adasData.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden';
+        
+        const table = document.createElement('div');
+        table.className = 'grid grid-cols-[1fr_auto] gap-px bg-gray-200 dark:bg-gray-600';
+
+        // Add Table Headers
+        const keyHeader = document.createElement('div');
+        keyHeader.className = 'bg-gray-100 dark:bg-gray-700 px-2 py-1 text-[10px] font-bold uppercase text-gray-400 border-b border-gray-200 dark:border-gray-600';
+        keyHeader.textContent = 'Key';
+        const valHeader = document.createElement('div');
+        valHeader.className = 'bg-gray-100 dark:bg-gray-700 px-2 py-1 text-[10px] font-bold uppercase text-gray-400 border-b border-gray-200 dark:border-gray-600 text-right min-w-[80px]';
+        valHeader.textContent = 'Value';
+        table.appendChild(keyHeader);
+        table.appendChild(valHeader);
+
+        Object.entries(item).forEach(([key, value]) => {
+            const keyEl = document.createElement('div');
+            keyEl.className = 'bg-white dark:bg-gray-800 px-2 py-1 text-[11px] font-medium text-gray-500 dark:text-gray-400 truncate';
+            keyEl.textContent = key;
+
+            const valEl = document.createElement('div');
+            valEl.className = 'bg-white dark:bg-gray-800 px-2 py-1 text-[11px] font-mono text-gray-900 dark:text-gray-100 text-right';
+            
+            // Apply formatting
+            if (typeof value === 'number') {
+                if (Number.isInteger(value)) {
+                    valEl.textContent = value;
+                } else if (key === 'snr') {
+                    valEl.textContent = value.toFixed(2);
+                } else {
+                    valEl.textContent = value.toFixed(4);
+                }
+            } else if (Array.isArray(value)) {
+                valEl.textContent = `[${value.map(v => typeof v === 'number' ? v.toFixed(3) : v).join(', ')}]`;
+            } else {
+                valEl.textContent = value;
+            }
+
+            table.appendChild(keyEl);
+            table.appendChild(valEl);
+        });
+
+        card.appendChild(table);
+        adasContainer.appendChild(card);
+    });
+}
+
 
 // --- START: New Robust Update Logic ---
 let throttleTimer = null;
@@ -298,7 +369,8 @@ export function initializeDataExplorer() {
 
     // --- START: Make panel interactive ---
     initializePanelPosition(panel);
-    makeDraggableAndResizable(panel, document.getElementById('data-explorer-header'));
+    // Rationale for 250x200: Allows for a very compact "sidecar" view when using the ADAS Property View.
+    makeDraggableAndResizable(panel, document.getElementById('data-explorer-header'), 250, 200);
     // --- END: Make panel interactive ---
     // --- Wire up all event listeners ---
 

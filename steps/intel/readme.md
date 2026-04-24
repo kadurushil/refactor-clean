@@ -58,7 +58,9 @@ The application leverages **p5.js** for rendering, **Web Workers** for backgroun
 
 ### `dataExplorer.js` (Data Inspector)
 - **Deep Inspection**: Provides Tree View, AG-Grid View, and Chart.js Plotting for raw numerical frame data.
+- **ADAS Property View [NEW]**: A specialized Vertical Property View for ADAS data, optimized for high readability of many columns in narrow panels.
 - **Persistent Memory [NEW]**: Remembers its last position, size, and display state across page reloads.
+- **Layout Optimization [NEW]**: Support for compact "sidecar" mode with reduced minimum dimensions (250x200) and scrollable navigation tabs.
 
 ### `keyboard.js` (Shortcuts)
 - **Centralized Handler**: Manages all keyboard interactions (Space, 1-4, S, T, D, G, P, etc.).

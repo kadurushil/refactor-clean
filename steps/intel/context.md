@@ -11,7 +11,10 @@ Context Document: Radar and Video Synchronizer Application
 - **Data Handling**:
   - **Web Workers** (`parser.worker.js`) with the `Clarinet.js` streaming library to parse large JSON files off the main thread, preventing UI freezes.
   - `Oboe.js` is included in vendor files but `Clarinet.js` is the active parser.
-- **Data Exploration**: `AG-Grid` for tabular data view and `Chart.js` for plotting data from the grid.
+- **Data Exploration**:
+  - `AG-Grid` for tabular Point Cloud and Track data.
+  - **Vertical Property View** (`dataExplorer.js`) for high-density ADAS data.
+  - `Chart.js` for plotting data from the grids.
 - **Persistence**: `IndexedDB` for caching large files (JSON, Video) and `localStorage` for user settings (UI state, theme, file references).
 
 ### 2. Project Architecture & File Structure
@@ -49,7 +52,11 @@ The application uses a modular ES6 structure. All source code resides in the `/s
 
 - **`/src/db.js`**: **The Caching Layer**. Manages all interactions with `IndexedDB` to save and load file blobs and their metadata, enabling fast session reloads.
 
-- **`/src/dataExplorer.js`**: **The Inspector**. Manages the "Data Explorer" panel. It uses AG-Grid to display data in a table and Chart.js to plot selected columns. It includes `throttledUpdateExplorer` to efficiently update the view during playback.
+- **`/src/dataExplorer.js`**: **The Inspector**. Manages the "Data Explorer" panel.
+  - **Standard Grids**: Uses AG-Grid for Point Cloud and Track data.
+  - **ADAS View**: Implements a custom Vertical Property View for readable ADAS inspection.
+  - **Visualization**: Chart.js for plotting selected numeric columns.
+  - **Optimizations**: `throttledUpdateExplorer` for performance; scrollable tabs and 250x200 minimum dimensions for compact layouts.
 
 - **`/src/ui.js`**: **The UI Engine**. Manages all advanced interface interactions.
   - `makeDraggableAndResizable()`: A unified utility that transforms any DOM element into a floating window with persistent memory.
