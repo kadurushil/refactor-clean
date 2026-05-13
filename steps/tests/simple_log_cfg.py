@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import filedialog
 import os
 
+
 def extract_radar_config(log_file_path, output_file_path=None):
     """
     Extract radar configuration commands from log file.
@@ -58,4 +59,4 @@ if __name__ == "__main__":
         extract_radar_config(log_file, output_file)
         print(f"[INFO] Processing complete for {log_file}")
     else:
-        print("[INFO] No file selected.")
+        print("[INFO] No file selected.")
