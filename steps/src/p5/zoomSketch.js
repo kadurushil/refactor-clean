@@ -8,7 +8,8 @@ import {
   drawClusterCentroids,
   drawRegionsOfInterest,
   drawCovarianceEllipse,
-  clusterColors, // We need to import clusterColors for the tooltip
+  clusterColors,
+  drawFcwWarning,
 } from "../drawUtils.js";
 import {
   toggleTracks,
@@ -380,7 +381,7 @@ export const zoomSketch = function (p) {
       if (togglePredictedPos.checked) {
         for (const track of appState.vizData.tracks) {
           const log = track.historyLog.find(
-            (log) => log.frameIdx === appState.currentFrame
+            (log) => log.frameIdx === frameData.frameIdx
           );
           if (
             log &&
@@ -401,8 +402,16 @@ export const zoomSketch = function (p) {
           }
         }
       }
+      
+      // Draw ADAS FCW Warning halo around vehicle if active
+      drawFcwWarning(p, frameData, plotScales, inverseZoom, true);
     }
     p.pop(); // End radar transformations
+
+    // Draw ADAS FCW screen-space HUD banner if active
+    if (frameData) {
+      drawFcwWarning(p, frameData, plotScales, 1, false);
+    }
 
     // --- Call the new, self-contained tooltip function with smoothed coords ---
     drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY, smoothedAvgX, smoothedAvgY, smoothedCamX, smoothedCamY);

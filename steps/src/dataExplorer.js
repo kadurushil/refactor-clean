@@ -154,7 +154,7 @@ function updateExplorer() {
     // We iterate through all tracks and find the history log entry for the current frame.
     const tracksForCurrentFrame = appState.vizData.tracks
         .map(track => {
-            const log = track.historyLog.find(log => log.frameIdx === appState.currentFrame);
+            const log = track.historyLog.find(log => log.frameIdx === frame.frameIdx);
             // Return a new object combining track ID with its log for this frame, if it exists.
             return log ? { trackId: track.id, ...log } : null;
         })

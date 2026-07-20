@@ -33,6 +33,7 @@ import {
   ttcColors,
   drawRegionsOfInterest,
   drawClusterCentroids,
+  drawFcwWarning,
 } from "../drawUtils.js";
 
 export const radarSketch = function (p) {
@@ -281,7 +282,7 @@ export const radarSketch = function (p) {
             if (toggleConfirmedOnly.checked && track.isConfirmed === false) {
               continue;
             }
-            const log = track.historyLog.find((log) => log.frameIdx === appState.currentFrame);
+            const log = track.historyLog.find((log) => log.frameIdx === frameData.frameIdx);
             if (
               log &&
               log.predictedPosition &&
@@ -309,7 +310,7 @@ export const radarSketch = function (p) {
                 continue;
               }
               const log = track.historyLog.find(
-                (log) => log.frameIdx === appState.currentFrame);
+                (log) => log.frameIdx === frameData.frameIdx);
               if (
                 log &&
                 log.ellipseRadii &&
@@ -335,7 +336,7 @@ export const radarSketch = function (p) {
                 continue;
               }
               const log = track.historyLog.find(
-                (log) => log.frameIdx === appState.currentFrame);
+                (log) => log.frameIdx === frameData.frameIdx);
               if (
                 log &&
                 log.objectExtentRadii &&
@@ -361,9 +362,17 @@ export const radarSketch = function (p) {
         if (toggleClusterColor.checked) {
           drawClusterCentroids(p, frameData.clusters, plotScales);
         }
+
+        // Draw ADAS FCW Warning halo around vehicle if active
+        drawFcwWarning(p, frameData, plotScales, 1, true);
       }
     }
     p.pop();
+
+    // Draw ADAS FCW screen-space HUD banner if active
+    if (frameData) {
+      drawFcwWarning(p, frameData, plotScales, 1, false);
+    }
 
     // 4. Draw the new legend buffer onto the main canvas
     // This is placed at the bottom-right corner.

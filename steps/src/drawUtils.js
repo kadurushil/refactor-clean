@@ -332,6 +332,11 @@ export function drawTrajectories(p, plotScales, scaleFactor = 1) {
   try {
     const localTtcColors = ttcColors(p);
 
+    if (!appState.vizData || !appState.vizData.radarFrames) return;
+    const frameData = appState.vizData.radarFrames[appState.currentFrame];
+    if (!frameData) return;
+    const currentFrameIdx = frameData.frameIdx;
+
     for (const track of appState.vizData.tracks) {
       if (toggleConfirmedOnly.checked && track.isConfirmed === false) {
         continue;
@@ -346,12 +351,12 @@ export function drawTrajectories(p, plotScales, scaleFactor = 1) {
       }
 
       const logs = track.historyLog.filter(
-        (log) => log.frameIdx <= appState.currentFrame
+        (log) => log.frameIdx <= currentFrameIdx
       );
       if (logs.length < 2) continue;
 
       const lastLog = logs[logs.length - 1];
-      if (appState.currentFrame - lastLog.frameIdx > MAX_TRAJECTORY_LENGTH)
+      if (currentFrameIdx - lastLog.frameIdx > MAX_TRAJECTORY_LENGTH)
         continue;
 
       const isCurrentlyStationary = lastLog.isStationary;
@@ -488,6 +493,22 @@ export function drawTrackMarkers(p, plotScales, scaleFactor = 1, showDetailsBox 
     const localStationaryColor = stationaryColor(p);
     const localMovingColor = movingColor(p);
 
+    if (!appState.vizData || !appState.vizData.radarFrames) return;
+    const frameData = appState.vizData.radarFrames[appState.currentFrame];
+    if (!frameData) return;
+    const currentFrameIdx = frameData.frameIdx;
+
+    // Check if there is an active stage-2 FCW and get its POI ID
+    let targetPoiId = null;
+    if (frameData.adas && Array.isArray(frameData.adas)) {
+      for (const adasItem of frameData.adas) {
+        if (adasItem && adasItem.fcw_stage === 2) {
+          targetPoiId = adasItem.poi_id;
+          break;
+        }
+      }
+    }
+
     // Style constants for the floating tooltips (matching zoomSketch)
     const highlightColor = p.color(46, 204, 113);
     const bgColor = document.documentElement.classList.contains("dark")
@@ -515,7 +536,7 @@ export function drawTrackMarkers(p, plotScales, scaleFactor = 1, showDetailsBox 
       if (!track || !track.historyLog || !Array.isArray(track.historyLog)) continue;
 
       const log = track.historyLog.find(
-        (log) => log.frameIdx === appState.currentFrame
+        (log) => log.frameIdx === currentFrameIdx
       );
 
       if (log) {
@@ -612,7 +633,7 @@ export function drawTrackMarkers(p, plotScales, scaleFactor = 1, showDetailsBox 
                 const w = maxW + padding * 2;
                 const h = lines.length * lineHeight + padding * 2;
 
-                labels.push({ x, y, w, h, lines });
+                labels.push({ x, y, w, h, lines, trackId: track.id });
             }
           }
         }
@@ -682,9 +703,12 @@ export function drawTrackMarkers(p, plotScales, scaleFactor = 1, showDetailsBox 
         // --- Draw Tooltips ---
         for (const label of placedBoxes) {
             p.push();
+
+            const isFcwCause = (targetPoiId !== null && label.trackId === targetPoiId);
+            const currentHighlightColor = isFcwCause ? p.color(230, 40, 40) : highlightColor;
             
             // 1. Draw Leader Line (World Space)
-            p.stroke(highlightColor);
+            p.stroke(currentHighlightColor);
             p.strokeWeight(1 * scaleFactor);
             // Draw to the closest side of the box
             // If box is to the right, draw to Left Edge (finalX)
@@ -705,7 +729,7 @@ export function drawTrackMarkers(p, plotScales, scaleFactor = 1, showDetailsBox 
             p.scale(1, -1); 
             
             p.fill(bgColor);
-            p.stroke(highlightColor);
+            p.stroke(currentHighlightColor);
             p.strokeWeight(1 * scaleFactor);
             p.rect(0, 0, label.w, label.h, 4 * scaleFactor);
             
@@ -809,7 +833,7 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
       for (const track of appState.vizData.tracks) {
         // --- FIX START: Fetch log for the CURRENT frame for the track marker ---
         const currentLog = track.historyLog.find(
-          (log) => log.frameIdx === appState.currentFrame
+          (log) => log.frameIdx === frameData.frameIdx
         );
         // --- FIX END ---
 
@@ -1234,3 +1258,83 @@ export function drawClusterCentroids(p, clustersInput, plotScales, scaleFactor =
     console.error("Error in drawClusterCentroids:", error);
   }
 }
+
+export function drawFcwWarning(p, frameData, plotScales, scaleFactor = 1, inRadarCoords = false) {
+  try {
+    let fcwActive = false;
+    let targetPoiId = null;
+
+    if (frameData && frameData.adas && Array.isArray(frameData.adas)) {
+      for (const adasItem of frameData.adas) {
+        if (adasItem && adasItem.fcw_stage === 2) {
+          fcwActive = true;
+          targetPoiId = adasItem.poi_id;
+          break;
+        }
+      }
+    }
+
+    // Toggle the HTML DIV overlay visibility under the radar plot
+    const fcwOverlay = document.getElementById("fcw-warning-overlay");
+    if (fcwOverlay) {
+      if (fcwActive) {
+        fcwOverlay.classList.remove("hidden");
+      } else {
+        fcwOverlay.classList.add("hidden");
+      }
+    }
+
+    if (!fcwActive) return;
+
+    if (inRadarCoords) {
+      // Draw target-vehicle halo and exclamation mark
+      if (targetPoiId !== null && appState.vizData && appState.vizData.tracks) {
+        const track = appState.vizData.tracks.find((t) => t.id === targetPoiId);
+        if (track && track.historyLog) {
+          const log = track.historyLog.find((l) => l.frameIdx === frameData.frameIdx);
+          if (log && log.correctedPosition && log.correctedPosition[0] !== null) {
+            const x = log.correctedPosition[0] * plotScales.plotScaleX;
+            const y = log.correctedPosition[1] * plotScales.plotScaleY;
+
+            p.push();
+            p.noFill();
+
+            // 1. Concentric pulsing darker yellow/amber warning circles
+            const pulse = (p.millis() / 5) % 25 + 10;
+            p.stroke(220, 140, 0, 200 - pulse * 8);
+            p.strokeWeight(2 * scaleFactor);
+            p.ellipse(x, y, (pulse * 2) * scaleFactor, (pulse * 2) * scaleFactor);
+
+            // 2. Base warning circle (darker amber)
+            p.stroke(200, 110, 0, 230);
+            p.strokeWeight(1.5 * scaleFactor);
+            p.ellipse(x, y, 15 * scaleFactor, 15 * scaleFactor);
+
+            // 3. Exclamation symbol badge
+            p.push();
+            p.translate(x, y);
+            p.scale(1, -1); // Un-flip Y coordinate system for text/shapes
+
+            p.fill(220, 140, 0, 230);
+            p.noStroke();
+            const badgeY = -18 * scaleFactor;
+            const side = 12 * scaleFactor;
+            p.triangle(0, badgeY - side * 0.6, -side * 0.5, badgeY + side * 0.4, side * 0.5, badgeY + side * 0.4);
+
+            p.fill(0);
+            p.textSize(9 * scaleFactor);
+            p.textStyle(p.BOLD);
+            p.textAlign(p.CENTER, p.CENTER);
+            p.text("!", 0, badgeY + side * 0.1);
+            p.pop();
+
+            p.pop();
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error in drawFcwWarning:", error);
+  }
+}
+

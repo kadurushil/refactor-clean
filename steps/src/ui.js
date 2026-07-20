@@ -48,6 +48,7 @@ import {
   startUserManualBtn,
   startCodebaseBtn,
   startChangelogBtn,
+  fcwWarningOverlay,
 } from "./dom.js";
 
 // --- START: Resizable and Draggable Panel Logic ---
@@ -529,4 +530,66 @@ export function initUIEventListeners() {
   toggleConfirmedOnly.addEventListener("change", () => {
     if (appState.p5_instance) appState.p5_instance.redraw();
   });
+
+  // --- Initialize FCW Draggable Overlay ---
+  if (fcwWarningOverlay) {
+    makeElementDraggable(fcwWarningOverlay);
+  }
+}
+
+/**
+ * Utility to make an absolute-positioned HTML element draggable within its offset parent.
+ */
+export function makeElementDraggable(element) {
+  if (!element) return;
+
+  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+  element.addEventListener("mousedown", dragMouseDown);
+
+  function dragMouseDown(e) {
+    e = e || window.event;
+    // Don't drag if clicking buttons or inputs inside the overlay
+    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+    
+    e.preventDefault();
+
+    // Get the element's current computed coordinates relative to its offsetParent
+    const rect = element.getBoundingClientRect();
+    const parentRect = element.offsetParent ? element.offsetParent.getBoundingClientRect() : { left: 0, top: 0 };
+
+    // Explicitly lock position using computed px offsets (instead of center-translating CSS classes)
+    element.style.left = `${rect.left - parentRect.left}px`;
+    element.style.top = `${rect.top - parentRect.top}px`;
+    element.style.transform = "none";
+    element.style.right = "auto";
+    element.style.bottom = "auto";
+    element.style.margin = "0";
+
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+
+    document.addEventListener("mouseup", closeDragElement);
+    document.addEventListener("mousemove", elementDrag);
+  }
+
+  function elementDrag(e) {
+    e = e || window.event;
+    e.preventDefault();
+
+    // Calculate position delta
+    pos1 = pos3 - e.clientX;
+    pos2 = pos4 - e.clientY;
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+
+    // Apply new style position coordinates
+    element.style.top = `${element.offsetTop - pos2}px`;
+    element.style.left = `${element.offsetLeft - pos1}px`;
+  }
+
+  function closeDragElement() {
+    document.removeEventListener("mouseup", closeDragElement);
+    document.removeEventListener("mousemove", elementDrag);
+  }
 }

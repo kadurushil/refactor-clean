@@ -19,10 +19,6 @@ echo ======================================================
 echo.
 
 echo Launching the application in your default browser...
-:: Delay the browser launch by 2 seconds to allow the Python server to start up
-start /b "" cmd /c "timeout /t 2 /nobreak > nul && start http://127.0.0.1:8000/index.html"
-
-echo Server is starting on http://127.0.0.1:8000
 echo Press CTRL+C at any time to stop the server.
 echo.
 

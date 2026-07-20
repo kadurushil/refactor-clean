@@ -529,6 +529,12 @@
               <p id="canvas-placeholder" class="hidden text-gray-500 dark:text-gray-400 text-lg">Load JSON data to start
                 visualization</p>
 
+              <!-- Draggable ADAS Warning Overlay -->
+              <div id="fcw-warning-overlay" class="absolute top-12 left-1/2 -translate-x-1/2 z-[25] cursor-move hidden bg-amber-600/95 text-white px-5 py-2.5 rounded-lg shadow-2xl flex items-center gap-2 border-2 border-yellow-400 font-bold text-sm select-none">
+                <span class="text-base">⚠️</span>
+                <span>FCW ALERT: COLLISION WARNING</span>
+              </div>
+
               <!-- Range Slider (Vertical) -->
               <div class="absolute bottom-8 left-2 flex flex-col items-center gap-2 z-20 group">
                 <span id="range-value-display"

@@ -77,8 +77,9 @@ export const speedGraphSketch = function (p) {
         
         if (track.historyLog) {
           for (const log of track.historyLog) {
-            if (log.frameIdx >= 0 && log.frameIdx < numFrames) {
-              trackCounts[log.frameIdx]++;
+            const idx = log.frameIdx - 1;
+            if (idx >= 0 && idx < numFrames) {
+              trackCounts[idx]++;
             }
           }
         }
@@ -156,6 +157,42 @@ export const speedGraphSketch = function (p) {
 
     b.text("Time (s)", (pad.left + (b.width - pad.right)) / 2, b.height - pad.bottom + 18);
     b.pop();
+
+    // --- Draw FCW Warning Zones (Transparent Amber/Red Bands) ---
+    if (radarData && radarData.radarFrames) {
+      b.push();
+      b.noStroke();
+      const warningColor = p.color(220, 100, 0, 40); // Transparent amber/orange
+      
+      for (let i = 0; i < radarData.radarFrames.length; i++) {
+        const frame = radarData.radarFrames[i];
+        let fcwActive = false;
+        if (frame.adas && Array.isArray(frame.adas)) {
+          for (const adasItem of frame.adas) {
+            if (adasItem && adasItem.fcw_stage === 2) {
+              fcwActive = true;
+              break;
+            }
+          }
+        }
+        
+        if (fcwActive) {
+          const relTime = frame.timestamp / 1000;
+          const x = b.map(relTime, 0, videoDuration, pad.left, b.width - pad.right);
+          
+          let nextRelTime = relTime + 0.05;
+          if (i < radarData.radarFrames.length - 1) {
+            nextRelTime = radarData.radarFrames[i+1].timestamp / 1000;
+          }
+          const nextX = b.map(nextRelTime, 0, videoDuration, pad.left, b.width - pad.right);
+          const w = Math.max(1, nextX - x);
+          
+          b.fill(warningColor);
+          b.rect(x, pad.top, w, b.height - pad.bottom - pad.top);
+        }
+      }
+      b.pop();
+    }
 
     // --- Density Legend Bar (Left Side) ---
     // Smooth gradient representation of track density
@@ -248,6 +285,7 @@ export const speedGraphSketch = function (p) {
 
     const canLabel = "CAN Speed (Color: Tracks Density)";
     const egoLabel = "Ego Speed";
+    const fcwLabel = "FCW Warning";
 
     const segLen = 18;
     const gapBetweenSegAndLabel = 8;
@@ -256,7 +294,8 @@ export const speedGraphSketch = function (p) {
     // compute widths of each legend item (segment + gap + label)
     const canItemWidth = segLen + gapBetweenSegAndLabel + b.textWidth(canLabel);
     const egoItemWidth = segLen + gapBetweenSegAndLabel + b.textWidth(egoLabel);
-    const totalLegendWidth = canItemWidth + betweenItemsGap + egoItemWidth;
+    const fcwItemWidth = segLen + gapBetweenSegAndLabel + b.textWidth(fcwLabel);
+    const totalLegendWidth = canItemWidth + betweenItemsGap + egoItemWidth + betweenItemsGap + fcwItemWidth;
 
     // center the legend across the plotting region (pad.left .. b.width - pad.right)
     const plottingLeft = pad.left;
@@ -292,6 +331,16 @@ export const speedGraphSketch = function (p) {
     b.noStroke();
     b.fill(textColor);
     b.text(egoLabel, egoX + segLen + gapBetweenSegAndLabel, legendY + 6);
+    b.pop();
+
+    // Draw FCW legend item
+    const fcwX = egoX + egoItemWidth + betweenItemsGap;
+    b.push();
+    b.fill(220, 100, 0, 180); // Amber warning color
+    b.noStroke();
+    b.rect(fcwX, legendY + 2, segLen, 8, 2);
+    b.fill(textColor);
+    b.text(fcwLabel, fcwX + segLen + gapBetweenSegAndLabel, legendY + 6);
     b.pop();
   };
 
