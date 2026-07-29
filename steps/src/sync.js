@@ -7,13 +7,15 @@ import {
   updateDebugOverlay,
   updatePersistentOverlays,
   videoPlayer,
+  videoSeekingBadge,
   frameCounter,
   canvasContainer,
   toggleEgoSpeed,
   egoSpeedDisplay,
   canSpeedDisplay,
   autoOffsetIndicator,
-  speedGraphContainer
+  speedGraphContainer,
+  setOffsetToggleMode,
 } from "./dom.js";
 import { VIDEO_FPS } from "./constants.js";
 import { findRadarFrameIndexForTime, precomputeRadarVideoSync } from "./utils.js";
@@ -46,6 +48,7 @@ export function resetVisualization() {
 // --- NEW Playback Control Functions ---
 
 export function startPlayback() {
+  hideSeekingBadge();
   if (videoPlayer.src && videoPlayer.readyState > 1) {
     videoPlayer.play();
     videoPlayer.requestVideoFrameCallback(videoFrameCallback); // Start the high-precision loop
@@ -65,6 +68,12 @@ export function forceResyncWithOffset(saveToDb = true) {
 
   const newOffset = parseFloat(offsetInput.value) || 0;
   appState.offset = newOffset; // Update the central state
+
+  // If user explicitly saves/applies a manual offset, disable frame map hard lock
+  if (saveToDb && appState.hasFrameMapping) {
+    appState.hasFrameMapping = false;
+    console.log("Switched from frame_mapping sync to Manual offset mode.");
+  }
   
   // Persist the manual offset to IndexedDB for this specific file
   if (saveToDb && appState.jsonFilename) {
@@ -74,11 +83,10 @@ export function forceResyncWithOffset(saveToDb = true) {
   // Re-Bake: Overwrite the pre-calculated sync times with the new offset.
   precomputeRadarVideoSync(appState.vizData, appState.offset);
 
-  // --- START: Manual Offset UI Update ---
-  // When the user manually sets an offset, we need to update the UI immediately.
-  autoOffsetIndicator.textContent = "Manual"; // Set text
-  autoOffsetIndicator.className = "text-xs font-bold ml-2 text-gray-500"; // Use consistent gray styling
-  // --- END: Manual Offset UI Update ---
+  // Update UI toggle switch to Manual mode only when a manual override is active
+  if (saveToDb || !appState.hasFrameMapping) {
+    setOffsetToggleMode("manual");
+  }
   console.log(`Forcing resync with new offset: ${appState.offset}ms`);
   
   // If the video is playing, pause it to allow for precise frame tuning.
@@ -165,7 +173,10 @@ export function updateFrame(frame, forceVideoSeek = false, overrideTime = null) 
       // Ensure target time is within video duration
       if (Math.abs(videoPlayer.currentTime - targetVideoTimeSec) > 0.05) {
         // Check for significant drift
+        showSeekingBadge();
         videoPlayer.currentTime = targetVideoTimeSec; // Seek video if drift is significant
+      } else {
+        checkAndClearSeekingState();
       }
       // MODIFIED: Use the calculated target time for our updates, not the stale videoPlayer.currentTime
     }
@@ -255,7 +266,101 @@ export function animationLoop() {
   }
 }
 
-let timelineDebounceTimer;
+let isVideoSeeking = false;
+let pendingPlayRequest = false;
+let lastFastSeekTime = 0;
+let timelineDebounceTimer = null;
+let seekDebounceTimer = null;
+let videoSeekDebounceTimer = null;
+let safetyHideTimer = null;
+
+export function isVideoSeekingPending() {
+  return (
+    isVideoSeeking ||
+    (videoPlayer && videoPlayer.seeking) ||
+    !!timelineDebounceTimer ||
+    !!seekDebounceTimer ||
+    !!videoSeekDebounceTimer
+  );
+}
+
+export function setPendingPlayRequest(val) {
+  pendingPlayRequest = val;
+}
+
+export function showSeekingBadge() {
+  if (videoSeekingBadge && videoPlayer && videoPlayer.src && !appState.videoMissing) {
+    videoSeekingBadge.classList.remove("hidden");
+
+    // Safety fallback: auto-clear if seeked event is skipped or delayed beyond 800ms
+    if (safetyHideTimer) clearTimeout(safetyHideTimer);
+    safetyHideTimer = setTimeout(() => {
+      safetyHideTimer = null;
+      checkAndClearSeekingState();
+    }, 800);
+  }
+}
+
+export function hideSeekingBadge() {
+  if (safetyHideTimer) {
+    clearTimeout(safetyHideTimer);
+    safetyHideTimer = null;
+  }
+  if (videoSeekingBadge) {
+    videoSeekingBadge.classList.add("hidden");
+  }
+}
+
+export function checkAndClearSeekingState() {
+  if (!timelineDebounceTimer && !seekDebounceTimer && !videoSeekDebounceTimer) {
+    if (!videoPlayer || !videoPlayer.seeking || appState.isPlaying) {
+      isVideoSeeking = false;
+      hideSeekingBadge();
+    }
+  }
+}
+
+export function performFastVideoSeek(targetTimeSec) {
+  if (
+    !videoPlayer ||
+    !videoPlayer.src ||
+    appState.videoMissing ||
+    videoPlayer.readyState <= 1 ||
+    isNaN(targetTimeSec)
+  )
+    return;
+
+  const now = performance.now();
+  if (!videoPlayer.seeking && now - lastFastSeekTime >= 60) {
+    lastFastSeekTime = now;
+    showSeekingBadge();
+    if (typeof videoPlayer.fastSeek === "function") {
+      videoPlayer.fastSeek(targetTimeSec);
+    } else {
+      videoPlayer.currentTime = targetTimeSec;
+    }
+  }
+}
+
+function handleVideoSeeking() {
+  isVideoSeeking = true;
+  showSeekingBadge();
+}
+
+function handleVideoSeeked() {
+  isVideoSeeking = false;
+  checkAndClearSeekingState();
+
+  if (pendingPlayRequest) {
+    pendingPlayRequest = false;
+    if (!appState.isPlaying) {
+      appState.isPlaying = true;
+      playPauseBtn.textContent = "Pause";
+      startPlayback();
+    }
+  }
+}
+
 export function handleTimelineInput(event) {
   if (!appState.vizData) return;
 
@@ -269,31 +374,36 @@ export function handleTimelineInput(event) {
   // 2. Get the target frame from the slider.
   const frame = parseInt(event.target.value, 10);
 
-  // 3. Update UI immediately for responsiveness, but WITHOUT forcing a video seek.
+  // 3. Update UI immediately for responsiveness.
   updateFrame(frame, false);
   if (appState.p5_instance) appState.p5_instance.redraw();
   if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
 
-  // 4. Use a debouncer to perform the expensive video seek after the user stops dragging.
+  // 4. Show visual seeking cue & attempt intermediate fast seek while scrubbing.
+  showSeekingBadge();
+  const frameData = appState.vizData.radarFrames[frame];
+  if (frameData && typeof frameData.videoSyncedTime === "number") {
+    performFastVideoSeek(frameData.videoSyncedTime);
+  }
+
+  // 5. Use a reduced debouncer (100ms) to perform final precise video seek after dragging stops.
   clearTimeout(timelineDebounceTimer);
   timelineDebounceTimer = setTimeout(() => {
+    timelineDebounceTimer = null;
     updateFrame(appState.currentFrame, true); // Perform final, precise video seek.
-  }, 300); // 300ms delay after last input event.
+    checkAndClearSeekingState();
+  }, 100);
 }
 
 let lastScrollTime = 0;
 let scrollSpeed = 0;
-let seekDebounceTimer;
 
 let lastVideoScrollTime = 0;
 let videoScrollSpeed = 0;
-let videoSeekDebounceTimer;
-let targetVideoTime = null; // NEW: State variable to track target time during scroll
-
+let targetVideoTime = null; // State variable to track target time during scroll
 
 function handleTimelineWheel(event) {
   // If no data, or if close-up mode is active, do not seek.
-  // The wheel event is used for zooming in close-up mode, unless Shift is held.
   if (!appState.vizData || (appState.isCloseUpMode && !event.shiftKey)) {
     return;
   }
@@ -314,42 +424,42 @@ function handleTimelineWheel(event) {
   scrollSpeed = timeDelta > 0 ? 1000 / timeDelta : scrollSpeed;
 
   // 3. Map scroll speed to an acceleration curve.
-  // The sensitivity value (e.g., 4) can be adjusted for more/less acceleration.
   const speedMultiplier = 1 + Math.floor(scrollSpeed / 4);
-  const seekAmount = Math.max(1, speedMultiplier); // Ensure we always move at least 1 frame.
+  const seekAmount = Math.max(1, speedMultiplier);
 
   // 4. Calculate the new frame index.
   const direction = Math.sign(event.deltaY);
-  // Scrolling down (positive deltaY) should advance the frame (increase index).
   let newFrame = appState.currentFrame + direction * seekAmount;
 
   // 5. Clamp the new frame to the valid range.
   const totalFrames = appState.vizData.radarFrames.length - 1;
   newFrame = Math.max(0, Math.min(newFrame, totalFrames));
 
-  // 6. Update the UI immediately for responsive feedback, but WITHOUT forcing a video seek.
-  // This makes the slider feel fast without causing video stutter.
+  // 6. Update the UI immediately for responsive feedback.
   updateFrame(newFrame, false);
-  // --- START: Immediate Redraw for Responsiveness ---
-  // Manually trigger redraws here so the radar visualization updates as the user scrolls.
   if (appState.p5_instance) appState.p5_instance.redraw();
   if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
-  // --- END: Immediate Redraw for Responsiveness ---
 
-  // 7. Use a debouncer for the expensive video seek. This will only run once
-  // after the user has finished scrolling, ensuring a final, precise sync.
+  // 7. Show seeking badge & perform intermediate fast seek during wheel scroll
+  showSeekingBadge();
+  const frameData = appState.vizData.radarFrames[newFrame];
+  if (frameData && typeof frameData.videoSyncedTime === "number") {
+    performFastVideoSeek(frameData.videoSyncedTime);
+  }
+
+  // 8. Reduced debouncer (100ms) for final precise seek.
   clearTimeout(seekDebounceTimer);
   seekDebounceTimer = setTimeout(() => {
-    // Perform the final, expensive video seek.
+    seekDebounceTimer = null;
     updateFrame(appState.currentFrame, true);
-  }, 300); // 300ms delay after the last scroll event.
+    checkAndClearSeekingState();
+  }, 100);
 }
 
 function handleVideoPanelWheel(event) {
   if (!appState.vizData || !videoPlayer.src || videoPlayer.duration <= 0) return;
-  event.preventDefault(); // Prevent default page scroll
+  event.preventDefault();
 
-  // 1. On the first scroll event, pause playback and initialize our target time.
   if (appState.isPlaying) {
     pausePlayback();
     appState.isPlaying = false;
@@ -359,69 +469,55 @@ function handleVideoPanelWheel(event) {
     targetVideoTime = videoPlayer.currentTime;
   }
 
-  // 2. Calculate scroll speed for acceleration.
   const now = performance.now();
   const timeDelta = now - (lastVideoScrollTime || now);
   lastVideoScrollTime = now;
   videoScrollSpeed = timeDelta > 0 ? 1000 / timeDelta : videoScrollSpeed;
 
-  // 3. Map scroll speed to an acceleration curve.
   const speedMultiplier = Math.floor(videoScrollSpeed / 8);
-  const seekAmount = Math.max(1, speedMultiplier); // Always move at least 1 frame.
+  const seekAmount = Math.max(1, speedMultiplier);
 
-  // 4. Calculate the new target time based on our stateful variable.
   const direction = Math.sign(event.deltaY);
   const timeIncrement = (direction * seekAmount) / VIDEO_FPS;
   targetVideoTime += timeIncrement;
 
-  // 5. Clamp the new time to the video's bounds.
   targetVideoTime = Math.max(0, Math.min(targetVideoTime, videoPlayer.duration));
 
-  // 6. Find the corresponding radar frame for the new target time.
   const newRadarFrame = findRadarFrameIndexForTime(targetVideoTime, appState.vizData);
 
-  console.log('--- Video Wheel Debug ---');
-  console.log(`Scroll Speed: ${videoScrollSpeed.toFixed(2)}`);
-  console.log(`Seek Amount (frames): ${seekAmount}`);
-  console.log(`Time Increment (s): ${timeIncrement.toFixed(4)}`);
-  console.log(`New Target Time (s): ${targetVideoTime.toFixed(4)}`);
-  console.log(`New Radar Frame: ${newRadarFrame}`);
-
-  // 7. Update the UI immediately for responsive feedback, but WITHOUT forcing a video seek.
   updateFrame(newRadarFrame, false, targetVideoTime);
   if (appState.p5_instance) appState.p5_instance.redraw();
   if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
 
-  // 8. Use a debouncer for the expensive video seek.
+  showSeekingBadge();
+  performFastVideoSeek(targetVideoTime);
+
   clearTimeout(videoSeekDebounceTimer);
   videoSeekDebounceTimer = setTimeout(() => {
-    console.log(`--- Debounced Seek Fired ---`);
-    console.log(`Final Seek Time (s): ${targetVideoTime.toFixed(4)}`);
-    // Perform the final, expensive video seek.
+    videoSeekDebounceTimer = null;
     videoPlayer.currentTime = targetVideoTime;
-    // Reset the state variable, so the next scroll interaction starts fresh.
     targetVideoTime = null;
-    lastVideoScrollTime = 0; // Also reset scroll time to prevent huge initial jump
-    videoScrollSpeed = 0; // FIX: Reset scroll speed to prevent "sticky" acceleration.
-  }, 150);
+    lastVideoScrollTime = 0;
+    videoScrollSpeed = 0;
+    checkAndClearSeekingState();
+  }, 100);
 }
-
 
 export function initSyncUIHandlers() {
   timelineSlider.addEventListener("input", handleTimelineInput);
   timelineSlider.addEventListener("wheel", handleTimelineWheel, {
     passive: false,
   });
-  // Use the canvas container for radar frame seeking
   canvasContainer.addEventListener("wheel", handleTimelineWheel, {
     passive: false,
   });
-  // Use the video player for video frame seeking
   videoPlayer.addEventListener("wheel", handleVideoPanelWheel, {
     passive: false,
   });
-  // Use the speed graph container for radar frame seeking
   speedGraphContainer.addEventListener("wheel", handleTimelineWheel, {
     passive: false,
   });
+
+  videoPlayer.addEventListener("seeking", handleVideoSeeking);
+  videoPlayer.addEventListener("seeked", handleVideoSeeked);
 }

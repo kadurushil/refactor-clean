@@ -18,24 +18,27 @@
 // ===========================================================================================================
 
 //import { showExplorer, hideExplorer, displayInGrid } from "./dataExplorer.js";
-import { initializeDataExplorer } from "./dataExplorer.js"; 
+import { initializeDataExplorer } from "./dataExplorer.js";
 import {
   showModal,
   hideModal,
   runStartupLoader,
-} from "./modal.js"; 
+} from "./modal.js";
 import {
   initSyncUIHandlers,
   startPlayback,
   pausePlayback,
   stopPlayback,
   forceResyncWithOffset,
+  isVideoSeekingPending,
+  setPendingPlayRequest,
 } from "./sync.js";
 import { formatTime } from "./utils.js";
 import { initSessionManagement } from "./session.js";
 import { initUIEventListeners } from "./ui.js";
 import { appState } from "./state.js";
 import { debugFlags } from "./debug.js"; // Import the new debug flags
+import { initDebugBadge } from "./debugBadge.js";
 window.appState = appState; // exposing the appState to console
 window.debugFlags = debugFlags; // Expose debug flags to the console for runtime toggling
 import {
@@ -57,8 +60,13 @@ import {
   startDropZone,
   startLoadJsonBtn,
   startLoadVideoBtn,
+  startLoadFolderBtn,
+  loadFolderBtn,
+  folderFileInput,
   startClearCacheBtn,
   globalDragOverlay,
+  toggleModeAuto,
+  toggleModeManual,
 } from "./dom.js";
 
 import { initializeTheme } from "./theme.js";
@@ -67,11 +75,35 @@ import { initDB, loadFreshFileFromDB, saveManualOffset } from "./db.js";
 import { initKeyboardShortcuts } from "./keyboard.js";
 import { handleFiles, revertToAutoOffset } from "./fileLoader.js";
 
+// --- [START] Segmented Offset Mode Toggle Switch Handlers ---
+if (toggleModeAuto) {
+  toggleModeAuto.addEventListener("click", () => {
+    revertToAutoOffset();
+  });
+}
+
+if (toggleModeManual) {
+  toggleModeManual.addEventListener("click", () => {
+    forceResyncWithOffset(true);
+  });
+}
+
+// Keep legacy fallback listener if element exists
+if (autoOffsetIndicator) {
+  autoOffsetIndicator.addEventListener("click", () => {
+    revertToAutoOffset();
+  });
+}
+// --- [END] Segmented Offset Mode Toggle Switch Handlers ---
+
 // Wire up the manual file inputs to the new handler
 jsonFileInput.addEventListener("change", (event) =>
   handleFiles(event.target.files)
 );
 videoFileInput.addEventListener("change", (event) =>
+  handleFiles(event.target.files)
+);
+folderFileInput.addEventListener("change", (event) =>
   handleFiles(event.target.files)
 );
 
@@ -105,16 +137,29 @@ document.body.addEventListener("drop", (event) => {
   dragCounter = 0;
   globalDragOverlay.classList.remove("opacity-100");
   globalDragOverlay.classList.add("opacity-0");
-  handleFiles(event.dataTransfer.files);
+
+  // Pause active playback immediately when files/folders are dropped
+  if (appState.isPlaying) {
+    pausePlayback();
+    appState.isPlaying = false;
+    if (playPauseBtn) playPauseBtn.textContent = "Play";
+  }
+
+  const itemsOrFiles = event.dataTransfer.items && event.dataTransfer.items.length > 0
+    ? event.dataTransfer.items
+    : event.dataTransfer.files;
+  handleFiles(itemsOrFiles);
 });
 
 // Event listeners for loading files (Start Screen)
 startLoadJsonBtn.addEventListener("click", () => jsonFileInput.click());
 startLoadVideoBtn.addEventListener("click", () => videoFileInput.click());
+startLoadFolderBtn.addEventListener("click", () => folderFileInput.click());
 
 // Event listeners for loading files (Workspace Footer - Legacy)
 loadJsonBtn.addEventListener("click", () => jsonFileInput.click());
 loadVideoBtn.addEventListener("click", () => videoFileInput.click());
+loadFolderBtn.addEventListener("click", () => folderFileInput.click());
 
 clearCacheBtn.addEventListener("click", async () => {
   const confirmed = await showModal("Clear all cached data and reload?", true);
@@ -143,6 +188,19 @@ offsetInput.addEventListener("input", () => {
 // Event listener for play/pause button click.
 playPauseBtn.addEventListener("click", () => {
   if (!appState.vizData && !videoPlayer.src) return;
+
+  if (isVideoSeekingPending()) {
+    if (!appState.isPlaying) {
+      setPendingPlayRequest(true);
+      playPauseBtn.textContent = "Syncing...";
+    } else {
+      setPendingPlayRequest(false);
+      appState.isPlaying = false;
+      playPauseBtn.textContent = "Play";
+      pausePlayback();
+    }
+    return;
+  }
 
   appState.isPlaying = !appState.isPlaying;
 
@@ -189,11 +247,12 @@ autoOffsetIndicator.addEventListener("click", () => {
 // --- [START] CORRECTED INITIALIZATION LOGIC ---
 document.addEventListener("DOMContentLoaded", () => {
   initializeTheme();
-  initializeDataExplorer(); 
+  initializeDataExplorer();
   initSessionManagement();
   initUIEventListeners();
   initKeyboardShortcuts();
   initSyncUIHandlers();
+  initDebugBadge();
 
   // Check if the user has seen the guide
   const isFirstRun = !sessionStorage.getItem("hasSeenUserGuide");
@@ -202,20 +261,20 @@ document.addEventListener("DOMContentLoaded", () => {
       .then(() => {
         // 1. Show User Guide
         guideModal.classList.remove("hidden");
-        
+
         // 2. Setup chaining for Guide -> Shortcuts
         // We use { once: true } to ensure this specific flow logic only runs once.
         // The default event listeners in ui.js simply toggle visibility, which works fine 
         // with this as long as we trigger the next step.
         const onGuideClose = () => {
-             shortcutsModal.classList.remove("hidden");
+          shortcutsModal.classList.remove("hidden");
         };
         guideModalCloseBtn.addEventListener("click", onGuideClose, { once: true });
-        
+
         // 3. Setup chaining for Shortcuts -> App
         const onShortcutsClose = () => {
-            // Flow complete
-             sessionStorage.setItem("hasSeenUserGuide", "true");
+          // Flow complete
+          sessionStorage.setItem("hasSeenUserGuide", "true");
         };
         shortcutsModalCloseBtn.addEventListener("click", onShortcutsClose, { once: true });
       })
@@ -224,8 +283,8 @@ document.addEventListener("DOMContentLoaded", () => {
         sessionStorage.setItem("hasSeenUserGuide", "true");
       });
   } else {
-      // Ensure the flag is set if it wasn't first run (defensive)
-      sessionStorage.setItem("hasSeenUserGuide", "true");
+    // Ensure the flag is set if it wasn't first run (defensive)
+    sessionStorage.setItem("hasSeenUserGuide", "true");
   }
 
   // Await the database initialization before attempting to load any files.
@@ -241,12 +300,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // Load filenames and the last known offset from localStorage
     appState.jsonFilename = localStorage.getItem("jsonFilename");
     appState.videoFilename = localStorage.getItem("videoFilename");
+    appState.sourceFolderName = localStorage.getItem("sourceFolderName");
     appState.offset = parseFloat(localStorage.getItem("visualizerOffset")) || 0;
 
     if (appState.jsonFilename) {
       // --- START: FIX FOR AUTO-RELOAD ---
       const jsonBlob = await loadFreshFileFromDB("json", appState.jsonFilename); // This is a Blob
       const videoBlob = await loadFreshFileFromDB("video", appState.videoFilename); // This is a Blob
+      const mapBlob = await loadFreshFileFromDB("frame_mapping", "frame_mapping.json");
 
       if (jsonBlob) {
         console.log("Cached session found. Starting auto-reload...");
@@ -261,6 +322,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // If a video exists, recreate it with its original name.
         if (videoBlob && appState.videoFilename) {
           filesToLoad.push(new File([videoBlob], appState.videoFilename, { type: videoBlob.type }));
+        }
+
+        // If frame mapping exists in cache, recreate it.
+        if (mapBlob) {
+          filesToLoad.push(new File([mapBlob], "frame_mapping.json", { type: "application/json" }));
         }
 
         // Now, pass the array of proper File objects to the handler.

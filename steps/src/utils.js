@@ -1,3 +1,6 @@
+import { appState, getVideoFps } from "./state.js";
+import { VIDEO_FPS } from "./constants.js";
+
 /**
  * Performs a binary search on the radar frames to find the frame index
  * closest to the target video time.
@@ -162,12 +165,45 @@ export function formatUTCTime(date) {
 
 /**
  * Pre-calculates the video-synchronized timestamp for each radar frame.
- * This "bakes" the offset into the data, simplifying future sync calculations.
+ * If frame_mapping.json is active, bakes exact per-frame video timestamps.
  *
  * @param {object} vizData - The visualization data containing radarFrames.
  * @param {number} offsetMs - The time offset between radar and video in milliseconds.
  */
 export function precomputeRadarVideoSync(vizData, offsetMs) {
+  if (!vizData || !vizData.radarFrames) return;
+
+  if (appState.hasFrameMapping && appState.frameMappingTable && appState.frameMappingTable.length > 0) {
+    const firstMapRecord = appState.frameMappingTable[0];
+    const fps = getVideoFps();
+    const videoStartUnixSec = firstMapRecord.video_frame_ts
+      ? firstMapRecord.video_frame_ts - (firstMapRecord.video_frame_index * (1 / fps))
+      : 0;
+
+    // Build O(1) Map lookup table by relFrameId for 100x precompute performance
+    const mapByRelId = new Map();
+    appState.frameMappingTable.forEach((record) => {
+      if (record && record.radar_frame_id_rel !== undefined) {
+        mapByRelId.set(record.radar_frame_id_rel, record);
+      }
+    });
+
+    vizData.radarFrames.forEach((frame, idx) => {
+      const relFrameId = idx + 1;
+      const mapRecord = mapByRelId.get(relFrameId);
+
+      if (mapRecord && mapRecord.video_frame_ts && videoStartUnixSec > 0) {
+        frame.videoSyncedTime = mapRecord.video_frame_ts - videoStartUnixSec;
+      } else if (mapRecord && mapRecord.video_frame_index !== undefined) {
+        frame.videoSyncedTime = mapRecord.video_frame_index * (1 / fps);
+      } else {
+        frame.videoSyncedTime = (frame.timestamp + offsetMs) / 1000;
+      }
+    });
+    console.log("Precomputed per-frame video sync using frame_mapping.json");
+    return;
+  }
+
   vizData.radarFrames.forEach((frame) => {
     frame.videoSyncedTime = (frame.timestamp + offsetMs) / 1000;
   });

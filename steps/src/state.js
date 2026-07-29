@@ -24,6 +24,15 @@ export const appState = {
   // Stores the processed CAN bus data (speed, time)
   offset: 0, // The calculated or manually set offset in milliseconds.
   
+  // Per-frame mapping integration (frame_mapping.json)
+  frameMappingTable: null, // Array of frame mapping records
+  hasFrameMapping: false, // True if frame_mapping.json is active
+  frameMapFile: null, // File reference if present in uploaded folder
+  frameMapBaseOffset: 0, // Baseline map offset in ms (video_frame_index / FPS * 1000)
+  videoFps: 30, // Dynamic video FPS (detected from frame_mapping or video metadata)
+  sourceFolderName: "", // The top-level directory or file source name
+  activeWorker: null, // Reference to the currently running Web Worker instance
+  
   currentGraphScale: 10, // Current ms per block for the IFT graph (smooth zooming)
 
   videoStartDate: null,
@@ -77,3 +86,7 @@ export const appState = {
   radarYMin: RADAR_Y_MIN,
   radarYMax: RADAR_Y_MAX,
 };
+
+export function getVideoFps() {
+  return appState.videoFps || 30;
+}

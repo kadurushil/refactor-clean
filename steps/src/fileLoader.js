@@ -1,6 +1,7 @@
-import { appState } from "./state.js";
+import { appState, getVideoFps } from "./state.js";
 import { debugFlags } from "./debug.js";
 import { saveFileWithMetadata, loadManualOffset, deleteManualOffset } from "./db.js";
+import { updateDebugBadge } from "./debugBadge.js";
 import { parseVisualizationJson } from "./fileParsers.js";
 import {
   showLoadingModal,
@@ -17,6 +18,7 @@ import { resetVisualization } from "./sync.js";
 import { radarSketch } from "./p5/radarSketch.js";
 import { speedGraphSketch } from "./p5/speedGraphSketch.js";
 import { zoomSketch } from "./p5/zoomSketch.js";
+import { VIDEO_FPS } from "./constants.js";
 import {
   videoPlayer,
   videoPlaceholder,
@@ -32,35 +34,74 @@ import {
   updateDebugOverlay,
   resetUIForNewLoad,
   startScreenModal,
+  setOffsetToggleMode,
 } from "./dom.js";
 
 import { forceResyncWithOffset } from "./sync.js";
+import { extractAllFiles, triggerCaseCSelectionModal } from "./load_folder.js";
+
 /**
- * This is the main handler for both manual clicks and drag-and-drop.
- * It identifies the files and triggers the unified processing pipeline.
+ * Main file handler for clicks, drag & drop, and folder loads.
+ * Evaluates inputs and routes to single-dataset pipeline or Case C selection modal.
  */
-export function handleFiles(files, fromCache = false) {
-  // Identify new files from the input
-  let incomingJson = null;
-  let incomingVideo = null;
+export async function handleFiles(filesInput, fromCache = false) {
+  const allFiles = await extractAllFiles(filesInput);
+  if (!allFiles || allFiles.length === 0) return;
 
-  Array.from(files).forEach((file) => {
-    if (file.name.endsWith(".json")) {
-      incomingJson = file;
+  // Filter JSON datasets and Video resources
+  const jsonFiles = allFiles.filter((f) => f.name.toLowerCase().endsWith(".json"));
+  const videoFiles = allFiles.filter(
+    (f) => f.type.startsWith("video/") || /\.(mp4|webm|avi|mov|mkv)$/i.test(f.name)
+  );
+
+  // Extract root folder name if available
+  let folderName = null;
+  const firstPath = allFiles[0].relativePath || allFiles[0].webkitRelativePath;
+  if (firstPath && firstPath.includes("/")) {
+    folderName = firstPath.split("/")[0];
+  }
+
+  // Store frame_mapping.json reference in appState if present in the upload batch
+  const frameMapFile = allFiles.find((f) => f.name.toLowerCase() === "frame_mapping.json");
+  if (frameMapFile) {
+    appState.frameMapFile = frameMapFile;
+  } else {
+    appState.frameMapFile = null;
+  }
+
+  // Filter JSON datasets (excluding frame_mapping.json)
+  const vizJsonFiles = jsonFiles.filter((f) => f.name.toLowerCase() !== "frame_mapping.json");
+
+  // Case 1: Standard Single Dataset (1 JSON and/or 1 Video)
+  if (vizJsonFiles.length <= 1 && videoFiles.length <= 1) {
+    const jsonFile = vizJsonFiles[0] || null;
+    const videoFile = videoFiles[0] || null;
+    if (!jsonFile && !videoFile) return;
+
+    if (folderName) {
+      appState.sourceFolderName = folderName;
+      localStorage.setItem("sourceFolderName", folderName);
+    } else if (!fromCache) {
+      appState.sourceFolderName = "Direct File";
+      localStorage.setItem("sourceFolderName", "Direct File");
     }
-    if (file.type.startsWith("video/")) {
-      incomingVideo = file;
-    }
-  });
 
-  // If no valid files were dropped, do nothing
-  if (!incomingJson && !incomingVideo) return;
+    processFilePipeline(jsonFile, videoFile, fromCache);
+    return;
+  }
 
-  // Trigger the pipeline with the identified files
-  processFilePipeline(incomingJson, incomingVideo, fromCache);
+  // Case C: Special Case - Multiple JSONs or Videos detected
+  triggerCaseCSelectionModal(jsonFiles, videoFiles, folderName, fromCache, processFilePipeline, allFiles);
 }
 
 async function processFilePipeline(jsonFile, videoFile, fromCache) {
+  // Terminate any previous active worker to prevent background race conditions
+  if (appState.activeWorker) {
+    console.log("Terminating ongoing Web Worker task from previous parse...");
+    appState.activeWorker.terminate();
+    appState.activeWorker = null;
+  }
+
   // 0. Reset the UI to a clean state before processing anything.
   // Pass 'true' if a new video is present, 'false' if we should try to keep the old one.
   const isNewVideo = !!videoFile;
@@ -101,6 +142,13 @@ async function processFilePipeline(jsonFile, videoFile, fromCache) {
     }
   }
 
+  if (appState.frameMapFile && !fromCache) {
+    const saveMapPromise = saveFileWithMetadata("frame_mapping", appState.frameMapFile).catch((e) =>
+      console.warn("Non-blocking cache save failed for frame_mapping:", e)
+    );
+    cachePromises.push(saveMapPromise);
+  }
+
   // --- PART B: Calculate Offset (Moved Up) ---
   // Critical: This must run BEFORE JSON parsing so valid start times are available.
   await calculateAndSetOffset();
@@ -114,6 +162,7 @@ async function processFilePipeline(jsonFile, videoFile, fromCache) {
     
     // Parse JSON
     const worker = new Worker("./src/parser.worker.js");
+    appState.activeWorker = worker;
     const parsedData = await new Promise((resolve, reject) => {
       worker.onmessage = (e) => {
         const { type, data, percent, message } = e.data;
@@ -121,9 +170,11 @@ async function processFilePipeline(jsonFile, videoFile, fromCache) {
           updateLoadingModal(percent * 0.8, `Parsing JSON (${percent}%)...`);
         } else if (type === "complete") {
           worker.terminate();
+          appState.activeWorker = null;
           resolve(data);
         } else if (type === "error") {
           worker.terminate();
+          appState.activeWorker = null;
           reject(new Error(message));
         }
       };
@@ -362,6 +413,9 @@ function finalizeSetup() {
     snrMinInput.value = appState.globalMinSnr.toFixed(1);
     snrMaxInput.value = appState.globalMaxSnr.toFixed(1);
   }
+
+  // 6. Update Debug Badge
+  updateDebugBadge();
 }
 
 // Sets up the video player with the given file URL.
@@ -379,7 +433,82 @@ function setupVideoPlayer(fileURL) {
   }
 }
 
+/**
+ * Parses frame_mapping.json lines into a structured array and detects actual FPS.
+ */
+async function parseFrameMappingFile(file) {
+  try {
+    const text = await file.text();
+    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    const records = [];
+    for (const line of lines) {
+      try {
+        const obj = JSON.parse(line);
+        // Defensive check: Ensure required properties exist and are valid numbers
+        if (
+          obj &&
+          typeof obj.video_frame_index === "number" &&
+          !isNaN(obj.video_frame_index)
+        ) {
+          records.push(obj);
+        }
+      } catch (e) {
+        // Skip malformed JSON lines
+      }
+    }
+    if (records.length > 1) {
+      const rec0 = records[0];
+      const recN = records[records.length - 1];
+      if (
+        rec0.video_frame_ts !== undefined &&
+        recN.video_frame_ts !== undefined
+      ) {
+        const deltaFrames = recN.video_frame_index - rec0.video_frame_index;
+        const deltaTime = recN.video_frame_ts - rec0.video_frame_ts;
+        if (deltaFrames > 0 && deltaTime > 0) {
+          const detectedFps = Math.round((deltaFrames / deltaTime) * 100) / 100;
+          appState.videoFps = detectedFps;
+          console.log(`Detected video FPS from frame_mapping.json: ${detectedFps}`);
+        }
+      }
+    }
+    return records.length > 0 ? records : null;
+  } catch (err) {
+    console.warn("Failed to read frame_mapping.json:", err);
+    return null;
+  }
+}
+
 async function calculateAndSetOffset() {  
+  // 0. Check if frame_mapping.json is available
+  if (appState.frameMapFile) {
+    const mappingRecords = await parseFrameMappingFile(appState.frameMapFile);
+    if (mappingRecords && mappingRecords.length > 0 && mappingRecords[0].video_frame_index !== undefined) {
+      appState.frameMappingTable = mappingRecords;
+      appState.hasFrameMapping = true;
+
+      const firstRecord = mappingRecords[0];
+      const fps = getVideoFps();
+      // Display human-readable offset equivalent to video lead time: (video_frame_index / FPS) * 1000
+      const displayOffsetMs = Math.round((firstRecord.video_frame_index / fps) * 1000);
+      appState.frameMapBaseOffset = isNaN(displayOffsetMs) ? 0 : displayOffsetMs;
+      appState.offset = appState.frameMapBaseOffset;
+      offsetInput.value = appState.offset;
+      localStorage.setItem("visualizerOffset", appState.offset);
+
+      // Show "Auto (map)" toggle mode
+      setOffsetToggleMode("auto", "Auto (map)");
+      console.log(`Loaded frame_mapping.json with ${mappingRecords.length} records @ ${fps} FPS. Display offset set to ${appState.offset}ms`);
+      return;
+    }
+  }
+
+  // Clear frame mapping & reset state back to defaults if map file is not present or invalid
+  appState.frameMappingTable = null;
+  appState.hasFrameMapping = false;
+  appState.frameMapBaseOffset = 0;
+  appState.videoFps = 30; // Reset back to default 30 FPS
+
   const jsonTimestampInfo = extractTimestampInfo(appState.jsonFilename);
   const videoTimestampInfo = extractTimestampInfo(appState.videoFilename);
 
@@ -413,10 +542,8 @@ async function calculateAndSetOffset() {
     // Update UI
     offsetInput.value = appState.offset;
     
-    // Show "Manual" indicator
-    autoOffsetIndicator.textContent = "Manual";
-    autoOffsetIndicator.className = "text-xs font-bold ml-2 text-gray-500"; // Gray for manual
-    autoOffsetIndicator.classList.remove("hidden");
+    // Show "Manual" toggle mode
+    setOffsetToggleMode("manual");
     
     localStorage.setItem("visualizerOffset", appState.offset);
     return; // Exit early, skipping auto-calc
@@ -431,27 +558,16 @@ async function calculateAndSetOffset() {
     if (isNaN(offset) || Math.abs(offset) > 30000) {
       console.warn(`Calculated offset of ${offset}ms is invalid or exceeds 30s threshold. Defaulting to 0.`);
       calculatedOffset = 0;
-      
-      // Show "Default" or "Out of Range" indicator
-      autoOffsetIndicator.textContent = isNaN(offset) ? "Default" : "Out of Range";
-      autoOffsetIndicator.className = "text-xs font-bold ml-2 text-yellow-600"; // Dark Yellow
-      autoOffsetIndicator.classList.remove("hidden");
-      
+      setOffsetToggleMode("manual");
     } else {
       calculatedOffset = offset;
-      
-      // Show "Auto" indicator
-      autoOffsetIndicator.textContent = "Auto";
-      autoOffsetIndicator.className = "text-xs font-bold ml-2 text-green-500"; // Green
-      autoOffsetIndicator.classList.remove("hidden");
-      
+      setOffsetToggleMode("auto", "Auto");
       console.log(`Auto-calculated offset: ${calculatedOffset} ms`);
     }
   } else if (jsonDate) {
       // If we have JSON but no video, we set start time but offset is 0
       appState.radarStartTimeMs = jsonDate.getTime();
-      // No specific indicator needed for JSON-only default 0, or could show "Default"
-      autoOffsetIndicator.classList.add("hidden"); 
+      setOffsetToggleMode("auto", "Auto");
   }
 
   appState.offset = calculatedOffset;
@@ -460,18 +576,30 @@ async function calculateAndSetOffset() {
 }
 
 /**
- * Re-calculates and applies the automatic offset based on filenames.
- * This function is triggered by user actions like clicking the 'Manual' indicator
- * or using a keyboard shortcut to revert a manual offset.
+ * Re-calculates and applies the automatic offset based on filenames or frame_mapping.
  */
 export function revertToAutoOffset() {
+  if (appState.frameMapFile && appState.frameMappingTable && appState.frameMappingTable.length > 0) {
+    appState.hasFrameMapping = true;
+    appState.offset = appState.frameMapBaseOffset;
+    offsetInput.value = appState.offset;
+    if (appState.jsonFilename) {
+      deleteManualOffset(appState.jsonFilename);
+    }
+    if (appState.vizData) {
+      precomputeRadarVideoSync(appState.vizData, appState.offset);
+    }
+    forceResyncWithOffset(false);
+    setOffsetToggleMode("auto", "Auto (map)");
+    return;
+  }
+
   // 1. Calculate the automatic offset.
   const jsonTimestampInfo = extractTimestampInfo(appState.jsonFilename);
   const videoTimestampInfo = extractTimestampInfo(appState.videoFilename);
 
   let calculatedOffset = 0;
-  let indicatorText = "Default";
-  let indicatorClass = "text-xs font-bold ml-2 text-yellow-600"; // Default to yellow
+  let indicatorText = "Auto";
 
   if (jsonTimestampInfo && videoTimestampInfo) {
     const jsonDate = parseTimestamp(jsonTimestampInfo.timestampStr, jsonTimestampInfo.format);
@@ -485,7 +613,6 @@ export function revertToAutoOffset() {
       } else {
         calculatedOffset = offset;
         indicatorText = "Auto";
-        indicatorClass = "text-xs font-bold ml-2 text-green-500";
       }
     }
   }
@@ -502,7 +629,5 @@ export function revertToAutoOffset() {
   forceResyncWithOffset(false);
 
   // 5. After resyncing, set the correct indicator text and style.
-  autoOffsetIndicator.textContent = indicatorText;
-  autoOffsetIndicator.className = indicatorClass;
-  autoOffsetIndicator.classList.remove("hidden");
+  setOffsetToggleMode("auto", indicatorText);
 }

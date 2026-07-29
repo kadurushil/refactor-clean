@@ -1,0 +1,19 @@
+{
+  "name": "refactor-gitea",
+  "version": "1.0.0",
+  "description": "",
+  "main": "sync_gitea.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "sync": "node sync_gitea.js",
+    "watch": "node sync_gitea.js --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://baldevops.bajajauto.co.in/gitea/rakadu1/visualizer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}

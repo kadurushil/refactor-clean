@@ -1,4 +1,4 @@
-import { appState } from "./state.js";
+import { appState, getVideoFps } from "./state.js";
 import {
   playPauseBtn,
   videoPlayer,
@@ -23,16 +23,13 @@ import { VIDEO_FPS } from "./constants.js";
 import { findRadarFrameIndexForTime } from "./utils.js";
 
 function handleKeyDown(event) {
-  // --- FIX APPLIED HERE ---
-  // We only want to block shortcuts if the user is actively typing in a text or number input.
-  // This allows shortcuts to work even when other elements, like the timeline slider, are focused.
-  const isTextInputFocused =
-    event.target.tagName === "INPUT" &&
-    (event.target.type === "text" || event.target.type === "number");
-  if (isTextInputFocused) {
+  // Ignore shortcuts if the user is typing in an input field (e.g., offset)
+  if (
+    event.target.tagName === "INPUT" ||
+    event.target.tagName === "TEXTAREA"
+  ) {
     return;
   }
-  // --- END OF FIX ---
 
   const key = event.key;
   // We can add any new shortcut keys to this array.
@@ -106,7 +103,7 @@ function handleKeyDown(event) {
       playPauseBtn.click(); // Pause playback to allow for precise stepping
     }
 
-    const frameDuration = 1 / VIDEO_FPS;
+    const frameDuration = 1 / getVideoFps();
     let newVideoTime = videoPlayer.currentTime;
 
     if (key === "ArrowUp") {

@@ -208,3 +208,52 @@ export function loadFreshFileFromDB(key, expectedFilename) {
         };
     });
 }
+
+// Queries IndexedDB for cached files, returning the file count and total size formatted.
+export function getCacheStats() {
+  return new Promise(async (resolve) => {
+    const database = await getDB();
+    if (!database) {
+      resolve({ count: 0, sizeStr: "0.00 KB" });
+      return;
+    }
+    try {
+      const transaction = database.transaction(["files"], "readonly");
+      const store = transaction.objectStore("files");
+      const request = store.openCursor();
+      let count = 0;
+      let totalBytes = 0;
+
+      request.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          count++;
+          if (cursor.value && cursor.value.size) {
+            totalBytes += cursor.value.size;
+          }
+          cursor.continue();
+        } else {
+          // Format size
+          let sizeStr = "0.00 KB";
+          if (totalBytes >= 1024 * 1024) {
+            sizeStr = `${(totalBytes / (1024 * 1024)).toFixed(2)} MB`;
+          } else if (totalBytes >= 1024) {
+            sizeStr = `${(totalBytes / 1024).toFixed(2)} KB`;
+          } else if (totalBytes > 0) {
+            sizeStr = `${totalBytes} Bytes`;
+          }
+          resolve({ count, sizeStr });
+        }
+      };
+
+      request.onerror = (event) => {
+        console.warn("Error checking cache stats:", event.target.error);
+        resolve({ count: 0, sizeStr: "0.00 KB" });
+      };
+    } catch (e) {
+      console.warn("Exception during cache stats check:", e);
+      resolve({ count: 0, sizeStr: "0.00 KB" });
+    }
+  });
+}
+

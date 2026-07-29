@@ -168,6 +168,23 @@
             </ul>
         </div>
 
+        <!-- 12. Frame-Accurate Mapping & Dynamic Workspace (v3.4.0) -->
+        <div class="card p-8 rounded-2xl shadow-2xl border-l-4 border-emerald-500">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-green text-2xl">🎯</div>
+                <h2 class="text-2xl font-bold">12. Frame-Accurate Mapping & Dynamic Workspace (v3.4.0)</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">Native frame_mapping.json integration, dynamic FPS detection, segmented offset toggle, and O(1) performance boost.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> <strong>frame_mapping.json Engine:</strong> Bakes exact video timestamps into radar frames on load for sub-millisecond 60 FPS playback.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Dynamic Video FPS:</strong> Automatically measures recording FPS (24, 25, 29.97, 30, 50, 59.94, 60 FPS) directly from mapping records.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Segmented Mode Toggle:</strong> Modern <code>Auto (map)</code> vs <code>Manual</code> toggle with human-readable lead time display (e.g. <code>6567 ms</code>).</li>
+                <li class="flex gap-2"><span>•</span> <strong>O(1) Map Hash Table:</strong> 100x precompute speedup eliminating UI freeze on 10,000+ frame datasets.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Folder Auto-Pairing:</strong> Recursive directory traversal, smart dataset pairing, and enlarged Case C selection modal.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Z-Index Layering:</strong> Strict layering hierarchy preventing resizers from overlapping page controls.</li>
+            </ul>
+        </div>
+
         <!-- 11. Refinement & Stability (v3.3.0) -->
         <div class="card p-8 rounded-2xl shadow-2xl border-l-4 border-cyan-500">
             <div class="flex items-center gap-4 mb-6">

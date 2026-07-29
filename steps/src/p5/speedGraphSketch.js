@@ -1,7 +1,7 @@
 // File: src/speedGraphSketch.js
 import { appState } from "../state.js";
 import { videoPlayer, speedGraphContainer, playPauseBtn } from "../dom.js";
-import { updateFrame, pausePlayback } from "../sync.js";
+import { updateFrame, pausePlayback, performFastVideoSeek, showSeekingBadge } from "../sync.js";
 import { ttcColors } from "../drawUtils.js";
 import { debugFlags } from "../debug.js";
 
@@ -413,6 +413,11 @@ export const speedGraphSketch = function (p) {
         
         if (hoverFrameIndex !== null) {
            updateFrame(hoverFrameIndex, false);
+           showSeekingBadge();
+           const frameData = appState.vizData.radarFrames[hoverFrameIndex];
+           if (frameData && typeof frameData.videoSyncedTime === "number") {
+             performFastVideoSeek(frameData.videoSyncedTime);
+           }
            if (appState.p5_instance) appState.p5_instance.redraw();
         }
         p.redraw();

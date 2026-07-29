@@ -1,5 +1,5 @@
 // TODO(sync-refactor): move sync logic into src/sync.js
-import { appState } from "./state.js";
+import { appState, getVideoFps } from "./state.js";
 import { formatUTCTime } from "./utils.js";
 import { VIDEO_FPS } from "./constants.js";
 
@@ -45,6 +45,7 @@ export const canvasContainer = document.getElementById("canvas-container");
 export const canvasPlaceholder = document.getElementById("canvas-placeholder");
 export const videoPlayer = document.getElementById("video-player");
 export const videoPlaceholder = document.getElementById("video-placeholder");
+export const videoSeekingBadge = document.getElementById("video-seeking-badge");
 export const loadJsonBtn = document.getElementById("load-json-btn");
 export const loadVideoBtn = document.getElementById("load-video-btn");
 export const loadCanBtn = document.getElementById("load-can-btn");
@@ -76,6 +77,42 @@ export const snrMinInput = document.getElementById("snr-min-input");
 export const snrMaxInput = document.getElementById("snr-max-input");
 export const applySnrBtn = document.getElementById("apply-snr-btn");
 export const autoOffsetIndicator = document.getElementById("auto-offset-indicator");
+export const toggleModeAuto = document.getElementById("toggle-mode-auto");
+export const toggleModeManual = document.getElementById("toggle-mode-manual");
+export const autoModeLabel = document.getElementById("auto-mode-label");
+export const offsetModeToggle = document.getElementById("offset-mode-toggle");
+
+export function setOffsetToggleMode(mode, labelText = "Auto") {
+  if (autoModeLabel && labelText) {
+    autoModeLabel.textContent = labelText;
+  }
+  if (mode === "auto") {
+    if (toggleModeAuto) {
+      toggleModeAuto.className =
+        "px-2 py-1 rounded-md transition-all duration-150 text-white bg-green-600 shadow-sm font-bold flex items-center gap-1";
+    }
+    if (toggleModeManual) {
+      toggleModeManual.className =
+        "px-2 py-1 rounded-md transition-all duration-150 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200";
+    }
+    if (autoOffsetIndicator) {
+      autoOffsetIndicator.textContent = labelText;
+    }
+  } else {
+    if (toggleModeManual) {
+      toggleModeManual.className =
+        "px-2 py-1 rounded-md transition-all duration-150 text-white bg-gray-600 dark:bg-gray-600 shadow-sm font-bold flex items-center gap-1";
+    }
+    if (toggleModeAuto) {
+      toggleModeAuto.className =
+        "px-2 py-1 rounded-md transition-all duration-150 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200";
+    }
+    if (autoOffsetIndicator) {
+      autoOffsetIndicator.textContent = "Manual";
+    }
+  }
+}
+
 export const clearCacheBtn = document.getElementById("clear-cache-btn");
 export const speedGraphContainer = document.getElementById("speed-graph-container");
 export const speedGraphPlaceholder = document.getElementById("speed-graph-placeholder");
@@ -133,6 +170,20 @@ export const changelogModal = document.getElementById("changelog-modal");
 export const changelogModalCloseBtn = document.getElementById("changelog-modal-close-btn");
 export const rangeSlider = document.getElementById("range-slider");
 export const rangeValueDisplay = document.getElementById("range-value-display");
+
+export const folderFileInput = document.getElementById("folder-file-input");
+export const startLoadFolderBtn = document.getElementById("start-load-folder-btn");
+export const loadFolderBtn = document.getElementById("load-folder-btn");
+export const datasetSelectModal = document.getElementById("dataset-select-modal");
+export const datasetModalCloseBtn = document.getElementById("dataset-modal-close-btn");
+export const datasetAutoPairsContainer = document.getElementById("dataset-auto-pairs-container");
+export const datasetCustomJsonSelect = document.getElementById("dataset-custom-json-select");
+export const datasetCustomVideoSelect = document.getElementById("dataset-custom-video-select");
+export const datasetCustomLoadBtn = document.getElementById("dataset-custom-load-btn");
+export const toggleCustomSelectBtn = document.getElementById("toggle-custom-select-btn");
+export const customSelectDrawer = document.getElementById("custom-select-drawer");
+export const customDrawerIcon = document.getElementById("custom-drawer-icon");
+
 
 
 
@@ -228,7 +279,7 @@ export function updateDebugOverlay(currentMediaTime) {
       }
       content.push(timeString);
 
-      content.push(`Video Frame: ${Math.floor(currentMediaTime * VIDEO_FPS)}`);
+      content.push(`Video Frame: ${Math.floor(currentMediaTime * getVideoFps())}`);
       content.push(
         `Vid Abs Time: ${new Date(videoAbsoluteTimeMs)
           .toISOString()
@@ -523,7 +574,7 @@ export function updatePersistentOverlays(currentMediaTime) {
   // Default to Unix Epoch (Jan 1, 1970) if no dates are available
   const baseTimeMs = appState.videoStartDate ? appState.videoStartDate.getTime() : (appState.radarStartTimeMs || 0);
   const absVideoTime = new Date(baseTimeMs + currentMediaTime * 1000);
-  const videoFrame = Math.floor(currentMediaTime * VIDEO_FPS);
+  const videoFrame = Math.floor(currentMediaTime * getVideoFps());
   
   let timeDisplay = `Elapsed Time: ${currentMediaTime.toFixed(2)}s`;
   if (videoPlayer && !isNaN(videoPlayer.duration) && videoPlayer.duration > 0) {

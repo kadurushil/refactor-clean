@@ -1,6 +1,6 @@
 # Radar and Video Synchronizer (Refactored)
 
-**Version**: 3.3.0 (Synchronized Workspace Update)
+**Version**: 3.4.0 (Frame-Accurate Mapping & Dynamic Workspace Update)
 
 ## 🎯 Overview
 
@@ -79,7 +79,7 @@ The application leverages **p5.js** for rendering, **Web Workers** for backgroun
 ├── annex/                           # Supplementary documentation and reference files
 │   ├── User_Manual.html             # Content for the Quick Start Guide (loaded via iframe)
 │   ├── code-base-overview.html      # Technical overview of the codebase (infographic style)
-│   ├── Changelog_3.3.0.html         # Current version release notes (loaded via iframe)
+│   ├── Changelog_3.4.0.html         # Current version release notes (loaded via iframe)
 │   ├── Changelog.html               # Legacy change archive
 │   └── shortcuts.html               # Reference for keyboard shortcuts (legacy/static)
 ├── intel/                           # Project documentation and AI context

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARAS Visualizer V3.4.0 - Release Notes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;600;800&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #f1f5f9;
+        }
+
+        .commit-hash {
+            font-family: 'Fira Code', monospace;
+            color: #94a3b8;
+            font-size: 0.8rem;
+        }
+
+        .version-tag {
+            background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+        }
+
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: #6366f1;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+        }
+
+        .highlight-green {
+            color: #4ade80;
+        }
+
+        .highlight-blue {
+            color: #60a5fa;
+        }
+
+        .highlight-purple {
+            color: #c084fc;
+        }
+
+        .highlight-amber {
+            color: #fbbf24;
+        }
+
+        .highlight-cyan {
+            color: #22d3ee;
+        }
+
+        .highlight-rose {
+            color: #fb7185;
+        }
+
+        .icon-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 12px;
+        }
+
+        code {
+            font-family: 'Fira Code', monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body class="p-8 md:p-16">
+
+    <header class="max-w-6xl mx-auto mb-16 border-b border-slate-700 pb-12">
+        <div class="flex items-center gap-4 mb-4">
+            <span
+                class="version-tag text-white px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase">Major
+                Release</span>
+            <span class="text-slate-500 font-mono text-xs">V3.4.0 | 2026-07-24</span>
+        </div>
+        <h1
+            class="text-5xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-blue-400 italic">
+            What's New in Version 3.4.0
+        </h1>
+        <p class="text-xl text-slate-400 max-w-4xl leading-relaxed">
+            The 3.4.0 "Frame-Accurate Mapping & Dynamic Workspace" update introduces native
+            <code>frame_mapping.json</code> temporal synchronization, dynamic video FPS detection, a segmented offset
+            mode toggle, folder auto-pairing, GridStack workspace customization, and FCW Stage 2 warning overlays.
+        </p>
+    </header>
+
+    <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+
+        <!-- 1. Frame Mapping & High-Precision Sync -->
+        <div class="card p-8 rounded-2xl shadow-2xl border-t-4 border-emerald-500">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-green text-2xl">🎯</div>
+                <h2 class="text-2xl font-bold">frame_mapping.json Engine</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">Sub-millisecond per-frame temporal alignment for recorded
+                radar and video logs.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> <strong>Absolute Timestamp Baking:</strong> Bakes exact video
+                    timestamps into radar frames on file load for zero-overhead 60 FPS playback.</li>
+                <li class="flex gap-2"><span>•</span> <strong>O(1) Map Hash Table:</strong> Optimized lookup performance
+                    from O(N²) down to O(1) hash maps (100x precompute speedup).</li>
+                <li class="flex gap-2"><span>•</span> <strong>IndexedDB Map Caching:</strong> Retains
+                    <code>frame_mapping.json</code> in browser storage across page reloads.</li>
+            </ul>
+        </div>
+
+        <!-- 2. Dynamic FPS Recognition & Segmented Toggle -->
+        <div class="card p-8 rounded-2xl shadow-2xl border-t-4 border-blue-500">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-blue text-2xl">⚡</div>
+                <h2 class="text-2xl font-bold">Dynamic FPS & Mode Toggle</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">Smart hardware frame rate detection and intuitive offset
+                control.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> <strong>Dynamic Video FPS:</strong> Automatically computes
+                    recording FPS (24, 25, 29.97, 30, 50, 59.94, 60 FPS) directly from mapping records.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Human-Readable Display:</strong> Shows intuitive video
+                    lead offset (e.g. <code>6567 ms</code>) derived from <code>(video_frame / FPS) * 1000</code>.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Segmented Mode Toggle:</strong> Visual
+                    <code>Auto (map)</code> vs <code>Manual</code> mode toggle with one-click map revert.</li>
+            </ul>
+        </div>
+
+        <!-- 3. Folder Upload & Auto-Pairing Modal -->
+        <div class="card p-8 rounded-2xl shadow-2xl border-t-4 border-cyan-500">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-cyan text-2xl">📁</div>
+                <h2 class="text-2xl font-bold">Folder Upload & Auto-Pairing</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">Direct folder drag-and-drop with multi-dataset discovery.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> <strong>Recursive Traversal:</strong> Scans entire folder trees to
+                    discover JSON logs, MP4 videos, and map files automatically.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Smart Dataset Pairing:</strong> Pairs log files with video
+                    files using priority scoring rules and subfolder matching.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Selection Modal (Case C):</strong> 30% larger modal layout
+                    with auto-scroll to primary recommendations.</li>
+            </ul>
+        </div>
+
+        <!-- 4. GridStack Layout & FCW Stage 2 Overlays -->
+        <div class="card p-8 rounded-2xl shadow-2xl border-t-4 border-amber-500">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-amber text-2xl">🖥️</div>
+                <h2 class="text-2xl font-bold">GridStack & FCW Stage 2</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">Customizable dashboard grid, ADAS inspector, and forward
+                collision warnings.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> <strong>GridStack Integration:</strong> Resizable and reorderable
+                    dashboard cards with persistent layout memory.</li>
+                <li class="flex gap-2"><span>•</span> <strong>FCW Stage 2 Overlays:</strong> Draggable Forward Collision
+                    Warning overlays with real-time target distance markers.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Floating Panels:</strong> Decoupled God Mode Zoom panel
+                    and Data Explorer with vertical ADAS property inspector.</li>
+            </ul>
+        <!-- 5. High-Speed Seeking & Visual Sync Badge -->
+        <div class="card p-8 rounded-2xl shadow-2xl border-t-4 border-purple-500">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-purple text-2xl">🚀</div>
+                <h2 class="text-2xl font-bold">Fast Seeking & Visual Sync Badge</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">High-speed video seek throttling, 100ms reduced debounce, and real-time visual seeking cues.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> <strong>Throttled Fast-Seek:</strong> Dispatches native <code>fastSeek()</code> every ~60ms during continuous scrubbing for near real-time video feedback alongside <1ms radar redraws.</li>
+                <li class="flex gap-2"><span>•</span> <strong>100ms Debounce Snap:</strong> Reduced trailing seek debounce from 300ms to 100ms for instant frame snapping when seeking stops.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Visual Seeking Badge:</strong> Animated seeking overlay badge on the video panel indicating active video decoding and seek state.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Robust State Reconciliation:</strong> Eliminates stuck seeking badge states via post-debounce state checks, small-drift handling, and an 800ms safety fallback timer.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Queued Playback Guard:</strong> Shows "Syncing..." and queues playback if Play is pressed while a seek is in progress.</li>
+            </ul>
+        </div>
+
+        <!-- 5. Layering & Layer Safeguards -->
+        <div class="card p-8 rounded-2xl shadow-2xl border-t-4 border-rose-500">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-rose text-2xl">🛡️</div>
+                <h2 class="text-2xl font-bold">Z-Index & Defensive Stability</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">Robust state isolation and clean UI handle layering.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> <strong>Clean Z-Index Hierarchy:</strong> Managed z-index scale
+                    (panels <code>z-40</code>, modals <code>z-[70]</code>, drag overlay <code>z-[90]</code>).</li>
+                <li class="flex gap-2"><span>•</span> <strong>State Isolation:</strong> Explicit reset of video FPS and
+                    map parameters when switching back to non-map datasets.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Deferred Cache Cleanup:</strong> Prevents premature
+                    IndexedDB cache wipes during drag-and-drop cancellations.</li>
+            </ul>
+        </div>
+
+        <!-- 6. Debug & Telemetry -->
+        <div class="card p-8 rounded-2xl shadow-2xl border-t-4 border-purple-500">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="icon-box highlight-purple text-2xl">📊</div>
+                <h2 class="text-2xl font-bold">Glassmorphic Debug Badge</h2>
+            </div>
+            <p class="text-slate-400 mb-4 text-sm italic">Real-time telemetry, cache stats, and build versioning.</p>
+            <ul class="space-y-3 text-slate-300 text-sm">
+                <li class="flex gap-2"><span>•</span> <strong>Floating Telemetry Badge:</strong> Glassmorphic bottom
+                    badge displaying active build version, browser, and OS.</li>
+                <li class="flex gap-2"><span>•</span> <strong>Cache Statistics:</strong> Interactive popover showing
+                    IndexedDB usage, stored blobs, and manual offsets.</li>
+                <li class="flex gap-2"><span>•</span> <strong>API Versioning:</strong> Dynamic <code>/api/version</code>
+                    fetch with automatic static server fallback.</li>
+            </ul>
+        </div>
+
+        <!-- Full Version History Link -->
+        <div
+            class="card p-6 rounded-2xl glass col-span-1 md:col-span-2 flex items-center justify-between border-dashed">
+            <div class="flex items-center gap-4">
+                <span class="text-2xl">📂</span>
+                <div>
+                    <h3 class="font-bold underline">Version History Archive</h3>
+                    <p class="text-xs text-slate-500">View release notes from V3.0 through V3.3.0</p>
+                </div>
+            </div>
+            <a href="Changelog.html"
+                class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm font-bold transition-all">View Full
+                Archive</a>
+        </div>
+
+    </div>
+
+    <footer class="max-w-6xl mx-auto mt-24 pt-12 border-t border-slate-700 text-slate-500 text-center">
+        <p class="mb-2"><strong>Classification:</strong> Major Feature & Performance Release</p>
+        <p class="text-sm italic">Built for precision, speed, and reliability. ARAS Visualizer 2026.</p>
+    </footer>
+
+</body>
+
+</html>

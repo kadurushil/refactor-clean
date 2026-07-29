@@ -113,8 +113,8 @@ export function makeDraggableAndResizable(panel, header, minWidth = 400, minHeig
         if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
         e.preventDefault();
         
-        // Ensure panel floats on top
-        panel.style.zIndex = 100;
+        // Ensure panel floats on top of other panels, but below modals
+        panel.style.zIndex = "45";
         
         original_x = panel.offsetLeft;
         original_y = panel.offsetTop;
@@ -143,7 +143,7 @@ export function makeDraggableAndResizable(panel, header, minWidth = 400, minHeig
     resizers.forEach(resizer => {
         resizer.addEventListener('mousedown', (e) => {
             e.preventDefault();
-            panel.style.zIndex = 100;
+            panel.style.zIndex = "45";
             original_width = parseFloat(getComputedStyle(panel, null).getPropertyValue('width').replace('px', ''));
             original_height = parseFloat(getComputedStyle(panel, null).getPropertyValue('height').replace('px', ''));
             original_x = panel.getBoundingClientRect().left;
