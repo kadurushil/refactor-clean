@@ -93,7 +93,7 @@ function fullSync() {
 }
 
 /**
- * Stage, commit, and push synced changes to Gitea.
+ * Stage, commit, and push synced changes to Gitea remotes.
  */
 function publishToGitea(commitMsg) {
     const syncSuccess = fullSync();
@@ -115,10 +115,17 @@ function publishToGitea(commitMsg) {
         const escapedMsg = finalMsg.replace(/"/g, '\\"');
         execSync(`git commit -m "${escapedMsg}"`, { cwd: DEST_DIR, stdio: 'inherit' });
 
-        console.log(`\x1b[32m[Git] Pushing clean visualizer updates to Gitea origin...\x1b[0m`);
+        console.log(`\x1b[32m[Git] Pushing clean visualizer updates to origin...\x1b[0m`);
         execSync('git push origin refactor/sync-centralize', { cwd: DEST_DIR, stdio: 'inherit' });
 
-        console.log(`\x1b[32m[Success] Gitea repository successfully updated & published with commit message: "${finalMsg}"!\x1b[0m`);
+        // Push to bal-ev remote if configured
+        const remotes = execSync('git remote', { cwd: DEST_DIR }).toString().split(/\r?\n/).map(r => r.trim());
+        if (remotes.includes('bal-ev')) {
+            console.log(`\x1b[32m[Git] Pushing clean visualizer updates to BAL-EV-ARAS...\x1b[0m`);
+            execSync('git push bal-ev refactor/sync-centralize', { cwd: DEST_DIR, stdio: 'inherit' });
+        }
+
+        console.log(`\x1b[32m[Success] Gitea repository successfully updated & published to all remotes!\x1b[0m`);
     } catch (err) {
         console.error(`\x1b[31m[Error] Git publish failed: ${err.message}\x1b[0m`);
     }
