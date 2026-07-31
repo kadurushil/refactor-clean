@@ -20,6 +20,8 @@ export const appState = {
 
   // Stores the parsed visualization data (radar frames, tracks, etc.)
   vizData: null,
+  trackerLogData: null, // Holds parsed tracking.log frame data
+  trackerLogFilename: "", // Filename of loaded tracking log file
   zoomSketchInstance: null, // Add this line
   // Stores the processed CAN bus data (speed, time)
   offset: 0, // The calculated or manually set offset in milliseconds.

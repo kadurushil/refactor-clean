@@ -3,6 +3,7 @@ import { debugFlags } from "./debug.js";
 import { saveFileWithMetadata, loadManualOffset, deleteManualOffset } from "./db.js";
 import { updateDebugBadge } from "./debugBadge.js";
 import { parseVisualizationJson } from "./fileParsers.js";
+import { parseTrackerLog, findBestTrackerLogMatch } from "./trackerLogParser.js";
 import {
   showLoadingModal,
   updateLoadingModal,
@@ -69,6 +70,9 @@ export async function handleFiles(filesInput, fromCache = false) {
     appState.frameMapFile = null;
   }
 
+  // Store all files reference in appState
+  appState.allFiles = allFiles;
+
   // Filter JSON datasets (excluding frame_mapping.json)
   const vizJsonFiles = jsonFiles.filter((f) => f.name.toLowerCase() !== "frame_mapping.json");
 
@@ -86,7 +90,7 @@ export async function handleFiles(filesInput, fromCache = false) {
       localStorage.setItem("sourceFolderName", "Direct File");
     }
 
-    processFilePipeline(jsonFile, videoFile, fromCache);
+    processFilePipeline(jsonFile, videoFile, fromCache, allFiles);
     return;
   }
 
@@ -94,7 +98,7 @@ export async function handleFiles(filesInput, fromCache = false) {
   triggerCaseCSelectionModal(jsonFiles, videoFiles, folderName, fromCache, processFilePipeline, allFiles);
 }
 
-async function processFilePipeline(jsonFile, videoFile, fromCache) {
+async function processFilePipeline(jsonFile, videoFile, fromCache, allFilesParam = null) {
   // Terminate any previous active worker to prevent background race conditions
   if (appState.activeWorker) {
     console.log("Terminating ongoing Web Worker task from previous parse...");
@@ -147,6 +151,37 @@ async function processFilePipeline(jsonFile, videoFile, fromCache) {
       console.warn("Non-blocking cache save failed for frame_mapping:", e)
     );
     cachePromises.push(saveMapPromise);
+  }
+
+  // --- PART A.1: Parse Tracker Log if present ---
+  const filePool = allFilesParam || appState.allFiles || [];
+  const logFile = findBestTrackerLogMatch(jsonFile, filePool);
+  if (logFile) {
+    appState.trackerLogFile = logFile;
+    appState.trackerLogFilename = logFile.name;
+    localStorage.setItem("trackerLogFilename", logFile.name);
+
+    if (!fromCache) {
+      const saveLogPromise = saveFileWithMetadata("tracker_log", logFile).catch((e) =>
+        console.warn("Non-blocking cache save failed for tracker_log:", e)
+      );
+      cachePromises.push(saveLogPromise);
+    }
+
+    try {
+      const logText = await logFile.text();
+      appState.trackerLogData = parseTrackerLog(logText);
+      console.log(`Parsed tracker log (${appState.trackerLogData.frames.size} frames) from ${logFile.relativePath || logFile.name}`);
+    } catch (e) {
+      console.warn("Failed to parse tracker log file:", e);
+      appState.trackerLogData = null;
+      appState.trackerLogFilename = "";
+    }
+  } else {
+    appState.trackerLogFile = null;
+    appState.trackerLogData = null;
+    appState.trackerLogFilename = "";
+    localStorage.removeItem("trackerLogFilename");
   }
 
   // --- PART B: Calculate Offset (Moved Up) ---

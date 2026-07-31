@@ -17,4 +17,4 @@ export const ROI_TRACKS_Y_MAX = 80;
 
 // Region of Interest 2 (Close Region)
 export const ROI_CLOSE_Y_MIN = 0;
-export const ROI_CLOSE_Y_MAX = 20;
+export const ROI_CLOSE_Y_MAX = 30;

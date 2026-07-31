@@ -20,22 +20,125 @@ const tabs = {
     grid: { btn: document.getElementById('tab-btn-grid'), panel: document.getElementById('tab-panel-grid') },
     trackGrid: { btn: document.getElementById('tab-btn-track-grid'), panel: document.getElementById('tab-panel-track-grid') },
     adas: { btn: document.getElementById('tab-btn-adas'), panel: document.getElementById('tab-panel-adas') },
+    trackerLog: { btn: document.getElementById('tab-btn-tracker-log'), panel: document.getElementById('tab-panel-tracker-log') },
     plot: { btn: document.getElementById('tab-btn-plot'), panel: document.getElementById('tab-panel-plot') },
 };
 
 const gridDiv = document.getElementById('data-grid');
 const trackGridDiv = document.getElementById('track-data-grid');
 const adasContainer = document.getElementById('adas-vertical-view');
+const trackerLogContainer = document.getElementById('tracker-log-view');
 const chartCanvas = document.getElementById('data-chart');
+
+// Dual View Mode DOM References for Track Grid
+const btnCardsView = document.getElementById('track-view-mode-cards');
+const btnTableView = document.getElementById('track-view-mode-table');
+const trackCardsContainer = document.getElementById('track-cards-view');
+const trackTableView = document.getElementById('track-table-view');
+const trackSearchInput = document.getElementById('track-search-input');
+const pointcloudSearchInput = document.getElementById('pointcloud-search-input');
+const autoFitPointCloudBtn = document.getElementById('autofit-pointcloud-btn');
+const autoFitTracksBtn = document.getElementById('autofit-tracks-btn');
 
 // --- Module-Local State ---
 let gridApi = null;
 let trackGridApi = null;
 let chartInstance = null;
 let currentGridData = null;
+let isDiagnosticsCollapsed = localStorage.getItem('dataExplorer_diagnosticsCollapsed') === 'true';
+let trackGridViewMode = localStorage.getItem('dataExplorer_trackGridViewMode') || 'cards';
+let currentTrackFilter = '';
+let currentPointCloudFilter = '';
+let lastPointCloudColKeys = '';
+let lastTrackGridColKeys = '';
 
 // --- EXPORTED STATE for Optimization ---
 export let isExplorerOpen = false;
+
+// --- State & Risk Badge Formatting Helpers ---
+function getStateBadgeHtml(stateVal) {
+    switch (stateVal) {
+        case 0:
+            return '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 border border-gray-300 dark:border-gray-600">FREE (0)</span>';
+        case 1:
+            return '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-300 dark:border-blue-800">INIT (1)</span>';
+        case 2:
+            return '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300 dark:border-amber-800">TENTATIVE (2)</span>';
+        case 3:
+            return '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border border-green-300 dark:border-green-800">CONFIRMED (3)</span>';
+        case 4:
+            return '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300 border border-orange-300 dark:border-orange-800">COASTING (4)</span>';
+        case 5:
+            return '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border border-red-300 dark:border-red-800">LOST (5)</span>';
+        default:
+            return `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">State ${stateVal ?? 'N/A'}</span>`;
+    }
+}
+
+function getRiskBadgeHtml(riskVal) {
+    switch (riskVal) {
+        case 0:
+            return '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">Low (0)</span>';
+        case 1:
+            return '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">Low (1)</span>';
+        case 2:
+            return '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Medium (2)</span>';
+        case 3:
+            return '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">High (3)</span>';
+        default:
+            return `<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">${riskVal ?? '0'}</span>`;
+    }
+}
+
+const COLUMN_HEADER_MAP = {
+    trackId: 'Track ID',
+    frameIdx: 'Frame',
+    state: 'State',
+    predictedPos: 'Predicted Pos (m)',
+    predictedPosition: 'Predicted Pos (m)',
+    predictedVel: 'Predicted Vel (m/s)',
+    predictedVelocity: 'Predicted Vel (m/s)',
+    correctedPos: 'Corrected Pos (m)',
+    correctedPosition: 'Corrected Pos (m)',
+    correctedVel: 'Corrected Vel (m/s)',
+    correctedVelocity: 'Corrected Vel (m/s)',
+    ttc: 'TTC (s)',
+    tti: 'TTI (s)',
+    risk: 'Risk',
+    histCount: 'Age (Frames)',
+    isStationary: 'Stationary',
+    modelProbabilities: 'Model Probs (CV/CT/CA)',
+    accel: 'Accel [Ax, Ay]',
+    omega: 'Yaw Rate (rad/s)',
+    ellipseAngle: 'Ellipse Angle (°)',
+    ellipseRadii: 'Ellipse Radii',
+    objectExtentAngle: 'Extent Angle (°)',
+    objectExtentRadii: 'Extent Radii',
+    covarianceP: 'Covariance Matrix P',
+};
+
+// --- Column State Persistence Functions ---
+function savePointCloudColumnState() {
+    if (gridApi) {
+        try {
+            const state = gridApi.getColumnState();
+            localStorage.setItem('dataExplorer_pointCloudColumnState', JSON.stringify(state));
+        } catch (e) {
+            console.warn('Failed to save point cloud column state:', e);
+        }
+    }
+}
+
+function saveTrackGridColumnState() {
+    if (trackGridApi) {
+        try {
+            const state = trackGridApi.getColumnState();
+            localStorage.setItem('dataExplorer_trackGridColumnState', JSON.stringify(state));
+        } catch (e) {
+            console.warn('Failed to save track grid column state:', e);
+        }
+    }
+}
 
 // --- AG Grid Configuration ---
 const gridOptions = {
@@ -45,39 +148,36 @@ const gridOptions = {
         sortable: true,
         filter: true,
         resizable: true,
-        // --- START: Set a default width for all columns ---
-        width: 100, // Keep width at 100 as requested
-        // --- END: Set a default width ---
+        width: 100,
     },
-    // --- START: Define a specific column type for numbers ---
-    // This allows us to apply special formatting only to numeric columns.
+    onColumnResized: savePointCloudColumnState,
+    onColumnMoved: savePointCloudColumnState,
+    onSortChanged: savePointCloudColumnState,
+    onColumnVisible: savePointCloudColumnState,
     columnTypes: {
         numberColumn: {
-            // --- START: Add column-specific number formatting ---
-            // This formatter checks the column ID and applies the correct precision.
             valueFormatter: params => {
                 const { value, colDef } = params;
-                // Do nothing if value is not a number or is an integer (like 'index')
                 if (typeof value !== 'number' || value === null || Number.isInteger(value)) {
                     return value;
                 }
-
-                // Apply formatting based on the column's field name
                 switch (colDef.field) {
                     case 'snr':
-                        return value.toFixed(2); // SNR gets 2 decimal places
+                        return value.toFixed(2);
                     default:
-                        return value.toFixed(4); // All other numbers get 4 decimal places
+                        return value.toFixed(4);
                 }
             }
-            // --- END: Add column-specific number formatting ---
         }
     }
-    // --- END: Define a specific column type for numbers ---
 };
 
 const trackGridOptions = {
-    ...gridOptions
+    ...gridOptions,
+    onColumnResized: saveTrackGridColumnState,
+    onColumnMoved: saveTrackGridColumnState,
+    onSortChanged: saveTrackGridColumnState,
+    onColumnVisible: saveTrackGridColumnState,
 };
 
 
@@ -133,6 +233,7 @@ function switchTab(targetTab) {
     tabs[targetTab].btn.classList.remove('text-gray-500', 'dark:text-gray-400');
 
     footer.classList.toggle('hidden', targetTab !== 'grid');
+    localStorage.setItem('dataExplorer_activeTab', targetTab);
 }
 
 function createTreeView(data) {
@@ -150,6 +251,9 @@ function updateExplorer() {
     const frame = appState.vizData.radarFrames[appState.currentFrame];
     if (!frame) return;
 
+    const frameIdx = frame.frameIdx || (appState.currentFrame + 1);
+    const trackerLogFrame = appState.trackerLogData?.frames?.get(frameIdx) || null;
+
     // --- START: Correctly gather track data for the current frame ---
     // We iterate through all tracks and find the history log entry for the current frame.
     const tracksForCurrentFrame = appState.vizData.tracks
@@ -163,93 +267,258 @@ function updateExplorer() {
     
     tabs.tree.panel.innerHTML = '';
     tabs.tree.panel.appendChild(createTreeView({
-        currentFrame: appState.currentFrame + 1,
+        currentFrame: frameIdx,
         frameData: frame,
-        trackData: tracksForCurrentFrame // Use the newly created array
+        trackData: tracksForCurrentFrame,
+        trackerLog: trackerLogFrame
     }));
 
     // --- START: Auto-update Point Cloud Grid ---
-    displayInGrid(frame.pointCloud, `${appState.currentFrame + 1}`);
+    displayInGrid(frame.pointCloud, `${frameIdx}`);
     // --- END: Auto-update Point Cloud Grid ---
     displayTracksInGrid(tracksForCurrentFrame);
     displayAdasData(frame.adas);
-
+    displayTrackerLogData(trackerLogFrame, frameIdx);
 }
 
 function displayInGrid(data, title) {
     if (!Array.isArray(data) || data.length === 0 || !gridApi) return;
 
-    // --- START: Add index and prepare data ---
-    // We map the original data to a new array, adding an 'index' property to each object.
     const indexedData = data.map((row, index) => ({
         index: index,
         ...row
     }));
-    currentGridData = indexedData; // Store the new indexed data
-    // --- END: Add index and prepare data ---
+    currentGridData = indexedData;
 
-    // --- START: More robust column generation ---
-    // Auto-generate columns, and assign a 'type' if the data is numeric.
-    const columns = Object.keys(indexedData[0]).map(key => ({
-        field: key,
-        headerName: key, // Set header name
-        // If the first row's value for this key is a number, assign our custom number type.
-        type: typeof indexedData[0][key] === 'number' ? 'numberColumn' : undefined
-    }));
-    // --- END: More robust column generation ---
+    // Only update column definitions if the column schema actually changes
+    const currentColKeys = Object.keys(indexedData[0]).join(',');
+    if (currentColKeys !== lastPointCloudColKeys) {
+        lastPointCloudColKeys = currentColKeys;
 
-    gridApi.setGridOption('columnDefs', columns);
+        const columns = Object.keys(indexedData[0]).map(key => ({
+            field: key,
+            headerName: key,
+            type: typeof indexedData[0][key] === 'number' ? 'numberColumn' : undefined
+        }));
+
+        gridApi.setGridOption('columnDefs', columns);
+
+        const savedState = localStorage.getItem('dataExplorer_pointCloudColumnState');
+        if (savedState) {
+            try {
+                gridApi.applyColumnState({ state: JSON.parse(savedState), applyOrder: true });
+            } catch (e) {
+                gridApi.applyColumnState({ state: [{ colId: 'index', sort: 'asc' }] });
+            }
+        } else {
+            gridApi.applyColumnState({ state: [{ colId: 'index', sort: 'asc' }] });
+        }
+    }
+
+    // Update row data cleanly without re-calculating column widths
     gridApi.setGridOption('rowData', indexedData);
-
-    // --- START: Apply default sort ---
-    // After setting the data, apply a sort model to sort by the 'index' column ascending.
-    gridApi.applyColumnState({ state: [{ colId: 'index', sort: 'asc' }] });
-    // --- END: Apply default sort ---
-
     tabs.grid.btn.textContent = `Point Cloud: Frame ${title}`;
 }
 
-function displayTracksInGrid(trackData) {
-    if (!trackGridApi || !Array.isArray(trackData) || trackData.length === 0) {
-        if (trackGridApi) trackGridApi.setGridOption('rowData', []);
+function displayTracksAsCards(trackData) {
+    if (!trackCardsContainer) return;
+    trackCardsContainer.innerHTML = '';
+
+    const filtered = currentTrackFilter
+        ? trackData.filter(t => {
+            const str = JSON.stringify(t).toLowerCase();
+            return str.includes(currentTrackFilter);
+        })
+        : trackData;
+
+    if (!Array.isArray(filtered) || filtered.length === 0) {
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'text-gray-500 text-center p-6 italic';
+        emptyMsg.textContent = currentTrackFilter
+            ? `No tracks matching "${currentTrackFilter}"`
+            : 'No track data for this frame';
+        trackCardsContainer.appendChild(emptyMsg);
         return;
     }
 
-    // --- START: Update Track Grid Title ---
-    tabs.trackGrid.btn.textContent = `Track Grid: Frame ${appState.currentFrame + 1}`;
-    // --- END: Update Track Grid Title ---
+    filtered.forEach((track) => {
+        const card = document.createElement('div');
+        card.className = 'bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 p-3 space-y-3 shadow-sm hover:border-blue-400 transition-colors';
 
-    // --- START: Build a complete set of columns from ALL tracks ---
-    // Create a Set of all unique keys from all track objects in the current frame.
-    // This prevents missing columns if the first track has fewer properties than others.
+        // Retrieve Position & Velocity using all property key variations
+        const predPos = track.predictedPosition ?? track.predictedPos;
+        const predVel = track.predictedVelocity ?? track.predictedVel;
+        const corrPos = track.correctedPosition ?? track.correctedPos;
+        const corrVel = track.correctedVelocity ?? track.correctedVel;
+
+        // Header: Track ID + Badges (State on Left, Risk, Stationary, TTI, TTC on Right)
+        const header = document.createElement('div');
+        header.className = 'flex flex-wrap items-center justify-between gap-2 border-b pb-2 border-gray-200 dark:border-gray-600';
+
+        let statBadge = '';
+        if (track.isStationary !== undefined && track.isStationary !== null) {
+            statBadge = track.isStationary
+                ? '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600">🛑 Stationary</span>'
+                : '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800">🚗 Moving</span>';
+        }
+
+        const ttiBadge = (track.tti !== undefined && track.tti !== null)
+            ? `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500 text-white">TTI: ${typeof track.tti === 'number' ? track.tti.toFixed(2) : track.tti}s</span>`
+            : '';
+
+        const ttcBadge = (track.ttc !== undefined && track.ttc !== null)
+            ? `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${track.ttc < 2.0 ? 'bg-red-500 text-white' : 'bg-blue-600 text-white'}">TTC: ${typeof track.ttc === 'number' ? track.ttc.toFixed(2) : track.ttc}s</span>`
+            : '';
+
+        header.innerHTML = `
+            <div class="flex items-center gap-2">
+                <span class="font-extrabold text-sm text-gray-900 dark:text-white">Track #${track.trackId}</span>
+                ${getStateBadgeHtml(track.state)}
+            </div>
+            <div class="flex flex-wrap items-center gap-1.5">
+                ${statBadge}
+                <span class="text-[10px] text-gray-400">Risk: ${getRiskBadgeHtml(track.risk)}</span>
+                ${ttiBadge}
+                ${ttcBadge}
+            </div>
+        `;
+        card.appendChild(header);
+
+        // Compact Kinematics Box (Predicted vs Corrected in 1-2 lines max)
+        const grid = document.createElement('div');
+        grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px] font-mono';
+
+        const fmtVec = (vec) => Array.isArray(vec) ? `[${vec.map(v => typeof v === 'number' ? v.toFixed(3) : v).join(', ')}]` : (vec ?? 'N/A');
+
+        grid.innerHTML = `
+            <div class="bg-white dark:bg-gray-800 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-x-2">
+                <span class="text-[9px] font-sans uppercase font-bold text-blue-500">Predicted</span>
+                <span class="text-gray-700 dark:text-gray-300"><span class="text-gray-400 font-sans font-medium">Pos:</span> ${fmtVec(predPos)}</span>
+                <span class="text-gray-700 dark:text-gray-300"><span class="text-gray-400 font-sans font-medium">Vel:</span> ${fmtVec(predVel)}</span>
+            </div>
+            <div class="bg-white dark:bg-gray-800 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-x-2">
+                <span class="text-[9px] font-sans uppercase font-bold text-green-500">Corrected</span>
+                <span class="text-gray-700 dark:text-gray-300"><span class="text-gray-400 font-sans font-medium">Pos:</span> ${fmtVec(corrPos)}</span>
+                <span class="text-gray-700 dark:text-gray-300"><span class="text-gray-400 font-sans font-medium">Vel:</span> ${fmtVec(corrVel)}</span>
+            </div>
+        `;
+        card.appendChild(grid);
+
+        // Extra Keys Footer (Separates concise fields vs large matrices like covarianceP)
+        const knownKeys = [
+            'trackId', 'frameIdx', 'state',
+            'predictedPos', 'predictedPosition',
+            'predictedVel', 'predictedVelocity',
+            'correctedPos', 'correctedPosition',
+            'correctedVel', 'correctedVelocity',
+            'ttc', 'tti', 'risk', 'isStationary'
+        ];
+        const extraKeys = Object.keys(track).filter(k => !knownKeys.includes(k));
+        if (extraKeys.length > 0) {
+            const extraContainer = document.createElement('div');
+            extraContainer.className = 'border-t pt-2 border-gray-200 dark:border-gray-700 space-y-1.5';
+
+            const inlineFields = [];
+            const collapsibleFields = [];
+
+            extraKeys.forEach(k => {
+                const val = track[k];
+                const label = COLUMN_HEADER_MAP[k] || k;
+                if (Array.isArray(val) && val.length > 6) {
+                    collapsibleFields.push({ key: k, label, val });
+                } else {
+                    inlineFields.push({ key: k, label, val });
+                }
+            });
+
+            if (inlineFields.length > 0) {
+                const inlineDiv = document.createElement('div');
+                inlineDiv.className = 'flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-gray-600 dark:text-gray-300 font-mono';
+                inlineFields.forEach(item => {
+                    const formattedVal = Array.isArray(item.val) ? fmtVec(item.val) : item.val;
+                    inlineDiv.innerHTML += `<div><span class="font-sans font-semibold text-gray-400">${item.label}:</span> ${formattedVal}</div>`;
+                });
+                extraContainer.appendChild(inlineDiv);
+            }
+
+            if (collapsibleFields.length > 0) {
+                collapsibleFields.forEach(item => {
+                    const details = document.createElement('details');
+                    details.className = 'text-[10px] text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 p-1.5 rounded border border-gray-200 dark:border-gray-700';
+                    const summary = document.createElement('summary');
+                    summary.className = 'cursor-pointer font-sans font-bold text-[9px] uppercase text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 select-none';
+                    summary.textContent = `${item.label} (${item.val.length} values)`;
+                    details.appendChild(summary);
+
+                    const pre = document.createElement('pre');
+                    pre.className = 'mt-1 font-mono text-[9px] whitespace-pre-wrap max-h-32 overflow-y-auto text-gray-700 dark:text-gray-300 p-1 bg-gray-50 dark:bg-gray-900 rounded';
+                    pre.textContent = JSON.stringify(item.val);
+                    details.appendChild(pre);
+
+                    extraContainer.appendChild(details);
+                });
+            }
+
+            card.appendChild(extraContainer);
+        }
+
+        trackCardsContainer.appendChild(card);
+    });
+}
+
+function displayTracksInGrid(trackData) {
+    if (!Array.isArray(trackData) || trackData.length === 0) {
+        if (trackGridApi) trackGridApi.setGridOption('rowData', []);
+        displayTracksAsCards([]);
+        return;
+    }
+
+    tabs.trackGrid.btn.textContent = `Track Grid: Frame ${appState.currentFrame + 1}`;
+
+    // Render Cards View
+    displayTracksAsCards(trackData);
+
+    // Only update AG-Grid column definitions if column schema changes
     const allKeys = new Set();
     trackData.forEach(track => {
         Object.keys(track).forEach(key => allKeys.add(key));
     });
+    const colKeysArray = Array.from(allKeys).sort();
+    const currentColKeys = colKeysArray.join(',');
 
-    // --- START: Fix for column type detection ---
-    const columns = Array.from(allKeys).map(key => ({
-        field: key,
-        headerName: key,
-        // Find the first track that has a non-null value for this key to determine its type.
-        // This is much more reliable than only checking the first track in the list.
-        type: typeof trackData.find(t => t[key] !== null && t[key] !== undefined)?.[key] === 'number' ? 'numberColumn' : undefined,
-        valueFormatter: params => {
-            if (Array.isArray(params.value)) {
-                // --- START: Robust Array Formatting ---
-                // Check if the item 'v' is a number before calling toFixed.
-                // If it's not a number (e.g., it's another array), stringify it.
-                return `[${params.value.map(v => (typeof v === 'number' && v !== null) ? v.toFixed(3) : JSON.stringify(v)).join(', ')}]`;
-                // --- END: Robust Array Formatting ---
+    if (currentColKeys !== lastTrackGridColKeys && trackGridApi) {
+        lastTrackGridColKeys = currentColKeys;
+
+        const columns = colKeysArray.map(key => ({
+            field: key,
+            headerName: COLUMN_HEADER_MAP[key] || key,
+            type: typeof trackData.find(t => t[key] !== null && t[key] !== undefined)?.[key] === 'number' ? 'numberColumn' : undefined,
+            cellRenderer: params => {
+                if (key === 'state') return getStateBadgeHtml(params.value);
+                if (key === 'risk') return getRiskBadgeHtml(params.value);
+                if (Array.isArray(params.value)) {
+                    return `<span class="font-mono text-[10px]">[${params.value.map(v => (typeof v === 'number' && v !== null) ? v.toFixed(3) : JSON.stringify(v)).join(', ')}]</span>`;
+                }
+                return params.value;
             }
-            return params.value;
-        }
-    }));
-    // --- END: Fix for column type detection ---
-    // --- END: Build a complete set of columns from ALL tracks ---
+        }));
 
-    trackGridApi.setGridOption('columnDefs', columns);
-    trackGridApi.setGridOption('rowData', trackData);
+        trackGridApi.setGridOption('columnDefs', columns);
+
+        const savedTrackState = localStorage.getItem('dataExplorer_trackGridColumnState');
+        if (savedTrackState) {
+            try {
+                trackGridApi.applyColumnState({ state: JSON.parse(savedTrackState), applyOrder: true });
+            } catch (e) {
+                console.warn('Failed to apply track grid column state:', e);
+            }
+        }
+    }
+
+    // Update row data cleanly without re-calculating column widths
+    if (trackGridApi) {
+        trackGridApi.setGridOption('rowData', trackData);
+    }
 }
 
 /**
@@ -320,6 +589,147 @@ function displayAdasData(adasData) {
     });
 }
 
+/**
+ * Renders Diagnostics and Track Management log data for the current frame.
+ */
+function displayTrackerLogData(trackerLogFrame, frameIdx) {
+    if (!trackerLogContainer) return;
+    trackerLogContainer.innerHTML = '';
+
+    if (!trackerLogFrame) {
+        tabs.trackerLog.btn.textContent = `Tracker Log`;
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'text-gray-500 text-center p-4';
+        emptyMsg.textContent = appState.trackerLogData
+            ? `No log data found for Frame ${frameIdx}`
+            : 'No tracker log loaded. Include tracking.log in folder upload.';
+        trackerLogContainer.appendChild(emptyMsg);
+        return;
+    }
+
+    tabs.trackerLog.btn.textContent = `Tracker Log: Frame ${frameIdx}`;
+
+    // --- Section 1: DIAGNOSTICS Card (Collapsible) ---
+    const diagCard = document.createElement('details');
+    diagCard.className = 'bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 p-3 space-y-2 group transition-all';
+    if (!isDiagnosticsCollapsed) {
+        diagCard.open = true;
+    }
+
+    diagCard.addEventListener('toggle', () => {
+        isDiagnosticsCollapsed = !diagCard.open;
+    });
+
+    const diagHeader = document.createElement('summary');
+    diagHeader.className = 'font-bold text-xs uppercase tracking-wider text-blue-600 dark:text-blue-400 border-b pb-1 border-gray-200 dark:border-gray-600 flex items-center justify-between cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden';
+    diagHeader.innerHTML = `
+        <div class="flex items-center gap-1.5">
+            <span class="text-[10px] transition-transform duration-200 inline-block transform group-open:rotate-90">▶</span>
+            <span>MASTER FRAME ${frameIdx}: DIAGNOSTICS</span>
+        </div>
+        <span class="text-[10px] text-gray-400 font-normal">Delta_t: ${trackerLogFrame.diagnostics.deltaT ?? 'N/A'}s</span>
+    `;
+    diagCard.appendChild(diagHeader);
+
+    // Diagnostics Metrics Grid
+    const diagGrid = document.createElement('div');
+    diagGrid.className = 'grid grid-cols-2 gap-2 text-[11px]';
+    
+    const diagMetrics = [
+        { label: 'Radar Points', val: trackerLogFrame.diagnostics.radarPoints ?? 'N/A' },
+        { label: 'Ego Velocity (Long / Lat)', val: `${trackerLogFrame.diagnostics.egoVx ?? 'N/A'} / ${trackerLogFrame.diagnostics.egoVy ?? 'N/A'} m/s` },
+        { label: 'Ego Accel', val: `${trackerLogFrame.diagnostics.accel ?? 'N/A'} m/s²` },
+        { label: 'RANSAC (In/Out/Ratio)', val: `${trackerLogFrame.diagnostics.ransacInliers ?? 'N/A'} / ${trackerLogFrame.diagnostics.ransacOutliers ?? 'N/A'} (${trackerLogFrame.diagnostics.ransacRatio ?? 'N/A'})` },
+        { label: 'DBSCAN Raw Clusters', val: trackerLogFrame.diagnostics.dbscanClusters ?? 'N/A' },
+        { label: 'Tracking Eligible', val: trackerLogFrame.diagnostics.trackingClusters ?? 'N/A' }
+    ];
+
+    diagMetrics.forEach(m => {
+        const item = document.createElement('div');
+        item.className = 'bg-white dark:bg-gray-800 p-1.5 rounded border border-gray-200 dark:border-gray-700';
+        item.innerHTML = `<div class="text-[10px] font-medium text-gray-400 uppercase">${m.label}</div><div class="font-semibold text-gray-800 dark:text-gray-200">${m.val}</div>`;
+        diagGrid.appendChild(item);
+    });
+    diagCard.appendChild(diagGrid);
+
+    // Diagnostics Raw Lines (collapsible details)
+    if (trackerLogFrame.diagnostics.rawLines.length > 0) {
+        const rawDiagDetails = document.createElement('details');
+        rawDiagDetails.className = 'text-[11px] text-gray-600 dark:text-gray-300 mt-2 bg-gray-100 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700';
+        const summary = document.createElement('summary');
+        summary.className = 'cursor-pointer font-semibold text-[10px] uppercase text-gray-500 hover:text-gray-700 dark:hover:text-gray-200';
+        summary.textContent = `Raw Diagnostics Console Lines (${trackerLogFrame.diagnostics.rawLines.length})`;
+        rawDiagDetails.appendChild(summary);
+
+        const rawPre = document.createElement('pre');
+        rawPre.className = 'mt-1.5 whitespace-pre-wrap font-mono text-[10px] overflow-x-auto text-gray-700 dark:text-gray-300 max-h-48 overflow-y-auto p-1 bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-800';
+        rawPre.textContent = trackerLogFrame.diagnostics.rawLines.join('\n');
+        rawDiagDetails.appendChild(rawPre);
+
+        diagCard.appendChild(rawDiagDetails);
+    }
+    trackerLogContainer.appendChild(diagCard);
+
+    // --- Section 2: TRACK MANAGEMENT Card ---
+    const tmCard = document.createElement('div');
+    tmCard.className = 'bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 p-3 space-y-2';
+
+    const tmHeader = document.createElement('div');
+    tmHeader.className = 'font-bold text-xs uppercase tracking-wider text-purple-600 dark:text-purple-400 border-b pb-1 border-gray-200 dark:border-gray-600 flex items-center justify-between';
+    tmHeader.innerHTML = `<span>MASTER FRAME ${frameIdx}: TRACK MANAGEMENT</span>`;
+    tmCard.appendChild(tmHeader);
+
+    // Lifecycle Badges
+    const lc = trackerLogFrame.trackManagement.lifecycle;
+    const badgeContainer = document.createElement('div');
+    badgeContainer.className = 'flex flex-wrap gap-2 text-[10px] font-semibold';
+    badgeContainer.innerHTML = `
+        <span class="px-2 py-0.5 rounded bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border border-green-300 dark:border-green-800">Confirmed: ${lc.confirmed}</span>
+        <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-800">Tentative: ${lc.tentative}</span>
+        <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border border-red-300 dark:border-red-800">Lost: ${lc.lost}</span>
+        <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-300 dark:border-blue-800">Final Confirmed: ${trackerLogFrame.trackManagement.finalConfirmed ?? lc.confirmed}</span>
+    `;
+    tmCard.appendChild(badgeContainer);
+
+    // Categorized Steps List
+    if (trackerLogFrame.trackManagement.steps.length > 0) {
+        const stepsContainer = document.createElement('div');
+        stepsContainer.className = 'space-y-1 mt-2';
+
+        trackerLogFrame.trackManagement.steps.forEach(step => {
+            const stepRow = document.createElement('div');
+            stepRow.className = 'flex items-start gap-2 text-[11px] p-1.5 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700';
+
+            let catBadge = '';
+            switch (step.category) {
+                case 'ASSIGN':
+                    catBadge = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-600 text-white flex-shrink-0">ASSIGN</span>';
+                    break;
+                case 'PREDICT':
+                    catBadge = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-600 text-white flex-shrink-0">PREDICT</span>';
+                    break;
+                case 'TENTATIVE':
+                    catBadge = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-600 text-white flex-shrink-0">TENTATIVE</span>';
+                    break;
+                case 'REASSIGN':
+                    catBadge = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-600 text-white flex-shrink-0">REASSIGN</span>';
+                    break;
+                case 'DELETE':
+                    catBadge = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-600 text-white flex-shrink-0">DELETE</span>';
+                    break;
+                default:
+                    catBadge = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-gray-500 text-white flex-shrink-0">INFO</span>';
+            }
+
+            stepRow.innerHTML = `${catBadge}<div class="font-mono text-[10px] text-gray-700 dark:text-gray-300 break-all leading-snug">${step.line}</div>`;
+            stepsContainer.appendChild(stepRow);
+        });
+
+        tmCard.appendChild(stepsContainer);
+    }
+    trackerLogContainer.appendChild(tmCard);
+}
+
 
 // --- START: New Robust Update Logic ---
 let throttleTimer = null;
@@ -344,16 +754,44 @@ function initializePanelPosition(panel) {
     // Remove Tailwind classes that conflict with dynamic positioning/sizing
     panel.classList.remove('bottom-24', 'right-4', 'w-full', 'max-w-2xl', 'h-1/2');
 
-    // Set initial size and position with inline styles
-    const initialWidth = 896; // Corresponds to max-w-2xl
-    const initialHeight = window.innerHeight / 2;
-    
-    panel.style.width = `${initialWidth}px`;
-    panel.style.height = `${initialHeight}px`;
-    panel.style.top = `${window.innerHeight - initialHeight - 96}px`; // 96px is roughly bottom-24
-    panel.style.left = `${window.innerWidth - initialWidth - 16}px`; // 16px is right-4
+    // Only apply fallback initial position if no saved position exists
+    const savedPos = localStorage.getItem(`panel_pos_${panel.id}`);
+    if (!savedPos) {
+        const initialWidth = 896; // Corresponds to max-w-2xl
+        const initialHeight = window.innerHeight / 2;
+        
+        panel.style.width = `${initialWidth}px`;
+        panel.style.height = `${initialHeight}px`;
+        panel.style.top = `${window.innerHeight - initialHeight - 96}px`; // 96px is roughly bottom-24
+        panel.style.left = `${window.innerWidth - initialWidth - 16}px`; // 16px is right-4
+    }
 }
 // --- END: Resizable and Draggable Panel Logic ---
+
+function setTrackGridViewMode(mode) {
+    trackGridViewMode = mode;
+    localStorage.setItem('dataExplorer_trackGridViewMode', mode);
+
+    if (!btnCardsView || !btnTableView || !trackCardsContainer || !trackTableView) return;
+
+    if (mode === 'cards') {
+        trackCardsContainer.classList.remove('hidden');
+        trackTableView.classList.add('hidden');
+        btnCardsView.className = 'px-2.5 py-1 rounded-md transition-all duration-150 text-white bg-blue-600 shadow-sm font-bold flex items-center gap-1';
+        btnTableView.className = 'px-2.5 py-1 rounded-md transition-all duration-150 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center gap-1';
+    } else {
+        trackCardsContainer.classList.add('hidden');
+        trackTableView.classList.remove('hidden');
+        btnCardsView.className = 'px-2.5 py-1 rounded-md transition-all duration-150 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center gap-1';
+        btnTableView.className = 'px-2.5 py-1 rounded-md transition-all duration-150 text-white bg-blue-600 shadow-sm font-bold flex items-center gap-1';
+        if (trackGridApi) {
+            setTimeout(() => {
+                const allCols = trackGridApi.getAllDisplayedColumns().map(c => c.getColId());
+                trackGridApi.autoSizeColumns(allCols);
+            }, 50);
+        }
+    }
+}
 
 // --- Initialization Function (The file's only export) ---
 
@@ -369,10 +807,54 @@ export function initializeDataExplorer() {
 
     // --- START: Make panel interactive ---
     initializePanelPosition(panel);
-    // Rationale for 250x200: Allows for a very compact "sidecar" view when using the ADAS Property View.
     makeDraggableAndResizable(panel, document.getElementById('data-explorer-header'), 250, 200);
     // --- END: Make panel interactive ---
-    // --- Wire up all event listeners ---
+
+    // Restore user's saved active tab preference
+    const savedTab = localStorage.getItem('dataExplorer_activeTab');
+    if (savedTab && tabs[savedTab]) {
+        switchTab(savedTab);
+    }
+
+    // Wire up Track Grid View Mode Switchers
+    if (btnCardsView) btnCardsView.addEventListener('click', () => setTrackGridViewMode('cards'));
+    if (btnTableView) btnTableView.addEventListener('click', () => setTrackGridViewMode('table'));
+    setTrackGridViewMode(trackGridViewMode);
+
+    // Wire up Auto-fit Buttons
+    if (autoFitTracksBtn) {
+        autoFitTracksBtn.addEventListener('click', () => {
+            if (trackGridApi) {
+                const allCols = trackGridApi.getAllDisplayedColumns().map(c => c.getColId());
+                trackGridApi.autoSizeColumns(allCols);
+            }
+        });
+    }
+
+    if (autoFitPointCloudBtn) {
+        autoFitPointCloudBtn.addEventListener('click', () => {
+            if (gridApi) {
+                const allCols = gridApi.getAllDisplayedColumns().map(c => c.getColId());
+                gridApi.autoSizeColumns(allCols);
+            }
+        });
+    }
+
+    // Wire up Search / Filter Inputs
+    if (trackSearchInput) {
+        trackSearchInput.addEventListener('input', (e) => {
+            currentTrackFilter = e.target.value.toLowerCase();
+            if (trackGridApi) trackGridApi.setGridOption('quickFilterText', currentTrackFilter);
+            updateExplorer();
+        });
+    }
+
+    if (pointcloudSearchInput) {
+        pointcloudSearchInput.addEventListener('input', (e) => {
+            currentPointCloudFilter = e.target.value.toLowerCase();
+            if (gridApi) gridApi.setGridOption('quickFilterText', currentPointCloudFilter);
+        });
+    }
 
     // Toggle panel visibility
     explorerBtn.addEventListener('click', () => {

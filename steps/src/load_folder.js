@@ -235,7 +235,7 @@ export function triggerCaseCSelectionModal(
           : rootFolderName || "Direct File";
         appState.sourceFolderName = finalFolder;
         localStorage.setItem("sourceFolderName", finalFolder);
-        processFilePipelineCallback(pair.jsonFile, pair.videoFile, fromCache);
+        processFilePipelineCallback(pair.jsonFile, pair.videoFile, fromCache, allFiles);
       });
       datasetAutoPairsContainer.appendChild(card);
     });
@@ -313,7 +313,7 @@ export function triggerCaseCSelectionModal(
     appState.sourceFolderName = finalFolder;
     localStorage.setItem("sourceFolderName", finalFolder);
 
-    processFilePipelineCallback(selectedJson, selectedVideo, fromCache);
+    processFilePipelineCallback(selectedJson, selectedVideo, fromCache, allFiles);
   }, { signal: _customBtnAbort.signal });
 
   // Modal Close Handlers

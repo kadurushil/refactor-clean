@@ -300,6 +300,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Load filenames and the last known offset from localStorage
     appState.jsonFilename = localStorage.getItem("jsonFilename");
     appState.videoFilename = localStorage.getItem("videoFilename");
+    appState.trackerLogFilename = localStorage.getItem("trackerLogFilename");
     appState.sourceFolderName = localStorage.getItem("sourceFolderName");
     appState.offset = parseFloat(localStorage.getItem("visualizerOffset")) || 0;
 
@@ -308,6 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const jsonBlob = await loadFreshFileFromDB("json", appState.jsonFilename); // This is a Blob
       const videoBlob = await loadFreshFileFromDB("video", appState.videoFilename); // This is a Blob
       const mapBlob = await loadFreshFileFromDB("frame_mapping", "frame_mapping.json");
+      const logBlob = await loadFreshFileFromDB("tracker_log", appState.trackerLogFilename);
 
       if (jsonBlob) {
         console.log("Cached session found. Starting auto-reload...");
@@ -327,6 +329,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // If frame mapping exists in cache, recreate it.
         if (mapBlob) {
           filesToLoad.push(new File([mapBlob], "frame_mapping.json", { type: "application/json" }));
+        }
+
+        // If tracker log exists in cache, recreate it.
+        if (logBlob && appState.trackerLogFilename) {
+          filesToLoad.push(new File([logBlob], appState.trackerLogFilename, { type: "text/plain" }));
         }
 
         // Now, pass the array of proper File objects to the handler.

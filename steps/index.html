@@ -666,20 +666,61 @@
           Grid</button>
         <button id="tab-btn-adas" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 flex-shrink-0">ADAS
           Data</button>
+        <button id="tab-btn-tracker-log" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 flex-shrink-0">Tracker
+          Log</button>
         <button id="tab-btn-plot" class="px-4 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 flex-shrink-0">Plot
           View</button>
       </div>
 
       <div class="flex-grow overflow-auto">
         <div id="tab-panel-tree" class="font-mono text-xs"></div>
-        <div id="tab-panel-grid" class="hidden h-full p-2">
-          <div id="data-grid" class="ag-theme-alpine-dark h-full w-full"></div>
+        <div id="tab-panel-grid" class="hidden h-full flex flex-col p-2 space-y-2">
+          <div class="flex items-center justify-between gap-2 p-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 flex-shrink-0">
+            <input type="text" id="pointcloud-search-input" placeholder="Filter point cloud..."
+              class="px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-md w-48" />
+            <button id="autofit-pointcloud-btn" class="px-2.5 py-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-xs font-medium rounded-md transition-colors">
+              ↔ Fit Cols
+            </button>
+          </div>
+          <div class="flex-grow relative w-full h-full overflow-hidden">
+            <div id="data-grid" class="ag-theme-alpine-dark absolute inset-0 w-full h-full"></div>
+          </div>
         </div>
-        <div id="tab-panel-track-grid" class="hidden h-full p-2">
-          <div id="track-data-grid" class="ag-theme-alpine-dark h-full w-full"></div>
+        <div id="tab-panel-track-grid" class="hidden h-full flex flex-col p-2 space-y-2">
+          <!-- Control Bar -->
+          <div class="flex flex-wrap items-center justify-between gap-2 p-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 flex-shrink-0">
+            <!-- View Mode Switcher -->
+            <div class="inline-flex items-center bg-gray-200 dark:bg-gray-800 p-0.5 rounded-lg text-xs font-semibold select-none">
+              <button id="track-view-mode-cards" type="button" class="px-2.5 py-1 rounded-md transition-all duration-150 text-white bg-blue-600 shadow-sm font-bold flex items-center gap-1">
+                <span>🎛️ Cards</span>
+              </button>
+              <button id="track-view-mode-table" type="button" class="px-2.5 py-1 rounded-md transition-all duration-150 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center gap-1">
+                <span>📊 Table</span>
+              </button>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input type="text" id="track-search-input" placeholder="Search track ID / state..."
+                class="px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-md w-44" />
+              <button id="autofit-tracks-btn" title="Auto-Fit Columns" class="px-2.5 py-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-xs font-medium rounded-md transition-colors">
+                ↔ Fit Cols
+              </button>
+            </div>
+          </div>
+
+          <!-- Cards View -->
+          <div id="track-cards-view" class="flex-grow overflow-y-auto space-y-3 pr-1"></div>
+
+          <!-- Table View -->
+          <div id="track-table-view" class="hidden flex-grow relative w-full h-full overflow-hidden">
+            <div id="track-data-grid" class="ag-theme-alpine-dark absolute inset-0 w-full h-full"></div>
+          </div>
         </div>
         <div id="tab-panel-adas" class="hidden h-full p-2 overflow-y-auto">
           <div id="adas-vertical-view" class="space-y-4"></div>
+        </div>
+        <div id="tab-panel-tracker-log" class="hidden h-full p-2 overflow-y-auto">
+          <div id="tracker-log-view" class="space-y-4 font-mono text-xs"></div>
         </div>
         <div id="tab-panel-plot" class="hidden p-2">
           <canvas id="data-chart"></canvas>
