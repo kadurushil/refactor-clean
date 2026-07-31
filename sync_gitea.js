@@ -31,6 +31,18 @@ const EXCLUDE_PATTERNS = [
 const EXCLUDE_EXTENSIONS = ['.log', '.mp4', '.mat', '.bag', '.pcap'];
 
 /**
+ * Gets the latest commit message from the source dev repository.
+ */
+function getLatestDevCommitMessage() {
+    try {
+        const msg = execSync('git log -1 --pretty=%s', { cwd: SOURCE_DIR }).toString().trim();
+        return msg || "sync: publish visualizer core update";
+    } catch (e) {
+        return "sync: publish visualizer core update";
+    }
+}
+
+/**
  * Checks if a file or directory should be excluded from sync.
  */
 function shouldExclude(srcPath) {
@@ -83,9 +95,11 @@ function fullSync() {
 /**
  * Stage, commit, and push synced changes to Gitea.
  */
-function publishToGitea(commitMsg = "sync: publish visualizer core update") {
+function publishToGitea(commitMsg) {
     const syncSuccess = fullSync();
     if (!syncSuccess) return;
+
+    const finalMsg = commitMsg || getLatestDevCommitMessage();
 
     try {
         console.log(`\x1b[35m[Git] Checking for changes in Gitea repository...\x1b[0m`);
@@ -96,14 +110,15 @@ function publishToGitea(commitMsg = "sync: publish visualizer core update") {
             return;
         }
 
-        console.log(`\x1b[36m[Git] Staging and committing changes...\x1b[0m`);
+        console.log(`\x1b[36m[Git] Staging and committing changes with message:\x1b[0m "${finalMsg}"`);
         execSync('git add .', { cwd: DEST_DIR, stdio: 'inherit' });
-        execSync(`git commit -m "${commitMsg}"`, { cwd: DEST_DIR, stdio: 'inherit' });
+        const escapedMsg = finalMsg.replace(/"/g, '\\"');
+        execSync(`git commit -m "${escapedMsg}"`, { cwd: DEST_DIR, stdio: 'inherit' });
 
         console.log(`\x1b[32m[Git] Pushing clean visualizer updates to Gitea origin...\x1b[0m`);
         execSync('git push origin refactor/sync-centralize', { cwd: DEST_DIR, stdio: 'inherit' });
 
-        console.log(`\x1b[32m[Success] Gitea repository successfully updated & published!\x1b[0m`);
+        console.log(`\x1b[32m[Success] Gitea repository successfully updated & published with commit message: "${finalMsg}"!\x1b[0m`);
     } catch (err) {
         console.error(`\x1b[31m[Error] Git publish failed: ${err.message}\x1b[0m`);
     }
@@ -137,7 +152,12 @@ function debounceSync() {
 // Command Line Handler
 const args = process.argv.slice(2);
 if (args.includes('--publish') || args.includes('--push')) {
-    publishToGitea();
+    let customMsg = null;
+    const pubIndex = Math.max(args.indexOf('--publish'), args.indexOf('--push'));
+    if (pubIndex !== -1 && args[pubIndex + 1] && !args[pubIndex + 1].startsWith('--')) {
+        customMsg = args[pubIndex + 1];
+    }
+    publishToGitea(customMsg);
 } else if (args.includes('--watch')) {
     watchSync();
 } else {
