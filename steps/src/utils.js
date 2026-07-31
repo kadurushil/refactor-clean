@@ -73,6 +73,7 @@ export function extractTimestampInfo(filename) {
   return null;
 }
 
+
 export function parseTimestamp(timestampStr, format) {
   // Return null if timestamp string or format is not provided.
   if (!timestampStr || !format) return null;
@@ -141,26 +142,26 @@ export function throttle(func, delay) {
 }
 
 export function formatTime(milliseconds) {
-    if (isNaN(milliseconds) || milliseconds < 0) {
-        return "00:00.000";
-    }
-    const totalSeconds = milliseconds / 1000;
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = Math.floor(totalSeconds % 60);
-    const ms = Math.round(milliseconds % 1000);
+  if (isNaN(milliseconds) || milliseconds < 0) {
+    return "00:00.000";
+  }
+  const totalSeconds = milliseconds / 1000;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  const ms = Math.round(milliseconds % 1000);
 
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
 }
 
 export function formatUTCTime(date) {
-    if (!date || isNaN(date.getTime())) {
-        return "00:00:00.000";
-    }
-    const hours = String(date.getUTCHours()).padStart(2, '0');
-    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-    const seconds = String(date.getUTCSeconds()).padStart(2, '0');
-    const milliseconds = String(date.getUTCMilliseconds()).padStart(3, '0');
-    return `${hours}:${minutes}:${seconds}.${milliseconds}`;
+  if (!date || isNaN(date.getTime())) {
+    return "00:00:00.000";
+  }
+  const hours = String(date.getUTCHours()).padStart(2, '0');
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+  const milliseconds = String(date.getUTCMilliseconds()).padStart(3, '0');
+  return `${hours}:${minutes}:${seconds}.${milliseconds}`;
 }
 
 /**
