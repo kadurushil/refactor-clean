@@ -73,7 +73,6 @@ export function extractTimestampInfo(filename) {
   return null;
 }
 
-
 export function parseTimestamp(timestampStr, format) {
   // Return null if timestamp string or format is not provided.
   if (!timestampStr || !format) return null;
