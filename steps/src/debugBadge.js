@@ -2,6 +2,7 @@ import { getCacheStats } from "./db.js";
 import { appState } from "./state.js";
 import { changelogBtn } from "./dom.js";
 import { debugFlags, setDebugFlag } from "./debug.js";
+import { APP_VERSION } from "./constants.js";
 
 // Helper to detect browser and OS information.
 function getBrowserInfo() {
@@ -23,7 +24,7 @@ function getBrowserInfo() {
   return `${browser} (${os})`;
 }
 
-let appVersion = "3.4.0"; // Default static fallback version
+let appVersion = APP_VERSION; // Default static fallback version
 
 // Asynchronously queries the server to retrieve the compiled application version.
 function fetchVersionInfo() {
@@ -50,7 +51,7 @@ function fetchVersionInfo() {
   }
 }
 
-// Injects the markup for the badge and the popover.
+// Injects the markup for the popover card and binds top bar debug toggle buttons.
 export function initDebugBadge() {
   // Create a container element
   const container = document.createElement("div");
@@ -58,25 +59,25 @@ export function initDebugBadge() {
   container.className = "contents";
 
   container.innerHTML = `
-    <!-- Floating Version & Debug Badge -->
-    <div id="debug-version-badge" 
-         class="fixed bottom-[86px] right-4 z-[51] bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-full px-3 py-1.5 shadow-lg flex items-center gap-2 text-xs font-mono select-none cursor-pointer transition-all hover:scale-105 active:scale-95 hover:bg-white dark:hover:bg-gray-800 group"
-         title="Click to view version info & cache statistics">
-      <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-      <span id="badge-version-text" class="font-bold text-gray-700 dark:text-gray-300">v3.4.0</span>
-    </div>
-
     <!-- Version & Debug Popover Card -->
     <div id="debug-version-popover" 
-         class="hidden fixed bottom-[136px] right-4 z-[52] w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200 dark:border-gray-800 rounded-xl shadow-2xl p-4 font-sans text-xs transition-all duration-200 select-none">
-      <div class="flex items-center justify-between border-b dark:border-gray-800 pb-2 mb-3">
-        <span class="font-bold text-sm text-gray-900 dark:text-white">ARAS Visualizer</span>
-        <button id="popover-changelog-btn" class="text-blue-600 dark:text-blue-400 hover:underline font-medium focus:outline-none">Changelog</button>
+         class="hidden fixed top-16 right-4 z-50 w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200 dark:border-gray-800 rounded-xl shadow-2xl p-4 font-sans text-xs select-none">
+      <div id="popover-header" class="flex items-center justify-between border-b dark:border-gray-800 pb-2 mb-3 cursor-grab active:cursor-grabbing select-none" title="Drag to reposition">
+        <div class="flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+          </svg>
+          <span class="font-bold text-sm text-gray-900 dark:text-white">ARAS Visualizer</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="popover-changelog-btn" class="text-blue-600 dark:text-blue-400 hover:underline font-medium focus:outline-none">Changelog</button>
+          <button id="popover-close-btn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-sm font-bold leading-none px-1 py-0.5 rounded" title="Close debug card">&times;</button>
+        </div>
       </div>
       <div class="space-y-2 text-gray-600 dark:text-gray-400 font-mono">
         <div class="flex justify-between">
           <span class="text-gray-400">Version:</span> 
-          <span id="popover-version-text" class="text-gray-800 dark:text-gray-200 font-bold">3.4.0</span>
+          <span id="popover-version-text" class="text-gray-800 dark:text-gray-200 font-bold">${APP_VERSION}</span>
         </div>
         <div class="border-t border-gray-100 dark:border-gray-800/50 my-1"></div>
         <div>
@@ -146,9 +147,22 @@ export function initDebugBadge() {
 
   document.body.appendChild(container);
 
-  const badge = document.getElementById("debug-version-badge");
   const popover = document.getElementById("debug-version-popover");
+  const popoverHeader = document.getElementById("popover-header");
+  const popoverCloseBtn = document.getElementById("popover-close-btn");
   const popoverChangelogBtn = document.getElementById("popover-changelog-btn");
+  const debugToggleBtn = document.getElementById("debug-toggle-btn");
+  const startDebugToggleBtn = document.getElementById("start-debug-toggle-btn");
+
+  // Make popover card free-floating & draggable via its header
+  makeElementDraggable(popover, popoverHeader, "debug_popover");
+
+  if (popoverCloseBtn) {
+    popoverCloseBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      popover.classList.add("hidden");
+    });
+  }
 
   // Populate browser info
   const browserInfo = getBrowserInfo();
@@ -169,18 +183,20 @@ export function initDebugBadge() {
     }
   });
 
-  // Click on badge to toggle popover
-  badge.addEventListener("click", (e) => {
+  // Toggle popover visibility when clicking top bar buttons
+  const togglePopover = (e) => {
     e.stopPropagation();
     const isHidden = popover.classList.contains("hidden");
     if (isHidden) {
-      // Update data immediately before showing
       updateDebugBadge();
       popover.classList.remove("hidden");
     } else {
       popover.classList.add("hidden");
     }
-  });
+  };
+
+  if (debugToggleBtn) debugToggleBtn.addEventListener("click", togglePopover);
+  if (startDebugToggleBtn) startDebugToggleBtn.addEventListener("click", togglePopover);
 
   // Keep popover open if clicking inside it
   popover.addEventListener("click", (e) => {
@@ -206,6 +222,77 @@ export function initDebugBadge() {
 
   // Initial update
   updateDebugBadge();
+}
+
+// Helper to make popover card free floating and draggable with storage key
+function makeElementDraggable(element, handleElement, storageKeyPrefix = "debug_popover") {
+  if (!element || !handleElement) return;
+
+  // Restore saved position if available
+  const savedTop = localStorage.getItem(`${storageKeyPrefix}_top`);
+  const savedLeft = localStorage.getItem(`${storageKeyPrefix}_left`);
+  if (savedTop && savedLeft) {
+    element.style.bottom = "auto";
+    element.style.right = "auto";
+    element.style.top = savedTop;
+    element.style.left = savedLeft;
+  }
+
+  handleElement.addEventListener("mousedown", (e) => {
+    if (e.target.tagName === "BUTTON" || e.target.closest("button")) return;
+
+    // Capture element's current screen position at drag start
+    const rect = element.getBoundingClientRect();
+    const startMouseX = e.clientX;
+    const startMouseY = e.clientY;
+    const startElemLeft = rect.left;
+    const startElemTop = rect.top;
+    let hasMoved = false;
+
+    const onMouseMove = (moveEvt) => {
+      const dx = moveEvt.clientX - startMouseX;
+      const dy = moveEvt.clientY - startMouseY;
+
+      // Disable CSS transitions while dragging so top/left update instantaneously without lag
+      if (!hasMoved) {
+        hasMoved = true;
+        element.style.transition = "none";
+      }
+
+      moveEvt.preventDefault();
+
+      let newLeft = startElemLeft + dx;
+      let newTop = startElemTop + dy;
+
+      // Clamp within viewport
+      const w = element.offsetWidth;
+      const h = element.offsetHeight;
+      newLeft = Math.max(10, Math.min(newLeft, window.innerWidth - w - 10));
+      newTop = Math.max(10, Math.min(newTop, window.innerHeight - h - 10));
+
+      element.style.bottom = "auto";
+      element.style.right = "auto";
+      element.style.top = `${newTop}px`;
+      element.style.left = `${newLeft}px`;
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+
+      // Restore original CSS transition behavior
+      element.style.transition = "";
+
+      if (hasMoved) {
+        // Save final position once on release
+        localStorage.setItem(`${storageKeyPrefix}_top`, element.style.top);
+        localStorage.setItem(`${storageKeyPrefix}_left`, element.style.left);
+      }
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  });
 }
 
 // Updates the badge/popover contents with the current filenames and cache statistics.

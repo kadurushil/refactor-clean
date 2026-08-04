@@ -5,7 +5,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Radar and Video Visualizer - Timestamp Synchronized</title>
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png?v=3.4.0" />
+  <script>
+    // Centralized Application Version Number — change here to update version across the entire app
+    window.APP_VERSION = "3.4.3";
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const v = window.APP_VERSION;
+      const favicon = document.querySelector("link[rel='icon']");
+      if (favicon) favicon.href = `favicon.png?v=${v}`;
+      const manualIframe = document.getElementById("user-manual-iframe");
+      if (manualIframe) manualIframe.src = `annex/User_Manual.html?v=${v}`;
+      const codebaseIframe = document.getElementById("codebase-iframe");
+      if (codebaseIframe) codebaseIframe.src = `annex/code-base-overview.html?v=${v}`;
+    });
+  </script>
 
   <!-- <script src="https://cdn.tailwindcss.com"></script>  -->
   <script>
@@ -287,6 +300,11 @@
             fill-rule="evenodd" clip-rule="evenodd"></path>
         </svg>
       </button>
+      <button id="start-debug-toggle-btn" type="button"
+        title="Debug Logs & System Telemetry (v3.4.3)"
+        class="bg-slate-800 dark:bg-slate-700 text-slate-100 dark:text-slate-200 border border-slate-700 dark:border-slate-600 shadow-sm hover:bg-slate-700 dark:hover:bg-slate-600 active:scale-95 active:shadow-inner flex items-center justify-center rounded-lg w-[50px] h-[50px] transition-all">
+        <span class="font-serif italic font-extrabold text-2xl text-blue-400 dark:text-blue-300 leading-none select-none">i</span>
+      </button>
     </div>
 
     <div
@@ -405,6 +423,11 @@
             d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm2 0a1 1 0 112 0v-1a1 1 0 00-2 0v1zm-14 0a1 1 0 112 0v-1a1 1 0 00-2 0v1zm8 6a1 1 0 100 2 1 1 0 000-2zm5.657-11.657a1 1 0 010 1.414l-1.414 1.414a1 1 0 11-1.414-1.414l1.414-1.414a1 1 0 011.414 0zm-11.314 0a1 1 0 011.414 0l1.414 1.414a1 1 0 11-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zm11.314 11.314a1 1 0 01-1.414 0l-1.414-1.414a1 1 0 011.414-1.414l1.414 1.414a1 1 0 010 1.414zm-11.314 0a1 1 0 010-1.414l1.414-1.414a1 1 0 011.414 1.414l-1.414 1.414a1 1 0 01-1.414 0z"
             fill-rule="evenodd" clip-rule="evenodd"></path>
         </svg> </button>
+      <button id="debug-toggle-btn" type="button"
+        title="Debug Logs & System Telemetry (v3.4.3)"
+        class="bg-slate-800 dark:bg-slate-700 text-slate-100 dark:text-slate-200 border border-slate-700 dark:border-slate-600 shadow-sm hover:bg-slate-700 dark:hover:bg-slate-600 active:scale-95 active:shadow-inner flex items-center justify-center rounded-lg w-[50px] h-[50px] transition-all">
+        <span class="font-serif italic font-extrabold text-2xl text-blue-400 dark:text-blue-300 leading-none select-none">i</span>
+      </button>
     </div>
   </header>
 
@@ -921,7 +944,7 @@
       </div>
 
       <!-- Iframe Content -->
-      <iframe id="user-manual-iframe" src="annex/User_Manual.html?v=3.4.0"
+      <iframe id="user-manual-iframe" src="annex/User_Manual.html?v=3.4.3"
         class="flex-grow w-full border-0 rounded-b-2xl" style="min-height: 400px;"></iframe>
     </div>
   </div>
@@ -945,7 +968,7 @@
       </div>
 
       <!-- Iframe Content -->
-      <iframe id="codebase-iframe" src="annex/code-base-overview.html?v=3.4.0"
+      <iframe id="codebase-iframe" src="annex/code-base-overview.html?v=3.4.3"
         class="flex-grow w-full border-0 rounded-b-2xl" style="min-height: 400px;"></iframe>
     </div>
   </div>
@@ -1077,7 +1100,7 @@
     </div>
   </div>
 
-  <script type="module" src="./src/main.js?v=3.4.0"></script>
+  <script type="module" src="./src/main.js?v=3.4.3"></script>
 </body>
 
 </html>
