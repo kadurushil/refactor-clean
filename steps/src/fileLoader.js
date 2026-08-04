@@ -106,7 +106,7 @@ export async function handleFiles(filesInput, fromCache = false) {
 async function processFilePipeline(jsonFile, videoFile, fromCache, allFilesParam = null) {
   // Terminate any previous active worker to prevent background race conditions
   if (appState.activeWorker) {
-    console.log("Terminating ongoing Web Worker task from previous parse...");
+    if (debugFlags.fileLoading) console.log("Terminating ongoing Web Worker task from previous parse...");
     appState.activeWorker.terminate();
     appState.activeWorker = null;
   }
@@ -124,6 +124,11 @@ async function processFilePipeline(jsonFile, videoFile, fromCache, allFilesParam
   // --- PART A: Setup Filenames & Cache (Moved Up) ---
   if (jsonFile) {
     appState.jsonFilename = jsonFile.name;
+    const relPath = (jsonFile.relativePath || jsonFile.webkitRelativePath || "").replace(/\\/g, "/");
+    if (relPath) {
+      appState.jsonRelativePath = relPath;
+      localStorage.setItem("jsonRelativePath", relPath);
+    }
     localStorage.setItem("jsonFilename", appState.jsonFilename);
     if (!fromCache) {
       const savePromise = saveFileWithMetadata("json", jsonFile).catch((e) =>
@@ -176,7 +181,7 @@ async function processFilePipeline(jsonFile, videoFile, fromCache, allFilesParam
     try {
       const logText = await logFile.text();
       appState.trackerLogData = parseTrackerLog(logText);
-      console.log(`Parsed tracker log (${appState.trackerLogData.frames.size} frames) from ${logFile.relativePath || logFile.name}`);
+      if (debugFlags.fileLoading) console.log(`Parsed tracker log (${appState.trackerLogData.frames.size} frames) from ${logFile.relativePath || logFile.name}`);
     } catch (e) {
       console.warn("Failed to parse tracker log file:", e);
       appState.trackerLogData = null;
@@ -267,7 +272,7 @@ async function processFilePipeline(jsonFile, videoFile, fromCache, allFilesParam
   // Log the results of the non-blocking cache operations once they complete.
   if (cachePromises.length > 0) {
     Promise.allSettled(cachePromises).then((results) => {
-      console.log("Non-blocking cache operations finished:", results);
+      if (debugFlags.fileLoading) console.log("Non-blocking cache operations finished:", results);
     });
   }
 }
@@ -508,7 +513,7 @@ async function parseFrameMappingFile(file) {
         if (deltaFrames > 0 && deltaTime > 0) {
           const detectedFps = Math.round((deltaFrames / deltaTime) * 100) / 100;
           appState.videoFps = detectedFps;
-          console.log(`Detected video FPS from frame_mapping.json: ${detectedFps}`);
+          if (debugFlags.fileLoading) console.log(`Detected video FPS from frame_mapping.json: ${detectedFps}`);
         }
       }
     }
@@ -538,7 +543,7 @@ async function calculateAndSetOffset() {
 
       // Show "Auto (map)" toggle mode
       setOffsetToggleMode("auto", "Auto (map)");
-      console.log(`Loaded frame_mapping.json with ${mappingRecords.length} records @ ${fps} FPS. Display offset set to ${appState.offset}ms`);
+      if (debugFlags.fileLoading) console.log(`Loaded frame_mapping.json with ${mappingRecords.length} records @ ${fps} FPS. Display offset set to ${appState.offset}ms`);
       return;
     }
   }
@@ -574,7 +579,7 @@ async function calculateAndSetOffset() {
   const savedOffset = appState.jsonFilename ? await loadManualOffset(appState.jsonFilename) : null;
 
   if (savedOffset !== null) {
-    console.log(`Applying saved manual offset: ${savedOffset}ms`);
+    if (debugFlags.fileLoading) console.log(`Applying saved manual offset: ${savedOffset}ms`);
     appState.offset = savedOffset;
     if (jsonDate) {
          appState.radarStartTimeMs = jsonDate.getTime();
@@ -602,7 +607,7 @@ async function calculateAndSetOffset() {
     } else {
       calculatedOffset = offset;
       setOffsetToggleMode("auto", "Auto");
-      console.log(`Auto-calculated offset: ${calculatedOffset} ms`);
+      if (debugFlags.fileLoading) console.log(`Auto-calculated offset: ${calculatedOffset} ms`);
     }
   } else if (jsonDate) {
       // If we have JSON but no video, we set start time but offset is 0

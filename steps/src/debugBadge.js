@@ -1,6 +1,7 @@
 import { getCacheStats } from "./db.js";
 import { appState } from "./state.js";
 import { changelogBtn } from "./dom.js";
+import { debugFlags, setDebugFlag } from "./debug.js";
 
 // Helper to detect browser and OS information.
 function getBrowserInfo() {
@@ -26,26 +27,27 @@ let appVersion = "3.4.0"; // Default static fallback version
 
 // Asynchronously queries the server to retrieve the compiled application version.
 function fetchVersionInfo() {
-  fetch("/api/version")
-    .then((response) => {
-      if (!response.ok) throw new Error("HTTP error " + response.status);
-      return response.json();
-    })
-    .then((data) => {
-      if (data && data.version) {
-        appVersion = data.version;
-        
-        // Update DOM elements immediately with the correct version
-        const badgeText = document.getElementById("badge-version-text");
-        const popoverText = document.getElementById("popover-version-text");
-        if (badgeText) badgeText.textContent = `v${appVersion}`;
-        if (popoverText) popoverText.textContent = appVersion;
-      }
-    })
-    .catch((err) => {
-      // Gracefully fall back to the default static version (e.g. if served statically via python http.server)
-      console.log("Static server environment or API unavailable. Using fallback version:", appVersion);
-    });
+  if (location.protocol.startsWith("http") && location.pathname.startsWith("/app")) {
+    fetch("/api/version")
+      .then((response) => {
+        if (!response.ok) throw new Error("HTTP error " + response.status);
+        return response.json();
+      })
+      .then((data) => {
+        if (data && data.version) {
+          appVersion = data.version;
+          
+          // Update DOM elements immediately with the correct version
+          const badgeText = document.getElementById("badge-version-text");
+          const popoverText = document.getElementById("popover-version-text");
+          if (badgeText) badgeText.textContent = `v${appVersion}`;
+          if (popoverText) popoverText.textContent = appVersion;
+        }
+      })
+      .catch(() => {
+        // Silently fall back to default version in static mode
+      });
+  }
 }
 
 // Injects the markup for the badge and the popover.
@@ -100,6 +102,44 @@ export function initDebugBadge() {
             <span id="popover-browser-info" class="text-gray-800 dark:text-gray-200 truncate max-w-[170px]" title="">Detecting...</span>
           </div>
         </div>
+
+        <!-- Console Logging Toggles Section -->
+        <div class="border-t border-gray-200 dark:border-gray-800 pt-2.5 mt-2.5">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-bold text-gray-900 dark:text-white text-xs">Console Debug Log Toggles</span>
+            <span class="text-[10px] text-gray-400 font-normal">Toggle log categories</span>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 text-[11px] font-sans">
+            <label class="flex items-center gap-1.5 cursor-pointer hover:text-gray-900 dark:hover:text-white" title="Logs from file loader, tracker parser & video FPS">
+              <input type="checkbox" id="dbg-toggle-fileLoading" class="rounded border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500" ${debugFlags.fileLoading ? "checked" : ""}>
+              <span>File Loader</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer hover:text-gray-900 dark:hover:text-white" title="Logs from IndexedDB database operations">
+              <input type="checkbox" id="dbg-toggle-database" class="rounded border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500" ${debugFlags.database ? "checked" : ""}>
+              <span>Database</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer hover:text-gray-900 dark:hover:text-white" title="Logs from UI layout and panel position saves/loads">
+              <input type="checkbox" id="dbg-toggle-ui" class="rounded border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500" ${debugFlags.ui ? "checked" : ""}>
+              <span>UI & Panels</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer hover:text-gray-900 dark:hover:text-white" title="Logs from Radar sketch canvas drawing & resize events">
+              <input type="checkbox" id="dbg-toggle-drawing" class="rounded border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500" ${debugFlags.drawing ? "checked" : ""}>
+              <span>Radar Draw</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer hover:text-gray-900 dark:hover:text-white" title="Logs from Speed Graph density and normalization info">
+              <input type="checkbox" id="dbg-toggle-speedGraph" class="rounded border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500" ${debugFlags.speedGraph ? "checked" : ""}>
+              <span>Speed Graph</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer hover:text-gray-900 dark:hover:text-white" title="Logs from Video & Radar timestamp synchronization">
+              <input type="checkbox" id="dbg-toggle-sync" class="rounded border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500" ${debugFlags.sync ? "checked" : ""}>
+              <span>Video Sync</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer hover:text-gray-900 dark:hover:text-white col-span-2" title="Logs from startup initialization & cached session reloads">
+              <input type="checkbox" id="dbg-toggle-session" class="rounded border-gray-300 dark:border-gray-700 text-blue-600 focus:ring-blue-500" ${debugFlags.session ? "checked" : ""}>
+              <span>Startup & Session</span>
+            </label>
+          </div>
+        </div>
       </div>
     </div>
   `;
@@ -117,6 +157,17 @@ export function initDebugBadge() {
     browserEl.textContent = browserInfo;
     browserEl.title = navigator.userAgent;
   }
+
+  // Bind Debug Toggle Checkboxes
+  const toggleKeys = ["fileLoading", "database", "ui", "drawing", "speedGraph", "sync", "session"];
+  toggleKeys.forEach((key) => {
+    const cb = document.getElementById(`dbg-toggle-${key}`);
+    if (cb) {
+      cb.addEventListener("change", (e) => {
+        setDebugFlag(key, e.target.checked);
+      });
+    }
+  });
 
   // Click on badge to toggle popover
   badge.addEventListener("click", (e) => {
@@ -175,10 +226,23 @@ export function updateDebugBadge(jsonName = null, videoName = null) {
   // Use passed parameters or fall back to state/storage values
   const finalJson = jsonName || appState.jsonFilename || localStorage.getItem("jsonFilename");
   const finalVideo = videoName || appState.videoFilename || localStorage.getItem("videoFilename");
+  const relPath = appState.jsonRelativePath || localStorage.getItem("jsonRelativePath") || "";
 
   if (finalJson) {
-    jsonEl.textContent = finalJson;
-    jsonEl.title = finalJson;
+    let subfolder = "";
+    if (relPath && relPath.includes("/")) {
+      const parts = relPath.split("/").filter(Boolean);
+      // Remove root folder name if present at start
+      if (finalFolder && parts[0] === finalFolder) {
+        parts.shift();
+      }
+      if (parts.length > 1) {
+        subfolder = parts.slice(0, -1).join("/");
+      }
+    }
+    const labelTag = subfolder ? ` (${subfolder})` : (relPath ? " (Root)" : "");
+    jsonEl.textContent = `${finalJson}${labelTag}`;
+    jsonEl.title = relPath ? `Full Path: ${relPath}` : finalJson;
   } else {
     jsonEl.textContent = "None Loaded";
     jsonEl.title = "No JSON file loaded";

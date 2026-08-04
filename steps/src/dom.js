@@ -1,5 +1,6 @@
 // TODO(sync-refactor): move sync logic into src/sync.js
 import { appState, getVideoFps } from "./state.js";
+import { debugFlags } from "./debug.js";
 import { formatUTCTime } from "./utils.js";
 import { VIDEO_FPS } from "./constants.js";
 
@@ -191,7 +192,7 @@ export const customDrawerIcon = document.getElementById("custom-drawer-icon");
 // Resets the UI to make sure everything is clean before new files load.
 // @param {boolean} isNewVideo - If true, the video player will be reset. If false, existing video is preserved.
 export function resetUIForNewLoad(isNewVideo = true) {
-    console.log(`Resetting UI for new file load. New Video: ${isNewVideo}`);
+    if (debugFlags.ui) console.log(`Resetting UI for new file load. New Video: ${isNewVideo}`);
 
     // Hide feature toggles
     featureToggles.classList.add("hidden");

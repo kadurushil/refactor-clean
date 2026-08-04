@@ -1,3 +1,5 @@
+import { debugFlags } from "./debug.js";
+
 export function parseJsonWithOboe(fileURL, onComplete, onError, onProgress) {
   const vizData = {
     radarFrames: [],
@@ -21,7 +23,7 @@ export function parseJsonWithOboe(fileURL, onComplete, onError, onProgress) {
       }
     })
     .done(() => {
-      console.log("Oboe.js parsing complete.");
+      if (debugFlags.fileLoading) console.log("Oboe.js parsing complete.");
       onComplete(vizData);
     })
     .fail((err) => {

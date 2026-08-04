@@ -15,6 +15,7 @@ import {
     restoreMainPanelLayout,
     setExplorerOpen,
 } from './dataExplorer.js';
+import { debugFlags } from "./debug.js";
 
 // --- Module-Local State ---
 let popoutWindow = null;
@@ -200,6 +201,7 @@ export function dockDataExplorer() {
         if (trackGridApi) {
             try { trackGridApi.redrawRows(); } catch (e) {}
         }
+
     }, 150);
-    console.log('Data Explorer docked back to main window with restored layout & z-index.');
+    if (debugFlags.ui) console.log('Data Explorer docked back to main window with restored layout & z-index.');
 }

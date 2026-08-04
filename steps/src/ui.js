@@ -1,4 +1,5 @@
 import { appState } from "./state.js";
+import { debugFlags } from "./debug.js";
 import { formatTime } from "./utils.js";
 import { showModal } from "./modal.js";
 import { pausePlayback } from "./sync.js";
@@ -74,7 +75,7 @@ export function makeDraggableAndResizable(panel, header, minWidth = 400, minHeig
             width: panel.style.width,
             height: panel.style.height
         };
-        console.log(`Saving position for ${panel.id}`, state);
+        if (debugFlags.ui) console.log(`Saving position for ${panel.id}`, state);
         localStorage.setItem(storageKey, JSON.stringify(state));
     }
 
@@ -84,7 +85,7 @@ export function makeDraggableAndResizable(panel, header, minWidth = 400, minHeig
         if (saved) {
             try {
                 const state = JSON.parse(saved);
-                console.log(`Loading position for ${panel.id}`, state);
+                if (debugFlags.ui) console.log(`Loading position for ${panel.id}`, state);
                 if (state.left) panel.style.left = state.left;
                 if (state.top) panel.style.top = state.top;
                 if (state.width) panel.style.width = state.width;
@@ -93,7 +94,7 @@ export function makeDraggableAndResizable(panel, header, minWidth = 400, minHeig
                 requestAnimationFrame(() => constrainToViewport());
             } catch (e) { console.error(`Failed to load position for ${panel.id}`, e); }
         } else {
-            console.log(`No saved position found for ${panel.id}`);
+            if (debugFlags.ui) console.log(`No saved position found for ${panel.id}`);
         }
     }
 
@@ -304,7 +305,7 @@ export function initUIEventListeners() {
         if (savedLayout) {
             try {
                 const layout = JSON.parse(savedLayout);
-                console.log("Restoring GridStack positions", layout);
+                if (debugFlags.ui) console.log("Restoring GridStack positions", layout);
                 // Use "soft load" to updates positions by id without replacing DOM
                 layout.forEach(item => {
                     const id = item.id || item.gsId;
@@ -323,7 +324,7 @@ export function initUIEventListeners() {
         if (isInitialLoad) return; // Don't save while loading
         // save(true, false) saves all items with their current positions/sizes
         const layout = appState.gridStackInstance.save(true, false);
-        console.log("Saving GridStack layout", layout);
+        if (debugFlags.ui) console.log("Saving GridStack layout", layout);
         localStorage.setItem('gridstack_layout', JSON.stringify(layout));
     };
     appState.gridStackInstance.on('change', saveGrid);

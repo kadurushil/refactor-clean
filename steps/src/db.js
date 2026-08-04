@@ -2,6 +2,7 @@ let db;
 let dbReadyPromise;
 let dbReadyResolve;
 import { showModal } from "./modal.js";
+import { debugFlags } from "./debug.js";
 
 // Initialize the promise that tracks DB readiness
 dbReadyPromise = new Promise((resolve) => {
@@ -25,7 +26,7 @@ export function initDB() {
 
   request.onsuccess = function (event) {
     db = event.target.result;
-    console.log("Database initialized");
+    if (debugFlags.database) console.log("Database initialized");
     dbReadyResolve(db); // Signal that DB is ready
   };
 
@@ -70,7 +71,7 @@ export function saveFileWithMetadata(key, file) {
     const request = store.put(dataToStore, key);
 
     request.onsuccess = () => {
-        console.log(`File '${file.name}' saved to DB with metadata.`);
+        if (debugFlags.database) console.log(`File '${file.name}' saved to DB with metadata.`);
         resolve();
     };
     
@@ -101,7 +102,7 @@ export function clearCachedFiles() {
       const store = transaction.objectStore("files");
       const request = store.clear();
       request.onsuccess = () => {
-        console.log("IndexedDB 'files' cache cleared.");
+        if (debugFlags.database) console.log("IndexedDB 'files' cache cleared.");
         resolve();
       };
       request.onerror = (e) => {
@@ -130,7 +131,7 @@ export function saveManualOffset(filename, offset) {
     const request = store.put(offset, filename); // Key is filename, value is offset
 
     request.onsuccess = () => {
-      console.log(`Manual offset ${offset}ms saved for '${filename}'.`);
+      if (debugFlags.database) console.log(`Manual offset ${offset}ms saved for '${filename}'.`);
       resolve();
     };
     request.onerror = (e) => {
@@ -155,7 +156,7 @@ export function loadManualOffset(filename) {
     request.onsuccess = () => {
       const result = request.result;
       if (result !== undefined) {
-        console.log(`Found saved manual offset for '${filename}': ${result}ms`);
+        if (debugFlags.database) console.log(`Found saved manual offset for '${filename}': ${result}ms`);
         resolve(result);
       } else {
         resolve(null);
@@ -180,7 +181,7 @@ export function deleteManualOffset(filename) {
     const request = store.delete(filename);
 
     request.onsuccess = () => {
-      console.log(`Manual offset for '${filename}' deleted.`);
+      if (debugFlags.database) console.log(`Manual offset for '${filename}' deleted.`);
       resolve();
     };
     request.onerror = (e) => {
@@ -207,7 +208,7 @@ export function loadFreshFileFromDB(key, expectedFilename) {
         request.onsuccess = function () {
             const cachedData = request.result;
             if (!cachedData) {
-                console.log(`Cache miss for key '${key}': No data found.`);
+                if (debugFlags.database) console.log(`Cache miss for key '${key}': No data found.`);
                 resolve(null);
                 return;
             }
@@ -227,7 +228,7 @@ export function loadFreshFileFromDB(key, expectedFilename) {
             }
 
             // All checks passed!
-            console.log(`Cache hit for '${expectedFilename}'`);
+            if (debugFlags.database) console.log(`Cache hit for '${expectedFilename}'`);
             resolve(cachedData.blob);
         };
 

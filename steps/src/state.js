@@ -54,6 +54,8 @@ export const appState = {
   speedGraphInstance: null,
   // The filename of the loaded JSON file
   jsonFilename: "",
+  // The relative path / subfolder of the loaded JSON file
+  jsonRelativePath: "",
   // The filename of the loaded video file
   videoFilename: "",
   // The filename of the loaded CAN log file

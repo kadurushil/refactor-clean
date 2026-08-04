@@ -279,7 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
         shortcutsModalCloseBtn.addEventListener("click", onShortcutsClose, { once: true });
       })
       .catch(() => {
-        console.log("Startup loader skipped/cancelled by user.");
+        if (debugFlags.session) console.log("Startup loader skipped/cancelled by user.");
         sessionStorage.setItem("hasSeenUserGuide", "true");
       });
   } else {
@@ -292,13 +292,14 @@ document.addEventListener("DOMContentLoaded", () => {
   initDB().then(async () => {
     // If this is the first run, do not attempt to auto-load files.
     if (isFirstRun) {
-      console.log("First run detected. Skipping auto-load of cached session.");
+      if (debugFlags.session) console.log("First run detected. Skipping auto-load of cached session.");
       return;
     }
 
-    console.log("Database initialized. Checking for cached session...");
+    if (debugFlags.session) console.log("Database initialized. Checking for cached session...");
     // Load filenames and the last known offset from localStorage
     appState.jsonFilename = localStorage.getItem("jsonFilename");
+    appState.jsonRelativePath = localStorage.getItem("jsonRelativePath") || "";
     appState.videoFilename = localStorage.getItem("videoFilename");
     appState.trackerLogFilename = localStorage.getItem("trackerLogFilename");
     appState.sourceFolderName = localStorage.getItem("sourceFolderName");
@@ -312,7 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const logBlob = await loadFreshFileFromDB("tracker_log", appState.trackerLogFilename);
 
       if (jsonBlob) {
-        console.log("Cached session found. Starting auto-reload...");
+        if (debugFlags.session) console.log("Cached session found. Starting auto-reload...");
 
         // The handleFiles function expects File objects with a .name property.
         // Blobs from IndexedDB don't have a name. We must reconstruct File objects.
@@ -340,12 +341,14 @@ document.addEventListener("DOMContentLoaded", () => {
         handleFiles(filesToLoad, true);
         // --- END: FIX FOR AUTO-RELOAD ---
       } else {
-        console.log(
-          "Cached session is stale or missing files. Ready for manual load."
-        );
+        if (debugFlags.session) {
+          console.log(
+            "Cached session is stale or missing files. Ready for manual load."
+          );
+        }
       }
     } else {
-      console.log("No previous session found. Ready for manual file load.");
+      if (debugFlags.session) console.log("No previous session found. Ready for manual file load.");
     }
   });
 });

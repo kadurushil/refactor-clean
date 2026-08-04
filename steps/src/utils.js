@@ -1,4 +1,5 @@
 import { appState, getVideoFps } from "./state.js";
+import { debugFlags } from "./debug.js";
 import { VIDEO_FPS } from "./constants.js";
 
 /**
@@ -200,7 +201,7 @@ export function precomputeRadarVideoSync(vizData, offsetMs) {
         frame.videoSyncedTime = (frame.timestamp + offsetMs) / 1000;
       }
     });
-    console.log("Precomputed per-frame video sync using frame_mapping.json");
+    if (debugFlags.sync) console.log("Precomputed per-frame video sync using frame_mapping.json");
     return;
   }
 

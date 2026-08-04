@@ -614,7 +614,7 @@ export const radarSketch = function (p) {
   p.windowResized = function () {}; // Disable native p5 window event to prevent multi-monitor dragging double-fires
 
   p.handleContainerResize = function () {
-    console.log("radarSketch: handleContainerResize triggered!");
+    if (debugFlags.drawing) console.log("radarSketch: handleContainerResize triggered!");
 
     // Immediately resize the elements that we know are stable.
     p.resizeCanvas(canvasContainer.offsetWidth, canvasContainer.offsetHeight);

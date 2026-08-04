@@ -11,11 +11,16 @@
   <script>
     // Silence Tailwind CDN production warning
     (function () {
-      const suppress = (msg) => typeof msg === 'string' && (msg.includes('cdn.tailwindcss.com') || msg.includes('Tailwind CSS in production'));
+      const isTailwindWarning = (args) => {
+        try {
+          const str = Array.from(args).map(a => typeof a === 'string' ? a : (a ? String(a) : '')).join(' ');
+          return str.includes('cdn.tailwindcss.com') || str.includes('Tailwind CSS in production');
+        } catch (e) { return false; }
+      };
       ['log', 'info', 'warn', 'error'].forEach(method => {
         const original = console[method];
         console[method] = function () {
-          if (arguments[0] && suppress(arguments[0])) return;
+          if (isTailwindWarning(arguments)) return;
           original.apply(console, arguments);
         };
       });
