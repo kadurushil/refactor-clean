@@ -185,11 +185,10 @@ export function updateFrame(frame, forceVideoSeek = false, overrideTime = null) 
   // The animationLoop is now responsible for all redraws.
   // We no longer call redraw() from here.
 
-  // --- NEW: Centralized Explorer Update ---
+  // --- Centralized Explorer Update ---
   if (isExplorerOpen) {
       throttledUpdateExplorer();
   }
-  // --- END: Centralized Explorer Update ---
   const endTime = performance.now();
   appState.lastFrameRenderTime = endTime - startTime; // <-- End timer and update state
 

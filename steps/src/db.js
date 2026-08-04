@@ -87,6 +87,35 @@ export function saveFileWithMetadata(key, file) {
   });
 }
 
+// Clears all cached data files (Blobs) from the IndexedDB 'files' store.
+// Leaves 'manualOffsets' intact so saved offsets persist across file updates.
+export function clearCachedFiles() {
+  return new Promise(async (resolve) => {
+    const database = await getDB();
+    if (!database) {
+      resolve();
+      return;
+    }
+    try {
+      const transaction = database.transaction(["files"], "readwrite");
+      const store = transaction.objectStore("files");
+      const request = store.clear();
+      request.onsuccess = () => {
+        console.log("IndexedDB 'files' cache cleared.");
+        resolve();
+      };
+      request.onerror = (e) => {
+        console.warn("Failed to clear 'files' cache:", e.target.error);
+        resolve();
+      };
+    } catch (err) {
+      console.warn("Error initiating 'files' cache clear:", err);
+      resolve();
+    }
+  });
+}
+
+
 
 // Saves a manual offset for a specific filename.
 export function saveManualOffset(filename, offset) {

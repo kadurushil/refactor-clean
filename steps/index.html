@@ -651,8 +651,14 @@
       <div id="data-explorer-header"
         class="flex items-center justify-between p-2 border-b dark:border-gray-700 cursor-move flex-shrink-0">
         <h2 class="text-lg font-bold ml-2">Data Explorer</h2>
-        <button id="close-explorer-btn"
-          class="text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg p-1.5">&times;</button>
+        <div class="flex items-center gap-1">
+          <button id="popout-explorer-btn" title="Pop Out to Secondary Monitor (Monitor 2)"
+            class="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold transition-colors flex items-center gap-1">
+            <span>Pop Out ↗️</span>
+          </button>
+          <button id="close-explorer-btn"
+            class="text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg p-1.5">&times;</button>
+        </div>
       </div>
       <!-- END: Add Draggable Header and Resizer Handles -->
 
@@ -672,9 +678,9 @@
           View</button>
       </div>
 
-      <div class="flex-grow overflow-auto">
-        <div id="tab-panel-tree" class="font-mono text-xs"></div>
-        <div id="tab-panel-grid" class="hidden h-full flex flex-col p-2 space-y-2">
+      <div class="flex-grow h-full flex flex-col min-h-0 overflow-hidden relative">
+        <div id="tab-panel-tree" class="hidden h-full flex-grow overflow-y-auto p-3 font-mono text-xs min-h-0"></div>
+        <div id="tab-panel-grid" class="hidden h-full flex-grow flex flex-col p-2 space-y-2 min-h-[300px]">
           <div class="flex items-center justify-between gap-2 p-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 flex-shrink-0">
             <input type="text" id="pointcloud-search-input" placeholder="Filter point cloud..."
               class="px-2.5 py-1 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-md w-48" />
@@ -682,11 +688,11 @@
               ↔ Fit Cols
             </button>
           </div>
-          <div class="flex-grow relative w-full h-full overflow-hidden">
-            <div id="data-grid" class="ag-theme-alpine-dark absolute inset-0 w-full h-full"></div>
+          <div class="flex-grow relative w-full h-full min-h-[250px] overflow-hidden">
+            <div id="data-grid" class="ag-theme-alpine-dark absolute inset-0 w-full h-full min-h-[250px]"></div>
           </div>
         </div>
-        <div id="tab-panel-track-grid" class="hidden h-full flex flex-col p-2 space-y-2">
+        <div id="tab-panel-track-grid" class="hidden h-full flex-grow flex flex-col p-2 space-y-2 min-h-[300px]">
           <!-- Control Bar -->
           <div class="flex flex-wrap items-center justify-between gap-2 p-1.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 flex-shrink-0">
             <!-- View Mode Switcher -->
@@ -709,20 +715,20 @@
           </div>
 
           <!-- Cards View -->
-          <div id="track-cards-view" class="flex-grow overflow-y-auto space-y-3 pr-1"></div>
+          <div id="track-cards-view" class="flex-grow overflow-y-auto space-y-3 pr-1 min-h-0"></div>
 
           <!-- Table View -->
-          <div id="track-table-view" class="hidden flex-grow relative w-full h-full overflow-hidden">
-            <div id="track-data-grid" class="ag-theme-alpine-dark absolute inset-0 w-full h-full"></div>
+          <div id="track-table-view" class="hidden flex-grow relative w-full h-full min-h-[250px] overflow-hidden">
+            <div id="track-data-grid" class="ag-theme-alpine-dark absolute inset-0 w-full h-full min-h-[250px]"></div>
           </div>
         </div>
-        <div id="tab-panel-adas" class="hidden h-full p-2 overflow-y-auto">
-          <div id="adas-vertical-view" class="space-y-4"></div>
+        <div id="tab-panel-adas" class="hidden h-full flex-grow overflow-y-auto p-3 min-h-0">
+          <div id="adas-vertical-view" class="space-y-4 pb-6"></div>
         </div>
-        <div id="tab-panel-tracker-log" class="hidden h-full p-2 overflow-y-auto">
-          <div id="tracker-log-view" class="space-y-4 font-mono text-xs"></div>
+        <div id="tab-panel-tracker-log" class="hidden h-full flex-grow overflow-y-auto p-3 min-h-0">
+          <div id="tracker-log-view" class="space-y-4 font-mono text-xs pb-6"></div>
         </div>
-        <div id="tab-panel-plot" class="hidden p-2">
+        <div id="tab-panel-plot" class="hidden h-full flex-grow p-2 min-h-0">
           <canvas id="data-chart"></canvas>
         </div>
       </div>

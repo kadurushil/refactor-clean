@@ -1,5 +1,3 @@
-// In src/dataExplorer.js
-
 import { appState } from './state.js';
 import { throttle } from './utils.js';
 import { makeDraggableAndResizable } from './ui.js';
@@ -8,10 +6,12 @@ import {
     explorerBtn,
     mainContent
 } from './dom.js'; // Import the DOM elements we need to listen to
+import { popoutDataExplorer } from './dataExplorerPop.js';
 
 // --- DOM Elements (Internal to this module) ---
 const panel = document.getElementById('data-explorer-panel');
 const closeBtn = document.getElementById('close-explorer-btn');
+const popoutBtn = document.getElementById('popout-explorer-btn');
 const footer = document.getElementById('explorer-footer');
 const plotBtn = document.getElementById('plot-selected-btn');
 
@@ -54,6 +54,26 @@ let lastTrackGridColKeys = '';
 
 // --- EXPORTED STATE for Optimization ---
 export let isExplorerOpen = false;
+
+// --- Accessor Exports for Pop-Out Module ---
+/** Returns the #data-explorer-panel DOM element. */
+export function getPanel() { return panel; }
+
+/** Returns live references to the AG-Grid API instances and cached row data. */
+export function getGridApis() {
+    return { gridApi, trackGridApi, currentGridData };
+}
+
+/** Forces AG-Grid to re-derive column definitions on next update. */
+export function resetColumnKeyCaches() {
+    lastPointCloudColKeys = null;
+    lastTrackGridColKeys = null;
+}
+
+/** Sets the isExplorerOpen flag (used by pop-out module). */
+export function setExplorerOpen(val) {
+    isExplorerOpen = val;
+}
 
 // --- State & Risk Badge Formatting Helpers ---
 function getStateBadgeHtml(stateVal) {
@@ -204,9 +224,9 @@ function createChart(data, label) {
     });
 }
 
-// --- Core Functions (Internal) ---
+// --- Core Functions ---
 
-function showExplorer() {
+export function showExplorer() {
     panel.classList.remove('hidden');
     isExplorerOpen = true; // Update state
     updateExplorer();
@@ -234,6 +254,29 @@ function switchTab(targetTab) {
 
     footer.classList.toggle('hidden', targetTab !== 'grid');
     localStorage.setItem('dataExplorer_activeTab', targetTab);
+
+    if (targetTab === 'grid' && gridApi) {
+        lastPointCloudColKeys = null; // Force column definition re-binding
+        updateExplorer();
+        setTimeout(() => {
+            // Guard: AG-Grid warns (#29) if grid has zero width (tab may still be rendering)
+            if (gridDiv && gridDiv.offsetWidth > 0) {
+                try { gridApi.sizeColumnsToFit(); } catch (e) {}
+            }
+        }, 50);
+    } else if (targetTab === 'trackGrid') {
+        lastTrackGridColKeys = null;
+        updateExplorer();
+        if (trackGridApi) {
+            setTimeout(() => {
+                const savedTrackState = localStorage.getItem('dataExplorer_trackGridColumnState');
+                if (savedTrackState) {
+                    try { trackGridApi.applyColumnState({ state: JSON.parse(savedTrackState), applyOrder: true }); } catch (e) {}
+                }
+                try { trackGridApi.redrawRows(); } catch (e) {}
+            }, 50);
+        }
+    }
 }
 
 function createTreeView(data) {
@@ -245,7 +288,7 @@ function createTreeView(data) {
     return pre;
 }
 
-function updateExplorer() {
+export function updateExplorer() {
     if (panel.classList.contains('hidden') || !appState.vizData) return;
     
     const frame = appState.vizData.radarFrames[appState.currentFrame];
@@ -274,7 +317,8 @@ function updateExplorer() {
     }));
 
     // --- START: Auto-update Point Cloud Grid ---
-    displayInGrid(frame.pointCloud, `${frameIdx}`);
+    const pointCloudData = frame.pointCloud || frame.point_cloud || frame.detections || frame.rawPoints || frame.points || [];
+    displayInGrid(pointCloudData, `${frameIdx}`);
     // --- END: Auto-update Point Cloud Grid ---
     displayTracksInGrid(tracksForCurrentFrame);
     displayAdasData(frame.adas);
@@ -282,7 +326,14 @@ function updateExplorer() {
 }
 
 function displayInGrid(data, title) {
-    if (!Array.isArray(data) || data.length === 0 || !gridApi) return;
+    if (!gridApi) return;
+
+    if (!Array.isArray(data) || data.length === 0) {
+        gridApi.setGridOption('rowData', []);
+        tabs.grid.btn.textContent = `Point Cloud: Frame ${title} (0 points)`;
+        currentGridData = [];
+        return;
+    }
 
     const indexedData = data.map((row, index) => ({
         index: index,
@@ -297,7 +348,7 @@ function displayInGrid(data, title) {
 
         const columns = Object.keys(indexedData[0]).map(key => ({
             field: key,
-            headerName: key,
+            headerName: COLUMN_HEADER_MAP[key] || key,
             type: typeof indexedData[0][key] === 'number' ? 'numberColumn' : undefined
         }));
 
@@ -317,7 +368,7 @@ function displayInGrid(data, title) {
 
     // Update row data cleanly without re-calculating column widths
     gridApi.setGridOption('rowData', indexedData);
-    tabs.grid.btn.textContent = `Point Cloud: Frame ${title}`;
+    tabs.grid.btn.textContent = `Point Cloud: Frame ${title} (${data.length} points)`;
 }
 
 function displayTracksAsCards(trackData) {
@@ -750,21 +801,43 @@ export function throttledUpdateExplorer() {
 }
 // --- END: New Robust Update Logic ---
 
-function initializePanelPosition(panel) {
-    // Remove Tailwind classes that conflict with dynamic positioning/sizing
+export function restoreMainPanelLayout(panel) {
+    if (!panel) return;
+    panel.style.position = 'fixed';
+    panel.style.zIndex = '50';
+    panel.style.display = '';          // Clear inline display so Tailwind .hidden class works
+    panel.style.flexDirection = '';     // Clear inline flex-direction (set during pop-out)
+
     panel.classList.remove('bottom-24', 'right-4', 'w-full', 'max-w-2xl', 'h-1/2');
 
-    // Only apply fallback initial position if no saved position exists
     const savedPos = localStorage.getItem(`panel_pos_${panel.id}`);
-    if (!savedPos) {
-        const initialWidth = 896; // Corresponds to max-w-2xl
-        const initialHeight = window.innerHeight / 2;
-        
-        panel.style.width = `${initialWidth}px`;
-        panel.style.height = `${initialHeight}px`;
-        panel.style.top = `${window.innerHeight - initialHeight - 96}px`; // 96px is roughly bottom-24
-        panel.style.left = `${window.innerWidth - initialWidth - 16}px`; // 16px is right-4
+    if (savedPos) {
+        try {
+            const state = JSON.parse(savedPos);
+            if (state.left) panel.style.left = state.left;
+            if (state.top) panel.style.top = state.top;
+            if (state.width) panel.style.width = state.width;
+            if (state.height) panel.style.height = state.height;
+        } catch (e) {
+            applyDefaultPanelPosition(panel);
+        }
+    } else {
+        applyDefaultPanelPosition(panel);
     }
+}
+
+function applyDefaultPanelPosition(panel) {
+    const initialWidth = Math.min(896, window.innerWidth - 32);
+    const initialHeight = Math.min(500, window.innerHeight / 2);
+    
+    panel.style.width = `${initialWidth}px`;
+    panel.style.height = `${initialHeight}px`;
+    panel.style.top = `${window.innerHeight - initialHeight - 96}px`;
+    panel.style.left = `${window.innerWidth - initialWidth - 16}px`;
+}
+
+function initializePanelPosition(panel) {
+    restoreMainPanelLayout(panel);
 }
 // --- END: Resizable and Draggable Panel Logic ---
 
@@ -784,25 +857,41 @@ function setTrackGridViewMode(mode) {
         trackTableView.classList.remove('hidden');
         btnCardsView.className = 'px-2.5 py-1 rounded-md transition-all duration-150 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center gap-1';
         btnTableView.className = 'px-2.5 py-1 rounded-md transition-all duration-150 text-white bg-blue-600 shadow-sm font-bold flex items-center gap-1';
+        
+        lastTrackGridColKeys = null; // Force column definitions re-binding
+        updateExplorer();
+
         if (trackGridApi) {
             setTimeout(() => {
-                const allCols = trackGridApi.getAllDisplayedColumns().map(c => c.getColId());
-                trackGridApi.autoSizeColumns(allCols);
-            }, 50);
+                const savedTrackState = localStorage.getItem('dataExplorer_trackGridColumnState');
+                if (savedTrackState) {
+                    try {
+                        trackGridApi.applyColumnState({ state: JSON.parse(savedTrackState), applyOrder: true });
+                    } catch (e) {}
+                } else {
+                    const allCols = trackGridApi.getAllDisplayedColumns().map(c => c.getColId());
+                    trackGridApi.autoSizeColumns(allCols);
+                }
+                try { trackGridApi.redrawRows(); } catch (e) {}
+            }, 100);
         }
     }
 }
 
-// --- Initialization Function (The file's only export) ---
+// --- Initialization Function ---
 
 export function initializeDataExplorer() {
     // Initialize the grid
     if (!gridApi) {
         gridApi = agGrid.createGrid(gridDiv, gridOptions);
+        gridApi.addEventListener('columnResized', savePointCloudColumnState);
+        gridApi.addEventListener('columnMoved', savePointCloudColumnState);
     }
 
     if (!trackGridApi) {
         trackGridApi = agGrid.createGrid(trackGridDiv, trackGridOptions);
+        trackGridApi.addEventListener('columnResized', saveTrackGridColumnState);
+        trackGridApi.addEventListener('columnMoved', saveTrackGridColumnState);
     }
 
     // --- START: Make panel interactive ---
@@ -865,6 +954,10 @@ export function initializeDataExplorer() {
         }
     });
     closeBtn.addEventListener('click', hideExplorer);
+
+    if (popoutBtn) {
+        popoutBtn.addEventListener('click', popoutDataExplorer);
+    }
 
     // Tab switching
     Object.keys(tabs).forEach(key => {

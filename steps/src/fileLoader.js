@@ -1,6 +1,6 @@
 import { appState, getVideoFps } from "./state.js";
 import { debugFlags } from "./debug.js";
-import { saveFileWithMetadata, loadManualOffset, deleteManualOffset } from "./db.js";
+import { saveFileWithMetadata, loadManualOffset, deleteManualOffset, clearCachedFiles } from "./db.js";
 import { updateDebugBadge } from "./debugBadge.js";
 import { parseVisualizationJson } from "./fileParsers.js";
 import { parseTrackerLog, findBestTrackerLogMatch } from "./trackerLogParser.js";
@@ -48,6 +48,11 @@ import { extractAllFiles, triggerCaseCSelectionModal } from "./load_folder.js";
 export async function handleFiles(filesInput, fromCache = false) {
   const allFiles = await extractAllFiles(filesInput);
   if (!allFiles || allFiles.length === 0) return;
+
+  // Clear cached file blobs if loading fresh user files/folders
+  if (!fromCache) {
+    await clearCachedFiles();
+  }
 
   // Filter JSON datasets and Video resources
   const jsonFiles = allFiles.filter((f) => f.name.toLowerCase().endsWith(".json"));

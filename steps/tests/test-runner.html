@@ -15,11 +15,13 @@
     <p>Check the browser's console for detailed results.</p>
     <div id="results"></div>
 
+    <script src="../vendor/tailwind-cdn.js"></script>
     <script src="../vendor/p5.js"></script>
     <script type="module" src="utils.test.js"></script>
     <script type="module" src="fileParsers.test.js"></script> 
     <script type="module" src="fileLoader.test.js"></script>
     <script type="module" src="trackerLogParser.test.js"></script>
+    <script type="module" src="dataExplorerPop.test.js"></script>
 
     <!-- Mock DOM for dom.js -->
     <div id="mock-dom" style="display: none;">
@@ -104,6 +106,40 @@
         <div id="menu-scrim"></div>
         <button id="explorer-btn"></button>
         <div id="zoom-canvas-container"></div>
+
+        <!-- Mock DOM for Data Explorer (dataExplorer.js) -->
+        <div id="data-explorer-panel" class="hidden" style="position: fixed;">
+            <div id="data-explorer-header"></div>
+            <button id="close-explorer-btn"></button>
+            <button id="popout-explorer-btn"></button>
+            <div id="explorer-footer" class="hidden"></div>
+            <button id="plot-selected-btn"></button>
+            <button id="tab-btn-tree"></button>
+            <div id="tab-panel-tree"></div>
+            <button id="tab-btn-grid"></button>
+            <div id="tab-panel-grid"></div>
+            <button id="tab-btn-track-grid"></button>
+            <div id="tab-panel-track-grid"></div>
+            <button id="tab-btn-adas"></button>
+            <div id="tab-panel-adas"></div>
+            <button id="tab-btn-tracker-log"></button>
+            <div id="tab-panel-tracker-log"></div>
+            <button id="tab-btn-plot"></button>
+            <div id="tab-panel-plot"></div>
+            <div id="data-grid" class="ag-theme-alpine-dark"></div>
+            <div id="track-data-grid" class="ag-theme-alpine-dark"></div>
+            <div id="adas-vertical-view"></div>
+            <div id="tracker-log-view"></div>
+            <canvas id="data-chart"></canvas>
+            <button id="track-view-mode-cards"></button>
+            <button id="track-view-mode-table"></button>
+            <div id="track-cards-view"></div>
+            <div id="track-table-view"></div>
+            <input type="text" id="track-search-input">
+            <input type="text" id="pointcloud-search-input">
+            <button id="autofit-pointcloud-btn"></button>
+            <button id="autofit-tracks-btn"></button>
+        </div>
     </div>
 </body>
 </html>
