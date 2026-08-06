@@ -1,4 +1,4 @@
-import { getCacheStats } from "./db.js";
+import { getCacheStats, purgeFullAppCache } from "./db.js";
 import { appState } from "./state.js";
 import { changelogBtn } from "./dom.js";
 import { debugFlags, setDebugFlag } from "./debug.js";
@@ -96,7 +96,10 @@ export function initDebugBadge() {
         <div class="space-y-1 mt-2">
           <div class="flex items-center justify-between">
             <span class="text-gray-400">Cache Stats:</span>
-            <span id="popover-cache-stats" class="text-gray-800 dark:text-gray-200 font-semibold">Checking...</span>
+            <div class="flex items-center gap-2">
+              <span id="popover-cache-stats" class="text-gray-800 dark:text-gray-200 font-semibold">Checking...</span>
+              <button id="popover-purge-cache-btn" class="text-[10px] bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/50 dark:hover:bg-red-800/80 dark:text-red-300 font-sans px-1.5 py-0.5 rounded transition-all font-bold" title="Purge cached binary files from IndexedDB and clear session storage keys">Purge</button>
+            </div>
           </div>
           <div class="flex items-center justify-between">
             <span class="text-gray-400">Platform:</span>
@@ -161,6 +164,27 @@ export function initDebugBadge() {
     popoverCloseBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       popover.classList.add("hidden");
+    });
+  }
+
+  const purgeBtn = document.getElementById("popover-purge-cache-btn");
+  if (purgeBtn) {
+    purgeBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      purgeBtn.disabled = true;
+      purgeBtn.textContent = "Purging...";
+      const newStats = await purgeFullAppCache();
+      const cacheEl = document.getElementById("popover-cache-stats");
+      if (cacheEl) {
+        cacheEl.textContent = `${newStats.count} files (${newStats.sizeStr})`;
+      }
+      purgeBtn.textContent = "Purged!";
+      setTimeout(() => {
+        purgeBtn.textContent = "Purge";
+        purgeBtn.disabled = false;
+      }, 1500);
+      updateDebugBadge();
     });
   }
 

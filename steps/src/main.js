@@ -71,7 +71,7 @@ import {
 
 import { initializeTheme } from "./theme.js";
 
-import { initDB, loadFreshFileFromDB, saveManualOffset } from "./db.js";
+import { initDB, loadFreshFileFromDB, saveManualOffset, purgeFullAppCache } from "./db.js";
 import { initKeyboardShortcuts } from "./keyboard.js";
 import { handleFiles, revertToAutoOffset } from "./fileLoader.js";
 
@@ -171,10 +171,9 @@ clearCacheBtn.addEventListener("click", async () => {
 });
 
 startClearCacheBtn.addEventListener("click", async () => {
-  const confirmed = await showModal("Clear all cached data and reload?", true);
+  const confirmed = await showModal("Clear all cached session data and free disk storage?", true);
   if (confirmed) {
-    indexedDB.deleteDatabase("visualizerDB");
-    localStorage.clear();
+    await purgeFullAppCache();
     window.location.reload();
   }
 });

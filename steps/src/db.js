@@ -116,6 +116,37 @@ export function clearCachedFiles() {
   });
 }
 
+// Performs a full cache purge: clears IndexedDB binary file Blobs and session storage keys,
+// freeing browser disk space while leaving manual offsets and user preferences intact.
+// Also triggers backend server endpoint /api/purge-all-caches to clean disk folders across all local ports.
+export function purgeFullAppCache() {
+  return new Promise(async (resolve) => {
+    await clearCachedFiles();
+
+    const sessionKeys = [
+      "jsonFilename",
+      "jsonRelativePath",
+      "videoFilename",
+      "trackerLogFilename",
+      "sourceFolderName"
+    ];
+    sessionKeys.forEach((key) => localStorage.removeItem(key));
+
+    // If served from Express backend, trigger server-side cross-port disk cleanup
+    if (location.protocol.startsWith("http")) {
+      try {
+        await fetch("/api/purge-all-caches", { method: "POST" });
+        if (debugFlags.database) console.log("Backend server purge-all-caches triggered successfully.");
+      } catch (e) {
+        // Silently skip if running in static development mode
+      }
+    }
+
+    if (debugFlags.database) console.log("Full app cache purged from IndexedDB and localStorage.");
+    resolve({ count: 0, sizeStr: "0.00 KB" });
+  });
+}
+
 
 
 // Saves a manual offset for a specific filename.
