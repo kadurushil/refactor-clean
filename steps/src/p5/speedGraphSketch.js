@@ -46,7 +46,7 @@ export const speedGraphSketch = function (p) {
     b.background(isDark ? [55, 65, 81] : 255);
     const gridColor = isDark ? 100 : 200;
     const textColor = isDark ? 200 : 100;
-    
+
     // --- Step 1: Define Spectral Color Scheme (MATLAB Style) ---
     // Anchors: Blue (0%) -> Cyan (25%) -> Green (50%) -> Yellow (75%) -> Red (100%)
     const spectralAnchors = [
@@ -74,7 +74,7 @@ export const speedGraphSketch = function (p) {
       for (const track of radarData.tracks) {
         // Only count tracks that would actually be visible in the confirmed view
         if (confirmedOnly && track.isConfirmed === false) continue;
-        
+
         if (track.historyLog) {
           for (const log of track.historyLog) {
             const idx = log.frameIdx - 1;
@@ -95,10 +95,10 @@ export const speedGraphSketch = function (p) {
       const p95Index = Math.floor(numFrames * 0.95);
       const p95Value = sortedCounts[p95Index];
       const maxValue = sortedCounts[numFrames - 1];
-      
+
       // We'll normalize against p95, but ensure it's at least a reasonable number.
       normTracks = Math.max(1, p95Value);
-      
+
       if (debugFlags.speedGraph) {
         console.log(`[SpeedGraph] Density Info (Confirmed Only: ${confirmedOnly}):`);
         console.log(` - Max tracks: ${maxValue}, 95th Percentile: ${p95Value}`);
@@ -164,7 +164,7 @@ export const speedGraphSketch = function (p) {
       b.noStroke();
       const cautionColor = p.color(245, 140, 0, 45); // Transparent amber/orange for Stage 1
       const alertColor = p.color(220, 40, 40, 65);   // Transparent red for Stage 2
-      
+
       for (let i = 0; i < radarData.radarFrames.length; i++) {
         const frame = radarData.radarFrames[i];
         let stage = 0;
@@ -177,23 +177,23 @@ export const speedGraphSketch = function (p) {
             }
           }
         }
-        
+
         if (stage > 0) {
           const relTime = frame.timestamp / 1000;
           const x = b.map(relTime, 0, videoDuration, pad.left, b.width - pad.right);
-          
+
           let nextRelTime = relTime + 0.05;
           if (i < radarData.radarFrames.length - 1) {
-            nextRelTime = radarData.radarFrames[i+1].timestamp / 1000;
+            nextRelTime = radarData.radarFrames[i + 1].timestamp / 1000;
           }
           const nextX = b.map(nextRelTime, 0, videoDuration, pad.left, b.width - pad.right);
-          
-          // Ensure minimum band thickness of 5px so even 1-2 frame warnings are immediately eye-catching
-          const minBandWidth = 5;
+
+          // Ensure minimum band thickness of 2px so even short warnings are cleanly visible without over-expanding
+          const minBandWidth = 1;
           const naturalW = nextX - x;
           const w = Math.max(minBandWidth, naturalW);
           const drawX = naturalW < minBandWidth ? x - (minBandWidth - naturalW) / 2 : x;
-          
+
           // 1. Full-height translucent warning band
           b.fill(stage === 2 ? alertColor : cautionColor);
           b.rect(drawX, pad.top, w, b.height - pad.bottom - pad.top);
@@ -225,10 +225,10 @@ export const speedGraphSketch = function (p) {
     // Legend Labels for the vertical bar
     b.fill(textColor);
     b.textSize(9);
-    
+
     b.textAlign(b.LEFT, b.TOP);
     b.text(normTracks, lx + lw + 3, ly);
-    
+
     b.textAlign(b.LEFT, b.BOTTOM);
     b.text("0", lx + lw + 3, ly + lh);
 
@@ -239,18 +239,18 @@ export const speedGraphSketch = function (p) {
     if (radarData && radarData.radarFrames) {
       b.strokeWeight(2.5); // Slightly thicker for better color visibility
       b.noFill();
-      
+
       let prevX = null;
       let prevY = null;
 
       for (let i = 0; i < radarData.radarFrames.length; i++) {
         const frame = radarData.radarFrames[i];
-        
+
         if (frame.canVehSpeed_kmph === null || isNaN(frame.canVehSpeed_kmph)) {
-          prevX = null; 
+          prevX = null;
           continue;
         }
-        
+
         const relTime = frame.timestamp / 1000;
         if (relTime < 0 || relTime > videoDuration) continue;
 
@@ -322,10 +322,10 @@ export const speedGraphSketch = function (p) {
     const step = segLen / 5;
     // Use spectralAnchors for the horizontal legend line
     b.stroke(spectralAnchors[0]); b.line(legendStartX, legendY + 6, legendStartX + step, legendY + 6);
-    b.stroke(spectralAnchors[1]); b.line(legendStartX + step, legendY + 6, legendStartX + step*2, legendY + 6);
-    b.stroke(spectralAnchors[2]); b.line(legendStartX + step*2, legendY + 6, legendStartX + step*3, legendY + 6);
-    b.stroke(spectralAnchors[3]); b.line(legendStartX + step*3, legendY + 6, legendStartX + step*4, legendY + 6);
-    b.stroke(spectralAnchors[4]); b.line(legendStartX + step*4, legendY + 6, legendStartX + segLen, legendY + 6);
+    b.stroke(spectralAnchors[1]); b.line(legendStartX + step, legendY + 6, legendStartX + step * 2, legendY + 6);
+    b.stroke(spectralAnchors[2]); b.line(legendStartX + step * 2, legendY + 6, legendStartX + step * 3, legendY + 6);
+    b.stroke(spectralAnchors[3]); b.line(legendStartX + step * 3, legendY + 6, legendStartX + step * 4, legendY + 6);
+    b.stroke(spectralAnchors[4]); b.line(legendStartX + step * 4, legendY + 6, legendStartX + segLen, legendY + 6);
 
     b.noStroke();
     b.fill(textColor);
@@ -370,13 +370,13 @@ export const speedGraphSketch = function (p) {
     // map hoverX to time in seconds inside [0, videoDuration]
     const dur = videoDuration > 0 ? videoDuration : Math.max(1, (appState.vizData.radarFrames[appState.vizData.radarFrames.length - 1].timestamp / 1000));
     hoverTimeSec = p.map(hoverX, pad.left, p.width - pad.right, 0, dur);
-    
+
     // Clamp time to [0, duration]
     hoverTimeSec = Math.max(0, Math.min(dur, hoverTimeSec));
-    
+
     const hoverTimeMs = Math.round(hoverTimeSec * 1000);
     hoverFrameIndex = findNearestFrameIndexByTime(hoverTimeMs);
-    
+
     if (hoverFrameIndex !== null) {
       const f = appState.vizData.radarFrames[hoverFrameIndex];
       hoverCanSpeed = (f.canVehSpeed_kmph !== null && !isNaN(f.canVehSpeed_kmph)) ? f.canVehSpeed_kmph : null;
@@ -392,12 +392,12 @@ export const speedGraphSketch = function (p) {
     canvas.parent("speed-graph-container");
 
     // --- Pointer Events for Drag & Click ---
-    
+
     canvas.elt.addEventListener('pointerdown', (e) => {
       if (!appState.vizData) return;
       isDragging = true;
       canvas.elt.setPointerCapture(e.pointerId);
-      
+
       if (appState.isPlaying) {
         pausePlayback();
         appState.isPlaying = false;
@@ -415,31 +415,31 @@ export const speedGraphSketch = function (p) {
 
     canvas.elt.addEventListener('pointermove', (e) => {
       if (!appState.vizData) return;
-      
+
       if (isDragging) {
         // When dragging, clamp X to canvas bounds and seek
         const rect = canvas.elt.getBoundingClientRect();
         // Calculate offsetX manually if needed, or trust e.offsetX with capture
         // With setPointerCapture, e.offsetX is relative to the target (canvas).
         updateHoverState(e.offsetX);
-        
+
         if (hoverFrameIndex !== null) {
-           updateFrame(hoverFrameIndex, false);
-           showSeekingBadge();
-           const frameData = appState.vizData.radarFrames[hoverFrameIndex];
-           if (frameData && typeof frameData.videoSyncedTime === "number") {
-             performFastVideoSeek(frameData.videoSyncedTime);
-           }
-           if (appState.p5_instance) appState.p5_instance.redraw();
+          updateFrame(hoverFrameIndex, false);
+          showSeekingBadge();
+          const frameData = appState.vizData.radarFrames[hoverFrameIndex];
+          if (frameData && typeof frameData.videoSyncedTime === "number") {
+            performFastVideoSeek(frameData.videoSyncedTime);
+          }
+          if (appState.p5_instance) appState.p5_instance.redraw();
         }
         p.redraw();
       } else {
         // Normal Hover Behavior
         if (hoverTimeout) {
-            clearTimeout(hoverTimeout);
-            hoverTimeout = null;
+          clearTimeout(hoverTimeout);
+          hoverTimeout = null;
         }
-        
+
         // If we are hovering, e.offsetX is correct. 
         updateHoverState(e.offsetX);
         p.redraw();
@@ -476,7 +476,7 @@ export const speedGraphSketch = function (p) {
       if (resizeDebounce) clearTimeout(resizeDebounce);
       resizeDebounce = setTimeout(() => {
         if (speedGraphContainer && speedGraphContainer.offsetWidth > 0 && speedGraphContainer.offsetHeight > 0) {
-           if(typeof p.handleContainerResize === 'function') p.handleContainerResize();
+          if (typeof p.handleContainerResize === 'function') p.handleContainerResize();
         }
       }, 100);
     });
@@ -611,15 +611,15 @@ export const speedGraphSketch = function (p) {
     }
   }
 
-  p.windowResized = function () {}; // Disable native p5 window event
+  p.windowResized = function () { }; // Disable native p5 window event
 
   p.handleContainerResize = function () {
     p.resizeCanvas(speedGraphContainer.offsetWidth, speedGraphContainer.offsetHeight);
-    
+
     // PREVENT MEMORY LEAK: Destroy old buffer before recreating
     if (staticBuffer) staticBuffer.remove();
     staticBuffer = p.createGraphics(p.width, p.height);
-    
+
     hoverX = null; // reset hover on resize
     if (appState.vizData && videoDuration > 0) {
       p.drawStaticGraphToBuffer(appState.vizData);
