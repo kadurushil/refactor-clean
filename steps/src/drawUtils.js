@@ -90,28 +90,28 @@ export function getTrackRisk(track, log) {
 export function drawStaticRegionsToBuffer(p, b, plotScales) {
   try {
     b.clear();
-    
+
     // 1. Draw Axes (Grid)
     // We pass 'b' as the p5 instance so it draws to the buffer.
     // Note: drawAxes applies its own coordinate transformations (translate/scale) internally
     // but it expects to start from the top-left relative to the canvas.
     // However, inside drawAxes it does: p.translate(5, y * scale)...
     // AND logic for flipping. 
-    
+
     // Let's look at how drawAxes is implemented. It pushes/pops and assumes 
     // it's drawing in SCREEN coordinates (pixels), but then uses plotScales.
     // The main draw loop applies: p.translate(width/2, height*0.95); p.scale(1, -1);
     // BEFORE calling drawAxes.
-    
+
     // So 'b' needs to be in that state before we call drawAxes/drawEgoVehicle.
-    
+
     b.push();
     b.translate(b.width / 2, b.height * 0.95);
     b.scale(1, -1);
-    
+
     // Draw Axes
     drawAxes(b, plotScales); // Pass 'b' as the drawing context
-    
+
     // Draw Ego Vehicle
     drawEgoVehicle(b, plotScales); // Pass 'b' as the drawing context
 
@@ -119,11 +119,11 @@ export function drawStaticRegionsToBuffer(p, b, plotScales) {
     b.stroke(100, 100, 100, 150);
     b.strokeWeight(1);
     b.drawingContext.setLineDash([8, 8]);
-    
+
     const a1 = p.radians(30); // Use 'p' for math constants if 'b' lacks them (b usually has them too)
     const a2 = p.radians(150);
     const len = 70;
-    
+
     b.line(
       0,
       0,
@@ -136,7 +136,7 @@ export function drawStaticRegionsToBuffer(p, b, plotScales) {
       len * Math.cos(a2) * plotScales.plotScaleX,
       len * Math.sin(a2) * plotScales.plotScaleY
     );
-    
+
     b.drawingContext.setLineDash([]);
     b.pop();
   } catch (error) {
@@ -272,8 +272,8 @@ export function drawPointCloud(p, points, plotScales, pointSize = 4) {
           p.stroke(
             pt.clusterNumber > 0
               ? localClusterColors[
-                  (pt.clusterNumber - 1) % localClusterColors.length
-                ]
+              (pt.clusterNumber - 1) % localClusterColors.length
+              ]
               : 128
             // Default to gray if cluster number is 0 or invalid.
           );
@@ -282,8 +282,8 @@ export function drawPointCloud(p, points, plotScales, pointSize = 4) {
             pt.isOutlier === false
               ? p.color(0, 255, 0)
               : pt.isOutlier === true
-              ? p.color(255, 0, 0)
-              : 128
+                ? p.color(255, 0, 0)
+                : 128
             // Default to gray if inlier status is unknown.
           );
         } else if (useSnr && pt.snr !== null) {
@@ -498,13 +498,18 @@ export function drawTrackMarkers(p, plotScales, scaleFactor = 1, showDetailsBox 
     if (!frameData) return;
     const currentFrameIdx = frameData.frameIdx;
 
-    // Check if there is an active stage-2 FCW and get its POI ID
-    let targetPoiId = null;
+    // Check if there is an active FCW and get its POI ID and stage
+    let currentPoiId = null;
+    let activeFcwStage = 0;
     if (frameData.adas && Array.isArray(frameData.adas)) {
       for (const adasItem of frameData.adas) {
-        if (adasItem && adasItem.fcw_stage === 2) {
-          targetPoiId = adasItem.poi_id;
-          break;
+        if (adasItem) {
+          if (adasItem.poi_id !== undefined && adasItem.poi_id !== null && adasItem.poi_id !== 0) {
+            currentPoiId = adasItem.poi_id;
+          }
+          if (adasItem.fcw_stage) {
+            activeFcwStage = Math.max(activeFcwStage, adasItem.fcw_stage);
+          }
         }
       }
     }
@@ -545,7 +550,7 @@ export function drawTrackMarkers(p, plotScales, scaleFactor = 1, showDetailsBox 
           const size = 5 * scaleFactor;
           const x = pos[0] * plotScales.plotScaleX;
           const y = pos[1] * plotScales.plotScaleY;
-          
+
           // --- Draw Marker Shape ---
           if (useStationary && log.isStationary === true) {
             p.stroke(localStationaryColor);
@@ -569,10 +574,10 @@ export function drawTrackMarkers(p, plotScales, scaleFactor = 1, showDetailsBox 
             log.predictedVelocity[0] !== null
           ) {
             const [vx, vy] = log.predictedVelocity;
-            
+
             // Draw velocity line
             if (log.isStationary === false) {
-              let velocityColor = p.color(255, 0, 255, 200); 
+              let velocityColor = p.color(255, 0, 255, 200);
               if (useStationary) velocityColor = localMovingColor;
               p.stroke(velocityColor);
 
@@ -583,7 +588,7 @@ export function drawTrackMarkers(p, plotScales, scaleFactor = 1, showDetailsBox 
               const velScale = 0.7;
               const vxScaled = vx * velScale;
               const vyScaled = vy * velScale;
-              
+
               const endX = (pos[0] + vxScaled) * plotScales.plotScaleX;
               const endY = (pos[1] + vyScaled) * plotScales.plotScaleY;
 
@@ -592,7 +597,7 @@ export function drawTrackMarkers(p, plotScales, scaleFactor = 1, showDetailsBox 
               // Draw arrow head
               const arrowSize = 4 * scaleFactor;
               const angle = Math.atan2(endY - y, endX - x);
-              
+
               p.push();
               p.translate(endX, endY);
               p.rotate(angle);
@@ -604,36 +609,38 @@ export function drawTrackMarkers(p, plotScales, scaleFactor = 1, showDetailsBox 
 
             // --- Collect Text Data (Only if details box is enabled) ---
             if (showDetailsBox) {
-                const speed = (Math.sqrt(vx * vx + vy * vy) * 3.6).toFixed(1);
-                let ttcText = "";
-                if ("tti" in log) {
-                  const tti = log.tti;
-                  if (typeof tti === "number" && isFinite(tti)) {
-                    ttcText = `TTI: ${tti.toFixed(1)}s`;
-                  }
-                } else if (log.ttc !== null && isFinite(log.ttc) && log.ttc < 100) {
-                  ttcText = `TTC: ${log.ttc.toFixed(1)}s`;
+              const speed = (Math.sqrt(vx * vx + vy * vy) * 3.6).toFixed(1);
+              let ttcText = "";
+              if ("tti" in log) {
+                const tti = log.tti;
+                if (typeof tti === "number" && isFinite(tti)) {
+                  ttcText = `TTI: ${tti.toFixed(1)}s`;
                 }
-                
-                const risk = getTrackRisk(track, log);
-                if (risk !== null) {
-                  ttcText += ttcText ? ` | Risk: ${risk}` : `Risk: ${risk}`;
-                }
-                
-                const state = log.state !== undefined && log.state !== null ? log.state : track.state;
-                if (state !== undefined && state !== null) {
-                  ttcText += ttcText ? ` | St: ${state}` : `St: ${state}`;
-                }
+              } else if (log.ttc !== null && isFinite(log.ttc) && log.ttc < 100) {
+                ttcText = `TTC: ${log.ttc.toFixed(1)}s`;
+              }
 
-                const lines = [`ID: ${track.id} | ${speed} km/h`];
-                if (ttcText) lines.push(ttcText);
+              const risk = getTrackRisk(track, log);
+              if (risk !== null) {
+                ttcText += ttcText ? ` | Risk: ${risk}` : `Risk: ${risk}`;
+              }
 
-                let maxW = 0;
-                for(let l of lines) maxW = Math.max(maxW, p.textWidth(l));
-                const w = maxW + padding * 2;
-                const h = lines.length * lineHeight + padding * 2;
+              const state = log.state !== undefined && log.state !== null ? log.state : track.state;
+              if (state !== undefined && state !== null) {
+                ttcText += ttcText ? ` | St: ${state}` : `St: ${state}`;
+              }
 
-                labels.push({ x, y, w, h, lines, trackId: track.id });
+              const isPoi = (currentPoiId !== null && track.id === currentPoiId);
+              const idPrefix = isPoi ? `ID: ${track.id} [LEAD POI]` : `ID: ${track.id}`;
+              const lines = [`${idPrefix} | ${speed} km/h`];
+              if (ttcText) lines.push(ttcText);
+
+              let maxW = 0;
+              for (let l of lines) maxW = Math.max(maxW, p.textWidth(l));
+              const w = maxW + padding * 2;
+              const h = lines.length * lineHeight + padding * 2;
+
+              labels.push({ x, y, w, h, lines, trackId: track.id });
             }
           }
         }
@@ -643,106 +650,113 @@ export function drawTrackMarkers(p, plotScales, scaleFactor = 1, showDetailsBox 
 
     // --- Smart Positioning & Drawing Labels ---
     if (labels.length > 0) {
-        // Sort by Y descending (Top to Bottom in World Space)
-        // allowing us to stack labels downwards
-        labels.sort((a, b) => b.y - a.y);
-        
-        const placedBoxes = [];
-        // Increased distance to 60 (3x previous 20)
-        const offsetDist = 60 * scaleFactor; 
+      // Sort by Y descending (Top to Bottom in World Space)
+      // allowing us to stack labels downwards
+      labels.sort((a, b) => b.y - a.y);
 
-        for (const label of labels) {
-            // Initial Position:
-            // If X < 0: Place to Left (x - offset - width)
-            // If X >= 0: Place to Right (x + offset)
-            let bx;
-            if (label.x < 0) {
-                bx = label.x - offsetDist - label.w;
-            } else {
-                bx = label.x + offsetDist;
-            }
-            
-            // Vertical position (Top edge) starts at same Y as marker + offset (Diagonal Up)
-            let by = label.y + offsetDist; 
-            
-            // Collision Resolution (Greedy)
-            const maxAttempts = 20;
-            let attempts = 0;
-            let collision = true;
-            
-            while(collision && attempts < maxAttempts) {
-                collision = false;
-                for (const pBox of placedBoxes) {
-                    // Check intersection in World Space
-                    // Box A (Current): [bx, bx+w] x [by-h, by]
-                    // Box B (Placed):  [pBox.x, pBox.x+pBox.w] x [pBox.y-pBox.h, pBox.y]
-                    
-                    const Ax1 = bx, Ax2 = bx + label.w;
-                    const Ay1 = by - label.h, Ay2 = by; 
-                    
-                    const Bx1 = pBox.x, Bx2 = pBox.x + pBox.w;
-                    const By1 = pBox.y - pBox.h, By2 = pBox.y;
-                    
-                    // Standard AABB Intersection
-                    if (Ax1 < Bx2 && Ax2 > Bx1 && Ay1 < By2 && Ay2 > By1) {
-                         // Collision! Move 'by' DOWN (decrease Y)
-                         // Snap Top (by) to just below Placed Box Bottom (By1)
-                         by = By1 - 5 * scaleFactor;
-                         collision = true;
-                         break; // Restart collision check against all
-                    }
-                }
-                attempts++;
-            }
-            
-            label.finalX = bx;
-            label.finalY = by;
-            placedBoxes.push(label);
+      const placedBoxes = [];
+      // Increased distance to 60 (3x previous 20)
+      const offsetDist = 60 * scaleFactor;
+
+      for (const label of labels) {
+        // Initial Position:
+        // If X < 0: Place to Left (x - offset - width)
+        // If X >= 0: Place to Right (x + offset)
+        let bx;
+        if (label.x < 0) {
+          bx = label.x - offsetDist - label.w;
+        } else {
+          bx = label.x + offsetDist;
         }
 
-        // --- Draw Tooltips ---
-        for (const label of placedBoxes) {
-            p.push();
+        // Vertical position (Top edge) starts at same Y as marker + offset (Diagonal Up)
+        let by = label.y + offsetDist;
 
-            const isFcwCause = (targetPoiId !== null && label.trackId === targetPoiId);
-            const currentHighlightColor = isFcwCause ? p.color(230, 40, 40) : highlightColor;
-            
-            // 1. Draw Leader Line (World Space)
-            p.stroke(currentHighlightColor);
-            p.strokeWeight(1 * scaleFactor);
-            // Draw to the closest side of the box
-            // If box is to the right, draw to Left Edge (finalX)
-            // If box is to the left, draw to Right Edge (finalX + w)
-            let boxSideX;
-            if (label.finalX > label.x) {
-                boxSideX = label.finalX; // Box is to the right
-            } else {
-                boxSideX = label.finalX + label.w; // Box is to the left
+        // Collision Resolution (Greedy)
+        const maxAttempts = 20;
+        let attempts = 0;
+        let collision = true;
+
+        while (collision && attempts < maxAttempts) {
+          collision = false;
+          for (const pBox of placedBoxes) {
+            // Check intersection in World Space
+            // Box A (Current): [bx, bx+w] x [by-h, by]
+            // Box B (Placed):  [pBox.x, pBox.x+pBox.w] x [pBox.y-pBox.h, pBox.y]
+
+            const Ax1 = bx, Ax2 = bx + label.w;
+            const Ay1 = by - label.h, Ay2 = by;
+
+            const Bx1 = pBox.x, Bx2 = pBox.x + pBox.w;
+            const By1 = pBox.y - pBox.h, By2 = pBox.y;
+
+            // Standard AABB Intersection
+            if (Ax1 < Bx2 && Ax2 > Bx1 && Ay1 < By2 && Ay2 > By1) {
+              // Collision! Move 'by' DOWN (decrease Y)
+              // Snap Top (by) to just below Placed Box Bottom (By1)
+              by = By1 - 5 * scaleFactor;
+              collision = true;
+              break; // Restart collision check against all
             }
-            const boxCenterY = label.finalY - label.h / 2;
-            p.line(label.x, label.y, boxSideX, boxCenterY);
-
-            // 2. Draw Box & Text
-            // Translate to Top-Left of box
-            p.translate(label.finalX, label.finalY);
-            // Flip for text drawing (local +Y is Down)
-            p.scale(1, -1); 
-            
-            p.fill(bgColor);
-            p.stroke(currentHighlightColor);
-            p.strokeWeight(1 * scaleFactor);
-            p.rect(0, 0, label.w, label.h, 4 * scaleFactor);
-            
-            p.noStroke();
-            p.fill(defaultTextColor);
-            p.textAlign(p.LEFT, p.TOP);
-            
-            for(let i=0; i<label.lines.length; i++) {
-                p.text(label.lines[i], padding, padding + i * lineHeight);
-            }
-
-            p.pop();
+          }
+          attempts++;
         }
+
+        label.finalX = bx;
+        label.finalY = by;
+        placedBoxes.push(label);
+      }
+
+      // --- Draw Tooltips ---
+      for (const label of placedBoxes) {
+        p.push();
+
+        const isPoi = (currentPoiId !== null && label.trackId === currentPoiId);
+        let currentHighlightColor = highlightColor;
+        if (isPoi) {
+          if (activeFcwStage === 2) {
+            currentHighlightColor = p.color(230, 40, 40); // Red for Critical Alert
+          } else {
+            currentHighlightColor = p.color(255, 140, 0); // Bright Orange for Lead POI
+          }
+        }
+
+        // 1. Draw Leader Line (World Space)
+        p.stroke(currentHighlightColor);
+        p.strokeWeight(1 * scaleFactor);
+        // Draw to the closest side of the box
+        // If box is to the right, draw to Left Edge (finalX)
+        // If box is to the left, draw to Right Edge (finalX + w)
+        let boxSideX;
+        if (label.finalX > label.x) {
+          boxSideX = label.finalX; // Box is to the right
+        } else {
+          boxSideX = label.finalX + label.w; // Box is to the left
+        }
+        const boxCenterY = label.finalY - label.h / 2;
+        p.line(label.x, label.y, boxSideX, boxCenterY);
+
+        // 2. Draw Box & Text
+        // Translate to Top-Left of box
+        p.translate(label.finalX, label.finalY);
+        // Flip for text drawing (local +Y is Down)
+        p.scale(1, -1);
+
+        p.fill(bgColor);
+        p.stroke(currentHighlightColor);
+        p.strokeWeight(1 * scaleFactor);
+        p.rect(0, 0, label.w, label.h, 4 * scaleFactor);
+
+        p.noStroke();
+        p.fill(defaultTextColor);
+        p.textAlign(p.LEFT, p.TOP);
+
+        for (let i = 0; i < label.lines.length; i++) {
+          p.text(label.lines[i], padding, padding + i * lineHeight);
+        }
+
+        p.pop();
+      }
     }
   } catch (error) {
     console.error("Error in drawTrackMarkers:", error);
@@ -784,7 +798,7 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
           const dx = mouseX - screenX;
           const dy = mouseY - screenY;
           if (dx * dx + dy * dy < radiusSq) {
-          // --- END: Squared Distance Optimization ---
+            // --- END: Squared Distance Optimization ---
             // Add the index 'i' to the object we push
             hoveredItems.push({
               type: "point",
@@ -812,7 +826,7 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
         const dx = mouseX - screenX;
         const dy = mouseY - screenY;
         if (dx * dx + dy * dy < radiusSq) {
-        // --- END: Squared Distance Optimization ---
+          // --- END: Squared Distance Optimization ---
           const color =
             cluster.id > 0
               ? localClusterColors[(cluster.id - 1) % localClusterColors.length]
@@ -846,7 +860,7 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
             const dx = mouseX - screenX;
             const dy = mouseY - screenY;
             if (dx * dx + dy * dy < radiusSq) {
-            // --- END: Squared Distance Optimization ---
+              // --- END: Squared Distance Optimization ---
               hoveredItems.push({
                 type: "track",
                 data: currentLog, // Use the log for the current frame
@@ -875,7 +889,7 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
             const dx = mouseX - screenX;
             const dy = mouseY - screenY;
             if (dx * dx + dy * dy < radiusSq) {
-            // --- END: Squared Distance Optimization ---
+              // --- END: Squared Distance Optimization ---
               hoveredItems.push({
                 type: "prediction",
                 data: currentLog,
@@ -909,9 +923,8 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
           const snr = data.snr !== null ? data.snr.toFixed(1) : "N/A";
           infoText = `Point ${item.index} | X:${data.x.toFixed(
             2
-          )}, Y:${data.y.toFixed(2)} | V:${vel}, SNR:${snr}, Cluster: ${
-            data.clusterNumber
-          }`;
+          )}, Y:${data.y.toFixed(2)} | V:${vel}, SNR:${snr}, Cluster: ${data.clusterNumber
+            }`;
           break;
         case "cluster":
           const rs =
@@ -980,7 +993,7 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
 
     const xOffset = 20;
     let boxX, lineAnchorX;
-    
+
     // Strategy: Try placing on the right. If it overflows, try the left. If it still overflows, clamp it to screen edges.
     if (mouseX + xOffset + boxWidth <= p.width) {
       boxX = mouseX + xOffset;
@@ -1063,7 +1076,7 @@ export function drawCovarianceEllipse(
     // Only draw the ellipse for tracks that are not stationary.
     if (isStationary) return;
     const [radiusA, radiusB] = radii;
-    const angledegrees = 90 + angle;
+    const angledegrees = 90 - angle; //New coordinate system algined to +ve Y axis
     p.push();
     p.noFill();
     p.stroke(255, 0, 0, 150);
@@ -1091,19 +1104,45 @@ export function drawObjectDimensions(
   dims,
   angle,
   plotScales,
-  isStationary
+  isStationary,
+  barrierLimits = null,
+  scaleFactor = 1
 ) {
   try {
-    if (isStationary) return;
+    if (!position || position[0] === null || position[1] === null) return;
+    const posX = position[0];
+    const posY = position[1];
+
+    if (isStationary) {
+      // Check if stationary object is within Region of Interest (ROI)
+      const leftLimit = barrierLimits && barrierLimits.length === 2 ? barrierLimits[0] : -4.0;
+      const rightLimit = barrierLimits && barrierLimits.length === 2 ? barrierLimits[1] : 4.0;
+      const inLateralRoi = posX >= leftLimit && posX <= rightLimit;
+      const inLongitudinalRoi = posY >= ROI_TRACKS_Y_MIN && posY <= (appState.radarYMax || ROI_TRACKS_Y_MAX);
+
+      if (!inLateralRoi || !inLongitudinalRoi) {
+        // Skip stationary objects outside the driving corridor to prevent clutter
+        return;
+      }
+    }
+
     const [dimA, dimB] = dims;
-    const angledegrees = 90 + angle;
+    const angledegrees = 90 - angle; //New coordinate system algined to +ve Y axis
     p.push();
     p.noFill();
-    p.stroke(128, 0, 128, 150); // Purple
-    p.strokeWeight(1);
+
+    if (isStationary) {
+      // Goldenrod / Dark Amber border for stationary obstacle in ROI
+      p.stroke(218, 165, 32, 200);
+      p.strokeWeight(1.5 * scaleFactor);
+    } else {
+      p.stroke(128, 0, 128, 150); // Purple for moving vehicles
+      p.strokeWeight(1 * scaleFactor);
+    }
+
     p.translate(
-      position[0] * plotScales.plotScaleX,
-      position[1] * plotScales.plotScaleY
+      posX * plotScales.plotScaleX,
+      posY * plotScales.plotScaleY
     );
     p.rotate(p.radians(angledegrees));
     p.rectMode(p.CENTER);
@@ -1261,34 +1300,35 @@ export function drawClusterCentroids(p, clustersInput, plotScales, scaleFactor =
 
 export function drawFcwWarning(p, frameData, plotScales, scaleFactor = 1, inRadarCoords = false) {
   try {
-    let fcwActive = false;
+    let activeStage = 0; // 0 = none, 1 = caution (orange), 2 = critical alert (red)
     let targetPoiId = null;
 
     if (frameData && frameData.adas && Array.isArray(frameData.adas)) {
       for (const adasItem of frameData.adas) {
-        if (adasItem && adasItem.fcw_stage === 2) {
-          fcwActive = true;
-          targetPoiId = adasItem.poi_id;
-          break;
+        if (adasItem && adasItem.fcw_stage) {
+          if (adasItem.fcw_stage > activeStage) {
+            activeStage = adasItem.fcw_stage;
+            targetPoiId = adasItem.poi_id;
+          }
         }
       }
     }
 
-    // Toggle the HTML DIV overlay visibility under the radar plot
+    // Toggle the HTML DIV overlay visibility under the radar plot (Active for Stage 2)
     const fcwOverlay = document.getElementById("fcw-warning-overlay");
     if (fcwOverlay) {
-      if (fcwActive) {
+      if (activeStage === 2) {
         fcwOverlay.classList.remove("hidden");
       } else {
         fcwOverlay.classList.add("hidden");
       }
     }
 
-    if (!fcwActive) return;
+    if (activeStage === 0 || targetPoiId === null) return;
 
     if (inRadarCoords) {
-      // Draw target-vehicle halo and exclamation mark
-      if (targetPoiId !== null && appState.vizData && appState.vizData.tracks) {
+      // Draw target-vehicle halo and optional exclamation mark
+      if (appState.vizData && appState.vizData.tracks) {
         const track = appState.vizData.tracks.find((t) => t.id === targetPoiId);
         if (track && track.historyLog) {
           const log = track.historyLog.find((l) => l.frameIdx === frameData.frameIdx);
@@ -1299,34 +1339,47 @@ export function drawFcwWarning(p, frameData, plotScales, scaleFactor = 1, inRada
             p.push();
             p.noFill();
 
-            // 1. Concentric pulsing darker yellow/amber warning circles
-            const pulse = (p.millis() / 5) % 25 + 10;
-            p.stroke(220, 140, 0, 200 - pulse * 8);
-            p.strokeWeight(2 * scaleFactor);
-            p.ellipse(x, y, (pulse * 2) * scaleFactor, (pulse * 2) * scaleFactor);
+            if (activeStage === 1) {
+              // --- Stage 1: Caution (Flashing / Pulsing Orange Halo) ---
+              const pulse = ((p.millis() / 8) % 20) + 8;
+              p.stroke(255, 140, 0, 200 - pulse * 9);
+              p.strokeWeight(2 * scaleFactor);
+              p.ellipse(x, y, (pulse * 2) * scaleFactor, (pulse * 2) * scaleFactor);
 
-            // 2. Base warning circle (darker amber)
-            p.stroke(200, 110, 0, 230);
-            p.strokeWeight(1.5 * scaleFactor);
-            p.ellipse(x, y, 15 * scaleFactor, 15 * scaleFactor);
+              // Base caution circle (amber/orange)
+              p.stroke(245, 130, 0, 220);
+              p.strokeWeight(1.5 * scaleFactor);
+              p.ellipse(x, y, 14 * scaleFactor, 14 * scaleFactor);
+            } else if (activeStage === 2) {
+              // --- Stage 2: Critical Alert (Flashing / Pulsing Red Halo + Exclamation Badge) ---
+              const pulse = ((p.millis() / 4) % 25) + 10;
+              p.stroke(230, 40, 40, 220 - pulse * 8);
+              p.strokeWeight(2.5 * scaleFactor);
+              p.ellipse(x, y, (pulse * 2) * scaleFactor, (pulse * 2) * scaleFactor);
 
-            // 3. Exclamation symbol badge
-            p.push();
-            p.translate(x, y);
-            p.scale(1, -1); // Un-flip Y coordinate system for text/shapes
+              // Base warning circle (darker red)
+              p.stroke(220, 30, 30, 240);
+              p.strokeWeight(2 * scaleFactor);
+              p.ellipse(x, y, 16 * scaleFactor, 16 * scaleFactor);
 
-            p.fill(220, 140, 0, 230);
-            p.noStroke();
-            const badgeY = -18 * scaleFactor;
-            const side = 12 * scaleFactor;
-            p.triangle(0, badgeY - side * 0.6, -side * 0.5, badgeY + side * 0.4, side * 0.5, badgeY + side * 0.4);
+              // Exclamation symbol badge
+              p.push();
+              p.translate(x, y);
+              p.scale(1, -1); // Un-flip Y coordinate system for text/shapes
 
-            p.fill(0);
-            p.textSize(9 * scaleFactor);
-            p.textStyle(p.BOLD);
-            p.textAlign(p.CENTER, p.CENTER);
-            p.text("!", 0, badgeY + side * 0.1);
-            p.pop();
+              p.fill(230, 40, 40, 240);
+              p.noStroke();
+              const badgeY = -18 * scaleFactor;
+              const side = 12 * scaleFactor;
+              p.triangle(0, badgeY - side * 0.6, -side * 0.5, badgeY + side * 0.4, side * 0.5, badgeY + side * 0.4);
+
+              p.fill(255);
+              p.textSize(9 * scaleFactor);
+              p.textStyle(p.BOLD);
+              p.textAlign(p.CENTER, p.CENTER);
+              p.text("!", 0, badgeY + side * 0.1);
+              p.pop();
+            }
 
             p.pop();
           }

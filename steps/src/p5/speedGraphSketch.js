@@ -158,25 +158,27 @@ export const speedGraphSketch = function (p) {
     b.text("Time (s)", (pad.left + (b.width - pad.right)) / 2, b.height - pad.bottom + 18);
     b.pop();
 
-    // --- Draw FCW Warning Zones (Transparent Amber/Red Bands) ---
+    // --- Draw FCW Warning Zones (Staged: Transparent Amber/Orange for Stage 1, Red for Stage 2) ---
     if (radarData && radarData.radarFrames) {
       b.push();
       b.noStroke();
-      const warningColor = p.color(220, 100, 0, 40); // Transparent amber/orange
+      const cautionColor = p.color(245, 140, 0, 45); // Transparent amber/orange for Stage 1
+      const alertColor = p.color(220, 40, 40, 65);   // Transparent red for Stage 2
       
       for (let i = 0; i < radarData.radarFrames.length; i++) {
         const frame = radarData.radarFrames[i];
-        let fcwActive = false;
+        let stage = 0;
         if (frame.adas && Array.isArray(frame.adas)) {
           for (const adasItem of frame.adas) {
-            if (adasItem && adasItem.fcw_stage === 2) {
-              fcwActive = true;
-              break;
+            if (adasItem && adasItem.fcw_stage) {
+              if (adasItem.fcw_stage > stage) {
+                stage = adasItem.fcw_stage;
+              }
             }
           }
         }
         
-        if (fcwActive) {
+        if (stage > 0) {
           const relTime = frame.timestamp / 1000;
           const x = b.map(relTime, 0, videoDuration, pad.left, b.width - pad.right);
           
@@ -185,10 +187,20 @@ export const speedGraphSketch = function (p) {
             nextRelTime = radarData.radarFrames[i+1].timestamp / 1000;
           }
           const nextX = b.map(nextRelTime, 0, videoDuration, pad.left, b.width - pad.right);
-          const w = Math.max(1, nextX - x);
           
-          b.fill(warningColor);
-          b.rect(x, pad.top, w, b.height - pad.bottom - pad.top);
+          // Ensure minimum band thickness of 5px so even 1-2 frame warnings are immediately eye-catching
+          const minBandWidth = 5;
+          const naturalW = nextX - x;
+          const w = Math.max(minBandWidth, naturalW);
+          const drawX = naturalW < minBandWidth ? x - (minBandWidth - naturalW) / 2 : x;
+          
+          // 1. Full-height translucent warning band
+          b.fill(stage === 2 ? alertColor : cautionColor);
+          b.rect(drawX, pad.top, w, b.height - pad.bottom - pad.top);
+
+          // 2. High-contrast top accent mark (3px) for instant timeline spotting
+          b.fill(stage === 2 ? p.color(230, 40, 40, 230) : p.color(255, 140, 0, 230));
+          b.rect(drawX, pad.top, w, 3);
         }
       }
       b.pop();

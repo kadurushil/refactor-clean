@@ -403,8 +403,8 @@ function finalizeSetup() {
   if (!appState.p5_instance) {
     appState.p5_instance = new p5(radarSketch);
   } else {
-    // If it existed, ensure it's up to date. 
-    // CRITICAL: Do NOT call .loop(). The app uses a custom animationLoop in sync.js.
+    // If it existed, ensure it is looping and up to date.
+    appState.p5_instance.loop();
     appState.p5_instance.redraw();
   }
 

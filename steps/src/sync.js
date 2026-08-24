@@ -254,8 +254,7 @@ export function animationLoop() {
   updateFrame(appState.currentFrame);
 
   // --- START: Centralized Redraw Logic ---
-  // Explicitly redraw all active sketches in sync with the animation frame.
-  if (appState.p5_instance) appState.p5_instance.redraw();
+  // Speed graph uses noLoop and is redrawn on frame updates.
   if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
   // --- END: Centralized Redraw Logic ---
 
@@ -349,6 +348,11 @@ function handleVideoSeeking() {
 function handleVideoSeeked() {
   isVideoSeeking = false;
   checkAndClearSeekingState();
+
+  if (appState.vizData && !appState.isPlaying && videoPlayer) {
+    updatePersistentOverlays(videoPlayer.currentTime);
+    updateDebugOverlay(videoPlayer.currentTime);
+  }
 
   if (pendingPlayRequest) {
     pendingPlayRequest = false;

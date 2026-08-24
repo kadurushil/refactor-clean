@@ -518,13 +518,8 @@ export function initUIEventListeners() {
       appState.isPlaying = false;
       playPauseBtn.textContent = "Play";
     }
-    if (appState.p5_instance) { // Handle p5 loop state
-      if (appState.isCloseUpMode) {
-        appState.p5_instance.loop(); // Start looping for mouse interaction.
-      } else {
-        appState.p5_instance.noLoop(); // Stop looping when exiting.
-        appState.p5_instance.redraw(); // Redraw one last time.
-      }
+    if (appState.p5_instance) {
+      appState.p5_instance.redraw();
     }
   });
 

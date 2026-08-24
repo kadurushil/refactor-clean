@@ -8,6 +8,7 @@ import {
   drawClusterCentroids,
   drawRegionsOfInterest,
   drawCovarianceEllipse,
+  drawObjectDimensions,
   clusterColors,
   drawFcwWarning,
 } from "../drawUtils.js";
@@ -16,6 +17,8 @@ import {
   toggleClusterColor,
   togglePredictedPos,
   toggleCovariance,
+  toggleVehicleDimensions,
+  toggleConfirmedOnly,
 } from "../dom.js";
 
 function drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY, smoothedAvgX, smoothedAvgY, smoothedCamX, smoothedCamY) {
@@ -226,10 +229,9 @@ export const zoomSketch = function (p) {
   appState.zoomLeadFactor = 0.2; // Control how much the circle "leads" the camera (0.0 = smooth, 1.0 = instant)
 
   p.setup = function () {
-    // Optimization: Increase target frame rate.
-    // p5.js often defaults to 60fps. On 75Hz+ screens, this causes frame skipping and judder.
-    p.frameRate(144);
-    // We enable looping so the lerp smoothing can animate between frames
+    // Set target frame rate ceiling high (240) so p5's internal frameRate limiter
+    // does not throttle/skip frames on 75Hz, 120Hz, or 144Hz monitors.
+    p.frameRate(240);
     p.loop();
     
     // --- START: ResizeObserver for ZoomSketch ---
@@ -282,17 +284,9 @@ export const zoomSketch = function (p) {
 
     const { mainMouseX, mainMouseY, hoveredItems } = lastUpdate;
 
-    // --- Camera Smoothing (Prevents Judder) ---
-    // If the main app updates at 60Hz but this sketch runs at 75Hz, raw coordinates cause stutter.
-    if (smoothedCamX === null) {
-      smoothedCamX = mainMouseX;
-      smoothedCamY = mainMouseY;
-    }
-    const camSmoothing = 0.5; 
-    const dt = Math.max(0, p.deltaTime);
-    const adjustedCamSmoothing = 1 - Math.pow(1 - camSmoothing, dt / (1000 / 60));
-    smoothedCamX = p.lerp(smoothedCamX, mainMouseX, adjustedCamSmoothing);
-    smoothedCamY = p.lerp(smoothedCamY, mainMouseY, adjustedCamSmoothing);
+    // Direct synchronization with smoothed mouse coordinates from main radar canvas
+    smoothedCamX = mainMouseX;
+    smoothedCamY = mainMouseY;
 
     // --- Tooltip Smoothing (Low Pass Filter) ---
     if (hoveredItems.length > 0) {
@@ -399,6 +393,50 @@ export const zoomSketch = function (p) {
             p.line(x - size, y - size, x + size, y + size);
             p.line(x + size, y - size, x - size, y + size);
             p.pop();
+          }
+        }
+      }
+      
+      if (toggleVehicleDimensions && toggleVehicleDimensions.checked) {
+        let currentPoiId = null;
+        if (frameData.adas && Array.isArray(frameData.adas)) {
+          for (const adasItem of frameData.adas) {
+            if (adasItem && adasItem.poi_id !== undefined && adasItem.poi_id !== null && adasItem.poi_id !== 0) {
+              currentPoiId = adasItem.poi_id;
+              break;
+            }
+          }
+        }
+        for (const track of appState.vizData.tracks) {
+          if (toggleConfirmedOnly && toggleConfirmedOnly.checked && track.isConfirmed === false) {
+            continue;
+          }
+          const log = track.historyLog.find(
+            (log) => log.frameIdx === frameData.frameIdx
+          );
+          if (
+            log &&
+            log.objectExtentRadii &&
+            typeof log.objectExtentAngle !== "undefined"
+          ) {
+            const pos = log.correctedPosition;
+            if (pos && pos[0] !== null) {
+              const isLeadPoi = (currentPoiId !== null && track.id === currentPoiId);
+              // For stationary tracks, only show dimensions if it is the LEAD vehicle track!
+              if (log.isStationary && !isLeadPoi) {
+                continue;
+              }
+              drawObjectDimensions(
+                p,
+                pos,
+                log.objectExtentRadii,
+                log.objectExtentAngle,
+                plotScales,
+                log.isStationary,
+                frameData.filtered_barrier_x || null,
+                inverseZoom
+              );
+            }
           }
         }
       }

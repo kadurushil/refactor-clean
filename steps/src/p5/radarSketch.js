@@ -18,6 +18,11 @@ import {
   toggleConfirmedOnly,
   rangeSlider,
   rangeValueDisplay,
+  videoPlayer,
+  updatePersistentOverlays,
+  updateDebugOverlay,
+  toggleDebugOverlay,
+  toggleDebug2Overlay,
 } from "../dom.js";
 import {
   drawStaticRegionsToBuffer,
@@ -51,10 +56,10 @@ export const radarSketch = function (p) {
   let isFirstFrame = true; // Flag to initialize smoothed position
   // --- END: Mouse Smoothing Variables ---
 
-  // --- START: FPS Calculation Variables ---
-  let lastFrameTime = 0;
-  let framesDrawn = 0;
-  // --- END: FPS Calculation Variables ---
+  // --- START: Robust Rolling-Window FPS Measurement ---
+  let fpsFrameCount = 0;
+  let fpsLastCalcTime = performance.now();
+  // --- END: Robust Rolling-Window FPS Measurement ---
 
   // Helper function to allow other sketches to access the static background
   p.getStaticBackground = function () {
@@ -201,8 +206,9 @@ export const radarSketch = function (p) {
     ro.observe(canvasContainer);
     // --- END: ResizeObserver for GridStack ---
 
-    p.noLoop();
-    // Disable continuous looping, redraw will be called manually
+    p.frameRate(240);
+    p.loop();
+    // Enable continuous looping so pulsing halos and animations run smoothly at native monitor refresh rate
   };
 
   p.draw = function () {
@@ -210,34 +216,24 @@ export const radarSketch = function (p) {
       console.log(`[${performance.now().toFixed(3)}] draw_DEBUG: radarSketch.draw() called.`);
     }
 
-    // --- START: FPS Calculation & Display ---
-    framesDrawn++;
-    const currentTime = p.millis();
+    // --- START: Accurate Rolling-Window FPS Calculation & Display ---
+    fpsFrameCount++;
+    const now = performance.now();
+    const elapsed = now - fpsLastCalcTime;
     
-    // Skip FPS calculation during the first few frames to avoid initialization spikes.
-    // This prevents the "300+ FPS" bug caused by the race between auto-draw and first redraw.
-    if (framesDrawn < 10) {
-      lastFrameTime = currentTime;
-    } else {
-      const delta = currentTime - lastFrameTime;
-      if (delta > 0) {
-        const currentFps = 1000 / delta;
-        // On the first valid calculation, snap to the current FPS to avoid slow ramp-up.
-        // Otherwise, use exponential moving average for smoothing.
-        if (framesDrawn === 10 || appState.fps === 0) {
-          appState.fps = currentFps;
-        } else {
-          // --- START: Frame-Rate Independent FPS Smoothing ---
-          const baseFactor = 0.05; // Smoothing factor at 60 FPS
-          const dt = Math.max(0, delta);
-          const adjustedFactor = 1 - Math.pow(1 - baseFactor, dt / (1000 / 60));
-          appState.fps = p.lerp(appState.fps, currentFps, adjustedFactor);
-          // --- END: Frame-Rate Independent FPS Smoothing ---
-        }
+    // Calculate and update FPS every 500ms for stable, readable measurements
+    if (elapsed >= 500) {
+      const measuredFps = (fpsFrameCount * 1000) / elapsed;
+      if (appState.fps === 0) {
+        appState.fps = measuredFps;
+      } else {
+        // Smooth slightly (70% previous, 30% new) to eliminate micro-jitter
+        appState.fps = appState.fps * 0.7 + measuredFps * 0.3;
       }
-      lastFrameTime = currentTime;
+      fpsFrameCount = 0;
+      fpsLastCalcTime = now;
     }
-    // --- END: FPS Calculation & Display ---
+    // --- END: Accurate Rolling-Window FPS Calculation & Display ---
 
     // Set background color based on current theme (dark/light)
     p.background(
@@ -247,6 +243,14 @@ export const radarSketch = function (p) {
     );
     // If no visualization data is loaded, stop drawing
     if (!appState.vizData) return;
+
+    // Keep persistent overlay (drift, FPS, EGO state) live in real time even while paused or seeking
+    if (!appState.isPlaying && videoPlayer && !isNaN(videoPlayer.currentTime)) {
+      updatePersistentOverlays(videoPlayer.currentTime);
+      if (toggleDebugOverlay && (toggleDebugOverlay.checked || (toggleDebug2Overlay && toggleDebug2Overlay.checked))) {
+        updateDebugOverlay(videoPlayer.currentTime);
+      }
+    }
 
     // Draw the pre-rendered static background elements
     if (staticBackgroundBuffer && staticBackgroundBuffer.width > 0 && staticBackgroundBuffer.height > 0) {
@@ -331,6 +335,16 @@ export const radarSketch = function (p) {
             }
           }
           if (toggleVehicleDimensions.checked) {
+            let currentPoiId = null;
+            if (frameData.adas && Array.isArray(frameData.adas)) {
+              for (const adasItem of frameData.adas) {
+                if (adasItem && adasItem.poi_id !== undefined && adasItem.poi_id !== null && adasItem.poi_id !== 0) {
+                  currentPoiId = adasItem.poi_id;
+                  break;
+                }
+              }
+            }
+            const barrierLimits = frameData.filtered_barrier_x || null;
             for (const track of appState.vizData.tracks) {
               if (toggleConfirmedOnly.checked && track.isConfirmed === false) {
                 continue;
@@ -344,13 +358,19 @@ export const radarSketch = function (p) {
               ) {
                 const pos = log.correctedPosition;
                 if (pos && pos[0] !== null) {
+                  const isLeadPoi = (currentPoiId !== null && track.id === currentPoiId);
+                  // For stationary tracks, only show dimensions if it is the LEAD vehicle track!
+                  if (log.isStationary && !isLeadPoi) {
+                    continue;
+                  }
                   drawObjectDimensions(
                     p,
                     pos,
                     log.objectExtentRadii,
                     log.objectExtentAngle,
                     plotScales,
-                    log.isStationary
+                    log.isStationary,
+                    barrierLimits
                   );
                 }
               }

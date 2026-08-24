@@ -392,7 +392,12 @@ export function updatePersistentOverlays(currentMediaTime) {
     const driftColor = Math.abs(driftMs) > 50 ? "#FF6347" : "#98FB98"; // Tomato or Pale Green
     const colorMode = getCurrentColorMode();
     const fps = appState.fps;
-    const fpsColor = fps >= 58 && fps <= 62 ? "#98FB98" : "#FF6347"; // Pale Green or Tomato
+    let fpsColor = "#98FB98"; // Pale Green for smooth/healthy FPS (>= 45)
+    if (fps < 30) {
+      fpsColor = "#FF6347"; // Tomato / Red for severe lag
+    } else if (fps < 45) {
+      fpsColor = "#FFD700"; // Gold / Yellow for minor drops
+    }
 
     const interFrameTime = currentRadarFrame.interFrameTime;
     const iftColor = getTimingColor(interFrameTime);
