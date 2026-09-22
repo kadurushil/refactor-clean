@@ -3,8 +3,10 @@
 import {
     extractTimestampInfo,
     parseTimestamp,
-    findRadarFrameIndexForTime
+    findRadarFrameIndexForTime,
+    precomputeRadarVideoSync
 } from '../src/utils.js';
+import { appState } from '../src/state.js';
 
 const resultsEl = document.getElementById('results');
 
@@ -51,36 +53,36 @@ test("utils.js: should correctly parse a video timestamp string into a Date obje
 
 const mockVizData = {
     radarFrames: [
-        { timestampMs: 100 }, // index 0
-        { timestampMs: 200 }, // index 1
-        { timestampMs: 300 }, // index 2
-        { timestampMs: 400 }, // index 3
+        { videoSyncedTime: 0.1 }, // index 0 (100ms)
+        { videoSyncedTime: 0.2 }, // index 1 (200ms)
+        { videoSyncedTime: 0.3 }, // index 2 (300ms)
+        { videoSyncedTime: 0.4 }, // index 3 (400ms)
     ]
 };
 
 test("utils.js: should find the correct frame for a time that is between two frames", () => {
-    const index = findRadarFrameIndexForTime(250, mockVizData); // Should find the frame at 200ms
+    const index = findRadarFrameIndexForTime(0.25, mockVizData); // Should find the frame at index 1 (0.2s)
     if (index !== 1) {
         throw new Error(`Expected index 1 but got ${index}`);
     }
 });
 
 test("utils.js: should find the correct frame for a time that exactly matches a frame", () => {
-    const index = findRadarFrameIndexForTime(300, mockVizData);
+    const index = findRadarFrameIndexForTime(0.3, mockVizData);
     if (index !== 2) {
         throw new Error(`Expected index 2 but got ${index}`);
     }
 });
 
 test("utils.js: should return the last frame for a time after the end of the data", () => {
-    const index = findRadarFrameIndexForTime(500, mockVizData);
+    const index = findRadarFrameIndexForTime(0.5, mockVizData);
     if (index !== 3) {
         throw new Error(`Expected index 3 but got ${index}`);
     }
 });
 
 test("utils.js: should return the first frame for a time before the start of the data", () => {
-    const index = findRadarFrameIndexForTime(50, mockVizData);
+    const index = findRadarFrameIndexForTime(0.05, mockVizData);
     if (index !== 0) {
         throw new Error(`Expected index 0 but got ${index}`);
     }
@@ -91,4 +93,39 @@ test("utils.js: should return -1 if radarFrames array is empty", () => {
     if (index !== -1) {
         throw new Error(`Expected index -1 for empty data but got ${index}`);
     }
+});
+
+// --- Test Cases for precomputeRadarVideoSync with frame_mapping.json ---
+
+test("utils.js: should bake exact video frame index into videoSyncedTime when frame_mapping is active", () => {
+    appState.hasFrameMapping = true;
+    appState.videoFps = 29.54;
+    appState.frameMappingTable = [
+        { radar_frame_id_rel: 1, video_frame_index: 0, video_frame_ts: 1000.0 },
+        { radar_frame_id_rel: 5000, video_frame_index: 7327, video_frame_ts: 1250.0 },
+    ];
+
+    const vizData = {
+        radarFrames: [
+            { timestamp: 0 },
+            { radar_frame_id_rel: 5000, timestamp: 250000 }
+        ]
+    };
+
+    precomputeRadarVideoSync(vizData, 0);
+
+    const expectedTimeFrame1 = 0 / 29.54;
+    const expectedTimeFrame5000 = 7327 / 29.54;
+
+    if (Math.abs(vizData.radarFrames[0].videoSyncedTime - expectedTimeFrame1) > 0.001) {
+        throw new Error(`Expected frame 0 videoSyncedTime to be ${expectedTimeFrame1} but got ${vizData.radarFrames[0].videoSyncedTime}`);
+    }
+
+    if (Math.abs(vizData.radarFrames[1].videoSyncedTime - expectedTimeFrame5000) > 0.001) {
+        throw new Error(`Expected frame 1 videoSyncedTime to be ${expectedTimeFrame5000} but got ${vizData.radarFrames[1].videoSyncedTime}`);
+    }
+
+    // Reset appState
+    appState.hasFrameMapping = false;
+    appState.frameMappingTable = null;
 });

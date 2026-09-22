@@ -190,13 +190,15 @@ export function precomputeRadarVideoSync(vizData, offsetMs) {
     });
 
     vizData.radarFrames.forEach((frame, idx) => {
-      const relFrameId = idx + 1;
+      const relFrameId = frame.radar_frame_id_rel !== undefined
+        ? frame.radar_frame_id_rel
+        : (frame.frameId !== undefined ? frame.frameId : idx + 1);
       const mapRecord = mapByRelId.get(relFrameId);
 
-      if (mapRecord && mapRecord.video_frame_ts && videoStartUnixSec > 0) {
-        frame.videoSyncedTime = mapRecord.video_frame_ts - videoStartUnixSec;
-      } else if (mapRecord && mapRecord.video_frame_index !== undefined) {
+      if (mapRecord && typeof mapRecord.video_frame_index === "number" && !isNaN(mapRecord.video_frame_index)) {
         frame.videoSyncedTime = mapRecord.video_frame_index * (1 / fps);
+      } else if (mapRecord && mapRecord.video_frame_ts && videoStartUnixSec > 0) {
+        frame.videoSyncedTime = mapRecord.video_frame_ts - videoStartUnixSec;
       } else {
         frame.videoSyncedTime = (frame.timestamp + offsetMs) / 1000;
       }

@@ -59,11 +59,13 @@ $$\text{Display Offset (ms)} = \frac{\text{video\_frame\_index}}{\text{getVideoF
 *(Example: 197 frames @ 30.0 FPS = **6567 ms**)*
 
 ### Per-Frame Sync Baking (`precomputeRadarVideoSync`)
-While the offset input box shows `6567 ms`, actual video playback alignment is driven by the absolute timestamps in `frameMappingTable`:
+While the offset input box shows `6567 ms`, actual video playback alignment is driven by the MP4 container frame index in `frameMappingTable`:
 
-$$\text{videoSyncedTime} = \text{video\_frame\_ts}[i] - \text{videoStartUnixSec}$$
+$$\text{videoSyncedTime} = \text{video\_frame\_index}[i] \times \frac{1}{\text{getVideoFps()}}$$
 
-This guarantees 100% sub-millisecond precision even if the video has variable frame rates or dropped frames.
+*(Fallback to $\text{video\_frame\_ts}[i] - \text{videoStartUnixSec}$ if `video_frame_index` is not provided).*
+
+This guarantees 100% frame-accurate playback in HTML5 video containers without accumulating drift from dropped recording frames or wall-clock jitter.
 
 ---
 

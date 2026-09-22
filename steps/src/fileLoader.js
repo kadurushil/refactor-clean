@@ -484,23 +484,57 @@ function setupVideoPlayer(fileURL) {
 async function parseFrameMappingFile(file) {
   try {
     const text = await file.text();
-    const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-    const records = [];
-    for (const line of lines) {
+    let records = [];
+
+    // 1. Try parsing as a standard JSON array first
+    const trimmed = text.trim();
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
       try {
-        const obj = JSON.parse(line);
-        // Defensive check: Ensure required properties exist and are valid numbers
-        if (
-          obj &&
-          typeof obj.video_frame_index === "number" &&
-          !isNaN(obj.video_frame_index)
-        ) {
-          records.push(obj);
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          records = parsed
+            .filter(
+              (obj) =>
+                obj &&
+                (typeof obj.video_frame_index === "number" ||
+                  (!isNaN(Number(obj.video_frame_index)) && obj.video_frame_index !== null))
+            )
+            .map((obj) => ({
+              ...obj,
+              video_frame_index: Number(obj.video_frame_index),
+              radar_frame_id_rel:
+                obj.radar_frame_id_rel !== undefined ? Number(obj.radar_frame_id_rel) : undefined,
+            }));
         }
       } catch (e) {
-        // Skip malformed JSON lines
+        // Fallback to line-by-line JSONL parser
       }
     }
+
+    // 2. If not a JSON array, parse as JSON Lines (JSONL)
+    if (records.length === 0) {
+      const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+      for (const line of lines) {
+        try {
+          const obj = JSON.parse(line);
+          if (
+            obj &&
+            (typeof obj.video_frame_index === "number" ||
+              (!isNaN(Number(obj.video_frame_index)) && obj.video_frame_index !== null))
+          ) {
+            records.push({
+              ...obj,
+              video_frame_index: Number(obj.video_frame_index),
+              radar_frame_id_rel:
+                obj.radar_frame_id_rel !== undefined ? Number(obj.radar_frame_id_rel) : undefined,
+            });
+          }
+        } catch (e) {
+          // Skip malformed JSON lines
+        }
+      }
+    }
+
     if (records.length > 1) {
       const rec0 = records[0];
       const recN = records[records.length - 1];
