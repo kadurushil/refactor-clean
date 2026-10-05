@@ -19,12 +19,38 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Expires', '0')
         super().end_headers()
 
+    def do_GET(self):
+        # Silently handle Chrome DevTools auto-discovery probe
+        if self.path.startswith('/.well-known/appspecific/com.chrome.devtools.json'):
+            self.send_response(204)
+            self.end_headers()
+            return
+
+        # Silently handle missing sourcemaps if requested by browser developer tools
+        if self.path.endswith('.map') and not os.path.exists(self.translate_path(self.path)):
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        super().do_GET()
+
+    def log_message(self, format, *args):
+        # Suppress noisy DevTools background requests from polluting the server console
+        req = getattr(self, 'path', '') or (args[0] if args else '')
+        if 'com.chrome.devtools.json' in str(req) or (str(req).endswith('.map') and not os.path.exists(self.translate_path(getattr(self, 'path', '')))):
+            return
+        super().log_message(format, *args)
+
+class ThreadedHTTPServer(http.server.ThreadingHTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
 Handler = MyHTTPRequestHandler
 
 httpd = None
 while True:
     try:
-        httpd = socketserver.TCPServer(("127.0.0.1", PORT), Handler)
+        httpd = ThreadedHTTPServer(("127.0.0.1", PORT), Handler)
         break
     except OSError as e:
         if e.errno == 10048 or "already in use" in str(e).lower():

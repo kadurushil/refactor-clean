@@ -29,8 +29,18 @@ The project is designed to run as a static web application but requires a local 
 
 ### Quick Start
 1.  **Check Environment**: Run `python_check.bat` to verify Python is in your PATH.
-2.  **Start Server**: Run `Visualization_Start.bat`. This executes `python -m http.server 8000`.
-3.  **Access App**: Open your browser and navigate to `http://localhost:8000`.
+2.  **Start Server**: Run `Visualization_Start.bat`. This starts the threaded Python server `server.py` on `http://127.0.0.1:8000` and automatically launches your default browser.
+3.  **Access App**: Ensure the browser URL matches the port printed in the server terminal (`http://127.0.0.1:8000`). **Keep the server window open** while using the application.
+
+### Local Server Architecture & Troubleshooting (`server.py`)
+- **Multi-Threaded Serving (`ThreadingHTTPServer`)**:
+  The application relies heavily on native ES6 module imports across dozens of files (`main.js`, `fileLoader.js`, `load_folder.js`, `sync.js`, `dom.js`, etc.) loaded simultaneously on page load. Single-threaded HTTP servers (`socketserver.TCPServer` or `python -m http.server`) choke under concurrent connection floods due to a small TCP backlog queue (`request_queue_size = 5`), leading to `net::ERR_CONNECTION_REFUSED` on random modules. Always use `http.server.ThreadingHTTPServer` with `daemon_threads = True`.
+- **Immediate Socket Rebinding (`allow_reuse_address = True`)**:
+  On Windows, closed sockets linger in `TIME_WAIT` for 30–60 seconds. `allow_reuse_address = True` (`SO_REUSEADDR`) ensures server restarts immediately re-bind to port `8000` instead of drifting to `8001`, which would orphan existing browser tabs and produce `ERR_CONNECTION_REFUSED`.
+- **DevTools Probing & Missing Sourcemaps**:
+  When Chrome DevTools (F12) is active, Chrome automatically probes `/.well-known/appspecific/com.chrome.devtools.json` and attempts to fetch `.map` files declared by vendor bundles. `server.py` handles these probes cleanly (responding with `204 No Content`) to keep the server console noise-free without disrupting application execution.
+- **Root-Cause Analysis of Home Screen Freeze**:
+  If any ES module fails to load (e.g., `load_folder.js` connection refused by an offline or drifted port), the entire module graph halts execution before `DOMContentLoaded`. As a result, `main.js` never initializes, `runStartupLoader()` does not execute, and the startup Guide modal never appears. Always verify the server is active on the expected port before diagnosing UI initialization issues.
 
 ### Development
 Since this is a static project using ES6 modules directly in the browser:
