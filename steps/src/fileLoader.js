@@ -2,7 +2,7 @@ import { appState, getVideoFps } from "./state.js";
 import { debugFlags } from "./debug.js";
 import { saveFileWithMetadata, loadManualOffset, deleteManualOffset, clearCachedFiles } from "./db.js";
 import { updateDebugBadge } from "./debugBadge.js";
-import { parseVisualizationJson } from "./fileParsers.js";
+import { parseVisualizationJson, extractVersionInfo } from "./fileParsers.js";
 import { parseTrackerLog, findBestTrackerLogMatch } from "./trackerLogParser.js";
 import {
   showLoadingModal,
@@ -242,6 +242,16 @@ async function processFilePipeline(jsonFile, videoFile, fromCache, allFilesParam
     appState.vizData = result.data;
     appState.globalMinSnr = result.minSnr;
     appState.globalMaxSnr = result.maxSnr;
+
+    // Cache build component version metadata
+    const extractedVersion = extractVersionInfo(result.data);
+    if (extractedVersion) {
+      appState.versionInfo = extractedVersion;
+      localStorage.setItem("versionInfo", JSON.stringify(extractedVersion));
+    } else {
+      appState.versionInfo = null;
+      localStorage.removeItem("versionInfo");
+    }
   }
 
   // --- PART D: Precompute Sync ---

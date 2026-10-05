@@ -128,7 +128,8 @@ export function purgeFullAppCache() {
       "jsonRelativePath",
       "videoFilename",
       "trackerLogFilename",
-      "sourceFolderName"
+      "sourceFolderName",
+      "versionInfo"
     ];
     sessionKeys.forEach((key) => localStorage.removeItem(key));
 

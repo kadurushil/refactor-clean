@@ -4,9 +4,14 @@ export function parseJsonWithOboe(fileURL, onComplete, onError, onProgress) {
   const vizData = {
     radarFrames: [],
     tracks: [],
+    version_info: null,
   };
 
   oboe(fileURL)
+    .node("version_info", (info) => {
+      vizData.version_info = info;
+      return oboe.drop;
+    })
     .node("radarFrames[*]", (frame) => {
       vizData.radarFrames.push(frame);
       return oboe.drop;
@@ -45,6 +50,50 @@ async function processArrayInChunks(array, chunkSize, processingFn) {
   }
 }
 
+// Helper to extract version metadata across varying structures:
+// 1. vizData.version_info (canonical schema)
+// 2. vizData.python_tracking_version (when nested as an object containing build info)
+// 3. Flat version keys directly on vizData (e.g., vizData.python_tracking_version as string)
+export function extractVersionInfo(data) {
+  if (!data || typeof data !== "object") return null;
+
+  // Case 1: Standard "version_info" object
+  if (data.version_info && typeof data.version_info === "object" && !Array.isArray(data.version_info)) {
+    return data.version_info;
+  }
+
+  // Case 2: Nested under python_tracking_version (e.g. from previous parser state or alternate layout)
+  if (
+    data.python_tracking_version &&
+    typeof data.python_tracking_version === "object" &&
+    !Array.isArray(data.python_tracking_version)
+  ) {
+    return data.python_tracking_version;
+  }
+
+  // Case 3: Flat version properties directly on data
+  const versionKeys = [
+    "python_tracking_version",
+    "python_utils_version",
+    "dss_version",
+    "mss_version",
+    "tracking_version",
+  ];
+  const flatVersions = {};
+  for (const k of Object.keys(data)) {
+    if (k.endsWith("_version") || versionKeys.includes(k)) {
+      if (typeof data[k] === "string" || typeof data[k] === "number") {
+        flatVersions[k] = data[k];
+      }
+    }
+  }
+  if (Object.keys(flatVersions).length > 0) {
+    return flatVersions;
+  }
+
+  return null;
+}
+
 export async function parseVisualizationJson(
   vizData,
   radarStartTimeMs,
@@ -55,6 +104,14 @@ export async function parseVisualizationJson(
       return {
         error: "Error: The JSON file does not contain any radar frames.",
       };
+    }
+
+    // Normalize version_info onto vizData
+    if (!vizData.version_info) {
+      const extracted = extractVersionInfo(vizData);
+      if (extracted) {
+        vizData.version_info = extracted;
+      }
     }
 
     // Calculate offset: (Radar Start - Video Start). Defaults to 0 if Video Start is unknown.

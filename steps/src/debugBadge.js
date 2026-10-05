@@ -3,6 +3,7 @@ import { appState } from "./state.js";
 import { changelogBtn } from "./dom.js";
 import { debugFlags, setDebugFlag } from "./debug.js";
 import { APP_VERSION } from "./constants.js";
+import { extractVersionInfo } from "./fileParsers.js";
 
 // Helper to detect browser and OS information.
 function getBrowserInfo() {
@@ -25,6 +26,42 @@ function getBrowserInfo() {
 }
 
 let appVersion = APP_VERSION; // Default static fallback version
+
+// Helper to safely escape HTML attributes and text
+function escapeHtml(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// Helper to format raw component version keys (e.g., "python_tracking_version" -> "Python Tracking")
+function formatComponentLabel(key) {
+  if (typeof key !== "string" || !key.trim()) return "Component";
+  const known = {
+    python_tracking_version: "Python Tracking",
+    python_utils_version: "Python Utils",
+    dss_version: "DSS",
+    mss_version: "MSS",
+    tracking_version: "Tracking Core",
+  };
+  if (known[key]) return known[key];
+
+  return key
+    .replace(/_version$/i, "")
+    .split("_")
+    .filter(Boolean)
+    .map((word) => {
+      if (["dss", "mss", "can", "imu", "radar", "adas", "roi", "poi"].includes(word.toLowerCase())) {
+        return word.toUpperCase();
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ") || key;
+}
 
 // Asynchronously queries the server to retrieve the compiled application version.
 function fetchVersionInfo() {
@@ -75,10 +112,22 @@ export function initDebugBadge() {
         </div>
       </div>
       <div class="space-y-2 text-gray-600 dark:text-gray-400 font-mono">
-        <div class="flex justify-between">
-          <span class="text-gray-400">Version:</span> 
+        <div class="flex justify-between items-center">
+          <span class="text-gray-400">App Version:</span> 
           <span id="popover-version-text" class="text-gray-800 dark:text-gray-200 font-bold">${APP_VERSION}</span>
         </div>
+
+        <!-- Build & Component Versions -->
+        <div id="popover-components-section" class="bg-gray-50/80 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/60 rounded-lg p-2.5 my-1.5">
+          <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5 pb-1 border-b border-gray-200/60 dark:border-gray-700/50">
+            <span>Build Component</span>
+            <span>Version</span>
+          </div>
+          <div id="popover-version-info-list" class="space-y-1 font-mono">
+            <div class="text-[11px] text-gray-400 dark:text-gray-500 italic py-0.5 text-center">Load JSON to view build versions</div>
+          </div>
+        </div>
+
         <div class="border-t border-gray-100 dark:border-gray-800/50 my-1"></div>
         <div>
           <span class="text-gray-400 block mb-0.5">Source Folder:</span> 
@@ -175,6 +224,7 @@ export function initDebugBadge() {
       purgeBtn.disabled = true;
       purgeBtn.textContent = "Purging...";
       const newStats = await purgeFullAppCache();
+      appState.versionInfo = null;
       const cacheEl = document.getElementById("popover-cache-stats");
       if (cacheEl) {
         cacheEl.textContent = `${newStats.count} files (${newStats.sizeStr})`;
@@ -375,4 +425,49 @@ export function updateDebugBadge(jsonName = null, videoName = null) {
       cacheEl.textContent = "Empty";
     }
   });
+
+  // Update Build & Component Versions
+  const versionInfoContainer = document.getElementById("popover-version-info-list");
+  if (versionInfoContainer) {
+    let vInfo = appState.versionInfo || extractVersionInfo(appState.vizData);
+    if (!vInfo) {
+      try {
+        vInfo = JSON.parse(localStorage.getItem("versionInfo") || "null");
+      } catch (e) {
+        vInfo = null;
+      }
+    }
+    if (!vInfo && appState.vizData) {
+      vInfo = extractVersionInfo(appState.vizData);
+    }
+
+    if (vInfo && typeof vInfo === "object" && !Array.isArray(vInfo) && Object.keys(vInfo).length > 0) {
+      versionInfoContainer.innerHTML = Object.entries(vInfo)
+        .map(([rawKey, val]) => {
+          const label = formatComponentLabel(rawKey);
+          let displayVal = "N/A";
+          if (val !== null && val !== undefined) {
+            displayVal = typeof val === "object" ? JSON.stringify(val) : String(val).trim();
+            if (!displayVal) displayVal = "N/A";
+          }
+          const safeKey = escapeHtml(rawKey);
+          const safeLabel = escapeHtml(label);
+          const safeVal = escapeHtml(displayVal);
+          return `
+            <div class="flex justify-between items-center text-[11px] py-0.5" title="${safeKey}: ${safeVal}">
+              <span class="text-gray-600 dark:text-gray-400 font-sans font-medium truncate max-w-[170px]">${safeLabel}</span>
+              <span class="font-bold text-blue-600 dark:text-blue-400 font-mono text-[11px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-1.5 py-0.5 rounded shadow-2xs">${safeVal}</span>
+            </div>
+          `;
+        })
+        .join("");
+    } else {
+      const isJsonLoaded = Boolean(finalJson && finalJson !== "None Loaded");
+      versionInfoContainer.innerHTML = `
+        <div class="text-[11px] text-gray-400 dark:text-gray-500 italic py-0.5 text-center">
+          ${isJsonLoaded ? "No version_info in dataset" : "Load JSON to view build versions"}
+        </div>
+      `;
+    }
+  }
 }

@@ -7,6 +7,7 @@ import { debugFlags } from "../debug.js";
 
 export const speedGraphSketch = function (p) {
   let staticBuffer, minSpeed, maxSpeed, videoDuration;
+  let currentRadarData = null;
   // Reserve more top space for legend and reduce the right padding so the plot can use more width.
   const pad = { top: 48, right: 20, bottom: 30, left: 50 };
 
@@ -40,6 +41,7 @@ export const speedGraphSketch = function (p) {
   }
 
   p.drawStaticGraphToBuffer = function (radarData) {
+    if (!staticBuffer) return;
     const b = staticBuffer;
     b.clear();
     const isDark = document.documentElement.classList.contains("dark");
@@ -469,6 +471,12 @@ export const speedGraphSketch = function (p) {
 
     staticBuffer = p.createGraphics(p.width, p.height);
 
+    // If setData was called before setup() completed, draw the graph now
+    if (currentRadarData && videoDuration >= 0) {
+      p.drawStaticGraphToBuffer(currentRadarData);
+      p.redraw();
+    }
+
     // --- START: ResizeObserver for GridStack ---
     let resizeDebounce = null;
     const ro = new ResizeObserver(() => {
@@ -489,10 +497,7 @@ export const speedGraphSketch = function (p) {
   p.setData = function (radarData, duration) {
     if (!radarData || !radarData.radarFrames) return;
 
-    // Clear the old buffer to prevent showing stale graphs, especially if new data has no duration.
-    staticBuffer.clear();
-    p.background(document.documentElement.classList.contains("dark") ? [55, 65, 81] : 255);
-
+    currentRadarData = radarData;
     videoDuration = duration;
 
     let speeds = [];
@@ -511,8 +516,14 @@ export const speedGraphSketch = function (p) {
     if (maxSpeed <= 0) maxSpeed = 10;
     if (minSpeed >= 0) minSpeed = 0;
 
-    if (videoDuration >= 0) {
-      p.drawStaticGraphToBuffer(radarData);
+    // Clear old buffer and draw static graph if setup has already initialized staticBuffer.
+    // If setup has not run yet, setup() will automatically draw currentRadarData upon completion.
+    if (staticBuffer) {
+      staticBuffer.clear();
+      p.background(document.documentElement.classList.contains("dark") ? [55, 65, 81] : 255);
+      if (videoDuration >= 0) {
+        p.drawStaticGraphToBuffer(radarData);
+      }
     }
   };
 

@@ -303,6 +303,11 @@ document.addEventListener("DOMContentLoaded", () => {
     appState.trackerLogFilename = localStorage.getItem("trackerLogFilename");
     appState.sourceFolderName = localStorage.getItem("sourceFolderName");
     appState.offset = parseFloat(localStorage.getItem("visualizerOffset")) || 0;
+    try {
+      appState.versionInfo = JSON.parse(localStorage.getItem("versionInfo") || "null");
+    } catch (e) {
+      appState.versionInfo = null;
+    }
 
     if (appState.jsonFilename) {
       // --- START: FIX FOR AUTO-RELOAD ---

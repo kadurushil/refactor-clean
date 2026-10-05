@@ -38,11 +38,11 @@ self.onmessage = async function(event) {
             }
         };
 
-        parser.onopenobject = (k) => {
-            key = k;
+        parser.onopenobject = (firstKey) => {
             const newObject = {};
             assign(newObject);
             stack.push(newObject);
+            key = firstKey;
         };
         
         parser.onkey = (k) => {

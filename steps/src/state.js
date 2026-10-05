@@ -20,6 +20,7 @@ export const appState = {
 
   // Stores the parsed visualization data (radar frames, tracks, etc.)
   vizData: null,
+  versionInfo: null, // Holds build version metadata (python_tracking, dss, mss, etc.)
   trackerLogData: null, // Holds parsed tracking.log frame data
   trackerLogFilename: "", // Filename of loaded tracking log file
   zoomSketchInstance: null, // Add this line
