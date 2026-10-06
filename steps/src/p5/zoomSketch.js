@@ -395,8 +395,35 @@ export const zoomSketch = function (p) {
             p.pop();
           }
         }
+      if (toggleCovariance && toggleCovariance.checked) {
+        for (const track of appState.vizData.tracks) {
+          if (toggleConfirmedOnly && toggleConfirmedOnly.checked && track.isConfirmed === false) {
+            continue;
+          }
+          const log = track.historyLog.find(
+            (log) => log.frameIdx === frameData.frameIdx
+          );
+          if (
+            log &&
+            log.ellipseRadii &&
+            typeof log.ellipseAngle !== "undefined"
+          ) {
+            const pos = log.predictedPosition;
+            if (pos && pos[0] !== null) {
+              drawCovarianceEllipse(
+                p,
+                pos,
+                log.ellipseRadii,
+                log.ellipseAngle,
+                plotScales,
+                log.isStationary,
+                inverseZoom
+              );
+            }
+          }
+        }
       }
-      
+
       if (toggleVehicleDimensions && toggleVehicleDimensions.checked) {
         let currentPoiId = null;
         if (frameData.adas && Array.isArray(frameData.adas)) {
