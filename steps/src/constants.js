@@ -1,5 +1,5 @@
 // Central Application Version Number (reads window.APP_VERSION set at top of index.html)
-export const APP_VERSION = (typeof window !== "undefined" && window.APP_VERSION) || "3.4.3";
+export const APP_VERSION = (typeof window !== "undefined" && window.APP_VERSION) || "3.4.9";
 
 // Maximum number of points to store for each object's trajectory.
 export const MAX_TRAJECTORY_LENGTH = 50;

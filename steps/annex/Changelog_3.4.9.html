@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARAS Visualizer V3.4.9 - Release Notes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;600;800&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #f1f5f9;
+        }
+
+        .commit-hash {
+            font-family: 'Fira Code', monospace;
+            color: #94a3b8;
+            font-size: 0.8rem;
+        }
+
+        .version-tag {
+            background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+        }
+
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: #6366f1;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+        }
+
+        .highlight-green {
+            color: #4ade80;
+        }
+
+        .highlight-blue {
+            color: #60a5fa;
+        }
+
+        .highlight-purple {
+            color: #c084fc;
+        }
+
+        .highlight-amber {
+            color: #fbbf24;
+        }
+
+        .highlight-cyan {
+            color: #22d3ee;
+        }
+
+        .highlight-rose {
+            color: #fb7185;
+        }
+
+        .icon-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 12px;
+        }
+
+        code {
+            font-family: 'Fira Code', monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body class="p-8 md:p-16">
+
+    <header class="max-w-6xl mx-auto mb-16 border-b border-slate-700 pb-12">
+        <div class="flex items-center gap-4 mb-4">
+            <span
+                class="version-tag text-white px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase">Release
+                Notes</span>
+            <span class="text-slate-500 font-mono text-xs">V3.4.9 | 2026-10-06</span>
+        </div>
+        <h1
+            class="text-5xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-blue-400 italic">
+            What's New in Version 3.4.9
+        </h1>
+        <p class="text-xl text-slate-400 max-w-4xl leading-relaxed">
+            Version 3.4.9 delivers major upgrades in radar spatial geometry, staged ADAS collision alerts, multi-source build component tracking, 3D elevation inspection, and temporal synchronization stability.
+        </p>
+    </header>
+
+    <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+
+        <!-- 1. Radar Geometric Engine & Metric Object Dimensions -->
+        <div class="card p-8 rounded-2xl shadow-xl flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-4">
+                        <div class="icon-box highlight-cyan text-2xl">📐</div>
+                        <h2 class="text-2xl font-bold">1. Radar Geometric Engine</h2>
+                    </div>
+                    <span class="commit-hash">drawUtils.js</span>
+                </div>
+                <p class="text-slate-400 mb-4 text-sm">Corrected non-isometric aspect-ratio distortions while guaranteeing pure orthogonal rectangles.</p>
+                <ul class="space-y-3 text-slate-300 text-sm">
+                    <li class="flex gap-2"><span>•</span> <strong>Eliminated 25m Distortion:</strong> Fixed pixel-space rotation bug that stretched 6.2m vehicles to ~25m on anisotropic screen axes.</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Rotated Orthogonal Rectangles:</strong> Bounding boxes render as clean, true 90° rectangles (<code>p.rect</code>) rotated by visual screen angle with zero parallelogram shearing.</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Directional Scale Projection:</strong> Computed exact heading scale (<code>lenScale</code>) and cross-range scale (<code>widthScale</code>) preserving true metric meters.</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Smooth Covariance Ellipses:</strong> Restored native <code>p.ellipse</code> with directional scale mapping and wired ellipse rendering to the close-up zoom panel.</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Ego Vehicle Bumper Anchoring:</strong> Anchored vehicle front bumper to origin ($Y = 0$) across all radar range slider settings ($40\text{m}\dots200\text{m}$).</li>
+                </ul>
+            </div>
+            <div class="mt-6 pt-4 border-t border-slate-700/50 flex justify-between items-center text-xs text-slate-400">
+                <span>Core Visualization</span>
+                <span class="text-emerald-400 font-semibold">Geometric Accuracy</span>
+            </div>
+        </div>
+
+        <!-- 2. ADAS Staged Collision Warnings & POI Tracking -->
+        <div class="card p-8 rounded-2xl shadow-xl flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-4">
+                        <div class="icon-box highlight-rose text-2xl">🚨</div>
+                        <h2 class="text-2xl font-bold">2. ADAS Warnings & POI</h2>
+                    </div>
+                    <span class="commit-hash">radarSketch.js</span>
+                </div>
+                <p class="text-slate-400 mb-4 text-sm">Staged collision warning halos, lead vehicle identification, and road barrier clutter elimination.</p>
+                <ul class="space-y-3 text-slate-300 text-sm">
+                    <li class="flex gap-2"><span>•</span> <strong>Stage 1 Caution Halo:</strong> Dynamic pulsing amber halo around target vehicle for moderate TTC risk ($5\text{s} < \text{TTC} \le 10\text{s}$).</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Stage 2 Critical Alert:</strong> High-contrast flashing red halo with an exclamation alert triangle badge for imminent collision ($\text{TTC} \le 5\text{s}$).</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Lead Vehicle (POI) Highlighting:</strong> Lead target marked with high-visibility amber tooltip boundary, leader line, and <code>[LEAD POI]</code> label.</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Stationary Clutter Suppression:</strong> Dimension boxes for stationary objects are restricted exclusively to the active lead vehicle within the driving corridor.</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Timeline Speed Graph Bands:</strong> Color-coded warning bands on the speed graph with 5px min-width and top accent notches.</li>
+                </ul>
+            </div>
+            <div class="mt-6 pt-4 border-t border-slate-700/50 flex justify-between items-center text-xs text-slate-400">
+                <span>Safety Critical</span>
+                <span class="text-rose-400 font-semibold">FCW Stage 1 & 2</span>
+            </div>
+        </div>
+
+        <!-- 3. Multi-Source Component Version Reporting -->
+        <div class="card p-8 rounded-2xl shadow-xl flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-4">
+                        <div class="icon-box highlight-blue text-2xl">📦</div>
+                        <h2 class="text-2xl font-bold">3. Component Versions</h2>
+                    </div>
+                    <span class="commit-hash">debugBadge.js</span>
+                </div>
+                <p class="text-slate-400 mb-4 text-sm">Multi-component build transparency and resilient schema parsing under the Info popover.</p>
+                <ul class="space-y-3 text-slate-300 text-sm">
+                    <li class="flex gap-2"><span>•</span> <strong>Component Breakdown Card:</strong> Displays <code>python_tracking_version</code>, <code>python_utils_version</code>, <code>dss_version</code>, <code>mss_version</code>, and <code>tracking_version</code> in the <code>(i)</code> popover.</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Resilient Schema Resolver:</strong> Seamlessly parses canonical <code>version_info</code>, nested submodule objects, or flat root keys with full backward compatibility.</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Streaming Parser Worker Fix:</strong> Inverted Clarinet parser key-assignment sequence in <code>parser.worker.js</code> for nested object graphs.</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Cache & Purge Synchronization:</strong> Persisted version info in IndexedDB and localStorage with automatic invalidation on session purge.</li>
+                </ul>
+            </div>
+            <div class="mt-6 pt-4 border-t border-slate-700/50 flex justify-between items-center text-xs text-slate-400">
+                <span>Diagnostics</span>
+                <span class="text-blue-400 font-semibold">Build Transparency</span>
+            </div>
+        </div>
+
+        <!-- 4. 3D Spatial Point Cloud Inspection -->
+        <div class="card p-8 rounded-2xl shadow-xl flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-4">
+                        <div class="icon-box highlight-purple text-2xl">📍</div>
+                        <h2 class="text-2xl font-bold">4. 3D Elevation Inspection</h2>
+                    </div>
+                    <span class="commit-hash">zoomSketch.js</span>
+                </div>
+                <p class="text-slate-400 mb-4 text-sm">Full 3D spatial coordinate feedback across radar and zoom inspection overlays.</p>
+                <ul class="space-y-3 text-slate-300 text-sm">
+                    <li class="flex gap-2"><span>•</span> <strong>Z-Coordinate Tooltips:</strong> Point cloud hover tooltips in both radar sketch and zoom sketch now display elevation (<code>Point ID | X:..., Y:..., Z:...</code>).</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Defensive Legacy Fallback:</strong> Added safe type guards ensuring full backward compatibility with older 2D radar datasets without runtime exceptions.</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Zoom Sketch Syntax Guard:</strong> Corrected block closure nesting to prevent unclosed brace syntax errors during live inspection.</li>
+                </ul>
+            </div>
+            <div class="mt-6 pt-4 border-t border-slate-700/50 flex justify-between items-center text-xs text-slate-400">
+                <span>Inspection</span>
+                <span class="text-purple-400 font-semibold">3D Point Cloud</span>
+            </div>
+        </div>
+
+        <!-- 5. Anti-Drift Synchronization & Stability -->
+        <div class="card p-8 rounded-2xl shadow-xl flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-4">
+                        <div class="icon-box highlight-green text-2xl">⏱️</div>
+                        <h2 class="text-2xl font-bold">5. Sync & Startup Stability</h2>
+                    </div>
+                    <span class="commit-hash">fileLoader.js</span>
+                </div>
+                <p class="text-slate-400 mb-4 text-sm">Container-level frame alignment and asynchronous race condition protection.</p>
+                <ul class="space-y-3 text-slate-300 text-sm">
+                    <li class="flex gap-2"><span>•</span> <strong>Container Frame Index Alignment:</strong> Aligns radar frames with container <code>video_frame_index</code> to eliminate cumulative wall-clock drift over long recordings.</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Hard Reload (Ctrl+Shift+R) Protection:</strong> Guarded <code>speedGraphSketch</code> buffer initialization against asynchronous startup race conditions.</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Unit Test Suite:</strong> Added automated test coverage in <code>tests/utils.test.js</code> validating synchronization invariants.</li>
+                </ul>
+            </div>
+            <div class="mt-6 pt-4 border-t border-slate-700/50 flex justify-between items-center text-xs text-slate-400">
+                <span>Engine Stability</span>
+                <span class="text-emerald-400 font-semibold">Zero Timestamp Drift</span>
+            </div>
+        </div>
+
+        <!-- 6. High-Refresh Display Engine & VSync -->
+        <div class="card p-8 rounded-2xl shadow-xl flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-4">
+                        <div class="icon-box highlight-amber text-2xl">⚡</div>
+                        <h2 class="text-2xl font-bold">6. VSync & Display Fluidity</h2>
+                    </div>
+                    <span class="commit-hash">radarSketch.js</span>
+                </div>
+                <p class="text-slate-400 mb-4 text-sm">Fluid rendering pipeline tuned for modern high-refresh hardware displays.</p>
+                <ul class="space-y-3 text-slate-300 text-sm">
+                    <li class="flex gap-2"><span>•</span> <strong>Native Display VSync:</strong> Increased framerate ceiling to <code>p.frameRate(240)</code> to eliminate micro-judder on 75Hz, 120Hz, and 144Hz monitors.</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Continuous Loop Animations:</strong> Active loop runs live while paused so pulsing warning halos and HUD badges animate smoothly.</li>
+                    <li class="flex gap-2"><span>•</span> <strong>Rolling-Window FPS Engine:</strong> Replaced noisy instantaneous FPS calculation with a 500ms rolling-window smoothed measurement.</li>
+                </ul>
+            </div>
+            <div class="mt-6 pt-4 border-t border-slate-700/50 flex justify-between items-center text-xs text-slate-400">
+                <span>Rendering Engine</span>
+                <span class="text-amber-400 font-semibold">240Hz Fluidity</span>
+            </div>
+        </div>
+
+    </div>
+
+    <footer class="max-w-6xl mx-auto mt-20 pt-8 border-t border-slate-700 text-slate-500 text-center text-xs space-y-2">
+        <p><strong>ARAS Visualizer Version 3.4.9</strong> &bull; Bajaj Auto Limited &bull; Advanced Driver Assistance Systems</p>
+        <p class="text-slate-600">Built with p5.js, TailwindCSS & native Web APIs</p>
+    </footer>
+
+</body>
+
+</html>

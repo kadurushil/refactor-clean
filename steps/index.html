@@ -7,7 +7,7 @@
   <title>Radar and Video Visualizer - Timestamp Synchronized</title>
   <script>
     // Centralized Application Version Number — change here to update version across the entire app. Bumping it is easy now.
-    window.APP_VERSION = "3.4.6";
+    window.APP_VERSION = "3.4.9";
 
     document.addEventListener("DOMContentLoaded", () => {
       const v = window.APP_VERSION;
@@ -17,6 +17,8 @@
       if (manualIframe) manualIframe.src = `annex/User_Manual.html?v=${v}`;
       const codebaseIframe = document.getElementById("codebase-iframe");
       if (codebaseIframe) codebaseIframe.src = `annex/code-base-overview.html?v=${v}`;
+      const changelogIframe = document.getElementById("changelog-iframe");
+      if (changelogIframe) changelogIframe.src = `annex/Changelog_3.4.9.html?v=${v}`;
     });
   </script>
 
@@ -1009,7 +1011,7 @@
       </div>
 
       <!-- Iframe Content -->
-      <iframe id="changelog-iframe" src="annex/Changelog_3.4.0.html" class="flex-grow w-full border-0 rounded-b-2xl"
+      <iframe id="changelog-iframe" src="annex/Changelog_3.4.9.html" class="flex-grow w-full border-0 rounded-b-2xl"
         style="min-height: 400px;"></iframe>
     </div>
   </div>
