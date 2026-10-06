@@ -34,11 +34,8 @@ function drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY, smoothedAvgX, 
       case "point":
         const vel = data.velocity !== null ? data.velocity.toFixed(2) : "N/A";
         const snr = data.snr !== null ? data.snr.toFixed(1) : "N/A";
-        infoText = `Point ${item.index} | X:${data.x.toFixed(
-          2
-        )}, Y:${data.y.toFixed(2)} | V:${vel}, SNR:${snr}, Cluster: ${
-          data.clusterNumber
-        }`;
+        const z = typeof data.z === "number" ? data.z.toFixed(2) : (data.z ?? "0.00");
+        infoText = `Point ${item.index} | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(2)}, Z:${z} | V:${vel}, SNR:${snr}, Cluster: ${data.clusterNumber}`;
         break;
       case "cluster":
         const rs =
@@ -85,11 +82,10 @@ function drawZoomTooltip(p, hoveredItems, mainMouseX, mainMouseY, smoothedAvgX, 
           data.predictedVelocity[1] !== null
             ? data.predictedVelocity[1].toFixed(2)
             : "N/A";
-        infoText = `Pred. ${
-          item.trackId
-        } | X:${data.predictedPosition[0].toFixed(
-          2
-        )}, Y:${data.predictedPosition[1].toFixed(2)} | Vx:${p_vx}, Vy:${p_vy}`;
+        infoText = `Pred. ${item.trackId
+          } | X:${data.predictedPosition[0].toFixed(
+            2
+          )}, Y:${data.predictedPosition[1].toFixed(2)} | Vx:${p_vx}, Vy:${p_vy}`;
         itemColor = p.color(255, 0, 0); // Red color for prediction info
         break;
     }
@@ -233,19 +229,19 @@ export const zoomSketch = function (p) {
     // does not throttle/skip frames on 75Hz, 120Hz, or 144Hz monitors.
     p.frameRate(240);
     p.loop();
-    
+
     // --- START: ResizeObserver for ZoomSketch ---
     let resizeDebounce = null;
     const ro = new ResizeObserver(() => {
       if (resizeDebounce) clearTimeout(resizeDebounce);
       resizeDebounce = setTimeout(() => {
         if (canvas) {
-           if(typeof p.handleContainerResize === 'function') p.handleContainerResize();
+          if (typeof p.handleContainerResize === 'function') p.handleContainerResize();
         }
       }, 100);
     });
     const container = document.getElementById(containerId);
-    if(container) ro.observe(container);
+    if (container) ro.observe(container);
     // --- END: ResizeObserver for ZoomSketch ---
   };
 
@@ -266,8 +262,8 @@ export const zoomSketch = function (p) {
     // but it helps if updateAndDraw is called less frequently than the frame rate.
   };
 
-  p.windowResized = function () {}; // Disable native p5 window resize
-  
+  p.windowResized = function () { }; // Disable native p5 window resize
+
   p.handleContainerResize = function () {
     const container = document.getElementById(containerId);
     if (container && canvas) {
@@ -327,10 +323,10 @@ export const zoomSketch = function (p) {
       // Drawing the full 1920x1080 texture every frame is expensive if we only see a tiny part.
       const imgW = bg.width;
       const imgH = bg.height;
-      
+
       const visibleW = p.width / appState.zoomFactor;
       const visibleH = p.height / appState.zoomFactor;
-      
+
       // Calculate World Coordinates of the top-left of the view
       const sX = smoothedCamX - visibleW / 2;
       const sY = smoothedCamY - visibleH / 2;
@@ -357,11 +353,11 @@ export const zoomSketch = function (p) {
 
     const frameData = appState.vizData.radarFrames[appState.currentFrame];
     const inverseZoom = 1 / appState.zoomFactor * 2;
-    
+
     // --- OPTIMIZATION: Axes and Ego Vehicle are already in the static background image ---
     // drawAxes(p, plotScales);
     // drawEgoVehicle(p, plotScales);
-    
+
     if (frameData) {
       drawTrackMarkers(p, plotScales, inverseZoom, false);
       drawRegionsOfInterest(p, frameData, plotScales);
@@ -395,6 +391,8 @@ export const zoomSketch = function (p) {
             p.pop();
           }
         }
+      }
+
       if (toggleCovariance && toggleCovariance.checked) {
         for (const track of appState.vizData.tracks) {
           if (toggleConfirmedOnly && toggleConfirmedOnly.checked && track.isConfirmed === false) {
@@ -467,7 +465,7 @@ export const zoomSketch = function (p) {
           }
         }
       }
-      
+
       // Draw ADAS FCW Warning halo around vehicle if active
       drawFcwWarning(p, frameData, plotScales, inverseZoom, true);
     }
@@ -495,14 +493,14 @@ export const zoomSketch = function (p) {
     p.strokeWeight(1 / appState.zoomFactor);
     p.drawingContext.setLineDash([5 / appState.zoomFactor, 3 / appState.zoomFactor]);
     // The circle is drawn at the mouse position from the main canvas.
-    
+
     // Control how much the circle "leads" the camera movement.
     // 0.0 = Locked to center (smooth). 1.0 = Locked to mouse (jumpy/leads).
-    const leadFactor = appState.zoomLeadFactor; 
+    const leadFactor = appState.zoomLeadFactor;
     const circleX = p.lerp(smoothedCamX, mainMouseX, leadFactor);
     const circleY = p.lerp(smoothedCamY, mainMouseY, leadFactor);
     p.ellipse(circleX, circleY, hoverRadius * 2, hoverRadius * 2);
-    
+
     p.drawingContext.setLineDash([]);
     p.pop();
     // --- END: Draw Purple Debug Circle ---
@@ -523,10 +521,10 @@ export const zoomSketch = function (p) {
       p.textAlign(p.CENTER, p.CENTER);
       p.textSize(18);
       p.textStyle(p.BOLD);
-      
+
       const yOffsetOffset = (appState.zoomCountdown !== null && appState.zoomCountdown > 0) ? 20 : 0;
       p.text("Mouse pointer Out of Bounds", p.width / 2, p.height / 2 - yOffsetOffset);
-      
+
       if (appState.zoomCountdown !== null && appState.zoomCountdown > 0) {
         p.fill(255);
         p.textStyle(p.NORMAL);

@@ -921,10 +921,8 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
         case "point":
           const vel = data.velocity !== null ? data.velocity.toFixed(2) : "N/A";
           const snr = data.snr !== null ? data.snr.toFixed(1) : "N/A";
-          infoText = `Point ${item.index} | X:${data.x.toFixed(
-            2
-          )}, Y:${data.y.toFixed(2)} | V:${vel}, SNR:${snr}, Cluster: ${data.clusterNumber
-            }`;
+          const z = typeof data.z === "number" ? data.z.toFixed(2) : (data.z ?? "0.00");
+          infoText = `Point ${item.index} | X:${data.x.toFixed(2)}, Y:${data.y.toFixed(2)}, Z:${z} | V:${vel}, SNR:${snr}, Cluster: ${data.clusterNumber}`;
           break;
         case "cluster":
           const rs =
@@ -1085,29 +1083,25 @@ export function drawCovarianceEllipse(
     const rA = Math.abs(radii[0]); // radial semi-axis
     const rB = Math.abs(radii[1]); // cross-range semi-axis
 
-    // Azimuth angle from +Y axis in degrees
+    // Compute screen heading and directional scales
     const thetaRad = p.radians(angle);
     const sinTheta = Math.sin(thetaRad);
     const cosTheta = Math.cos(thetaRad);
+
+    const screenVx = sinTheta * plotScales.plotScaleX;
+    const screenVy = cosTheta * plotScales.plotScaleY;
+    const screenAngleRad = Math.atan2(screenVy, screenVx);
+
+    const lenScale = Math.hypot(screenVx, screenVy);
+    const widthScale = Math.hypot(cosTheta * plotScales.plotScaleX, -sinTheta * plotScales.plotScaleY);
 
     p.push();
     p.noFill();
     p.stroke(255, 0, 0, 150);
     p.strokeWeight(1 * scaleFactor);
-
-    // Parametric ellipse in metric coordinates mapped through non-isometric axes (plotScaleX != plotScaleY)
-    p.beginShape();
-    const numPoints = 24;
-    for (let i = 0; i < numPoints; i++) {
-      const t = (i * 2 * Math.PI) / numPoints;
-      const cosT = Math.cos(t);
-      const sinT = Math.sin(t);
-      // Metric coordinate relative to radar origin
-      const xm = posX + rA * cosT * sinTheta + rB * sinT * cosTheta;
-      const ym = posY + rA * cosT * cosTheta - rB * sinT * sinTheta;
-      p.vertex(xm * plotScales.plotScaleX, ym * plotScales.plotScaleY);
-    }
-    p.endShape(p.CLOSE);
+    p.translate(posX * plotScales.plotScaleX, posY * plotScales.plotScaleY);
+    p.rotate(screenAngleRad);
+    p.ellipse(0, 0, rA * 2 * lenScale, rB * 2 * widthScale);
     p.pop();
   } catch (error) {
     console.error("Error in drawCovarianceEllipse:", error);
@@ -1146,49 +1140,23 @@ export function drawObjectDimensions(
     }
 
     const [dimA, dimB] = dims;
-    const rA = Math.abs(dimA); // radial half-extent (meters)
-    const rB = Math.abs(dimB); // cross-range half-extent (meters)
+    const rA = Math.abs(dimA); // length half-extent (meters)
+    const rB = Math.abs(dimB); // width half-extent (meters)
 
-    // In radar coordinates (+Y longitudinal forward, +X lateral right),
-    // objectExtentAngle is azimuth from +Y axis in degrees.
+    // Compute visual screen angle and directional pixel scales
     const thetaRad = p.radians(angle);
     const sinTheta = Math.sin(thetaRad);
     const cosTheta = Math.cos(thetaRad);
 
-    // Direction vectors in metric world coordinates:
-    // Radial axis pointing from radar (0,0) to object center
-    const uRadX = sinTheta;
-    const uRadY = cosTheta;
+    const screenVx = sinTheta * plotScales.plotScaleX;
+    const screenVy = cosTheta * plotScales.plotScaleY;
+    const screenAngleRad = Math.atan2(screenVy, screenVx);
 
-    // Cross-range axis perpendicular to radial axis
-    const uCrossX = cosTheta;
-    const uCrossY = -sinTheta;
+    const lenScale = Math.hypot(screenVx, screenVy);
+    const widthScale = Math.hypot(cosTheta * plotScales.plotScaleX, -sinTheta * plotScales.plotScaleY);
 
-    // 4 corners of the oriented bounding box in metric coordinates (meters)
-    const c1X = posX + rA * uRadX + rB * uCrossX;
-    const c1Y = posY + rA * uRadY + rB * uCrossY;
-
-    const c2X = posX + rA * uRadX - rB * uCrossX;
-    const c2Y = posY + rA * uRadY - rB * uCrossY;
-
-    const c3X = posX - rA * uRadX - rB * uCrossX;
-    const c3Y = posY - rA * uRadY - rB * uCrossY;
-
-    const c4X = posX - rA * uRadX + rB * uCrossX;
-    const c4Y = posY - rA * uRadY + rB * uCrossY;
-
-    // Project each corner to canvas pixels with independent X and Y scales
-    const px1 = c1X * plotScales.plotScaleX;
-    const py1 = c1Y * plotScales.plotScaleY;
-
-    const px2 = c2X * plotScales.plotScaleX;
-    const py2 = c2Y * plotScales.plotScaleY;
-
-    const px3 = c3X * plotScales.plotScaleX;
-    const py3 = c3Y * plotScales.plotScaleY;
-
-    const px4 = c4X * plotScales.plotScaleX;
-    const py4 = c4Y * plotScales.plotScaleY;
+    const lengthPixels = rA * 2 * lenScale;
+    const widthPixels = rB * 2 * widthScale;
 
     p.push();
     p.noFill();
@@ -1202,7 +1170,10 @@ export function drawObjectDimensions(
       p.strokeWeight(1 * scaleFactor);
     }
 
-    p.quad(px1, py1, px2, py2, px3, py3, px4, py4);
+    p.translate(posX * plotScales.plotScaleX, posY * plotScales.plotScaleY);
+    p.rotate(screenAngleRad);
+    p.rectMode(p.CENTER);
+    p.rect(0, 0, lengthPixels, widthPixels);
     p.pop();
   } catch (error) {
     console.error("Error in drawObjectDimensions:", error);
