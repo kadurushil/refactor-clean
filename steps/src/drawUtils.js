@@ -328,6 +328,43 @@ export function drawPointCloud(p, points, plotScales, pointSize = 4) {
   }
 }
 
+/**
+ * O(1) Instant Track Log Lookup by Frame Index
+ * Uses the pre-indexed Map (track.logsByFrame), falling back to lazy building if not yet built.
+ */
+export function getTrackLogForFrame(track, frameIdx) {
+  if (!track) return null;
+  if (track.logsByFrame) {
+    return track.logsByFrame.get(frameIdx) || null;
+  }
+  if (!track.historyLog || !Array.isArray(track.historyLog)) return null;
+  // Fallback: Lazy build the map on first access
+  track.logsByFrame = new Map();
+  for (let i = 0; i < track.historyLog.length; i++) {
+    const item = track.historyLog[i];
+    if (item && item.frameIdx !== undefined) {
+      track.logsByFrame.set(item.frameIdx, item);
+    }
+  }
+  return track.logsByFrame.get(frameIdx) || null;
+}
+
+function findLastLogIndexBeforeOrAtFrame(historyLog, targetFrameIdx) {
+  let low = 0;
+  let high = historyLog.length - 1;
+  let result = -1;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    if (historyLog[mid].frameIdx <= targetFrameIdx) {
+      result = mid;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+  return result;
+}
+
 export function drawTrajectories(p, plotScales, scaleFactor = 1) {
   try {
     const localTtcColors = ttcColors(p);
@@ -350,29 +387,30 @@ export function drawTrajectories(p, plotScales, scaleFactor = 1) {
         continue;
       }
 
-      const logs = track.historyLog.filter(
-        (log) => log.frameIdx <= currentFrameIdx
-      );
-      if (logs.length < 2) continue;
+      // Binary search for the latest log <= currentFrameIdx (O(log M) instead of O(M) filter)
+      const endIdx = findLastLogIndexBeforeOrAtFrame(track.historyLog, currentFrameIdx);
+      if (endIdx < 1) continue;
 
-      const lastLog = logs[logs.length - 1];
+      const lastLog = track.historyLog[endIdx];
       if (currentFrameIdx - lastLog.frameIdx > MAX_TRAJECTORY_LENGTH)
         continue;
 
       const isCurrentlyStationary = lastLog.isStationary;
 
-      // ... (trajectory point calculation logic remains the same)
       let maxLen = isCurrentlyStationary
         ? Math.floor(MAX_TRAJECTORY_LENGTH / 4)
         : MAX_TRAJECTORY_LENGTH;
-      let trajPts = logs
-        .filter(
-          (log) => log.correctedPosition && log.correctedPosition[0] !== null
-        )
-        .map((log) => log.correctedPosition);
-      if (trajPts.length > maxLen) {
-        trajPts = trajPts.slice(trajPts.length - maxLen);
+
+      // Extract only trailing valid points up to maxLen (zero garbage allocation)
+      const trajPts = [];
+      for (let i = endIdx; i >= 0 && trajPts.length < maxLen; i--) {
+        const item = track.historyLog[i];
+        if (item && item.correctedPosition && item.correctedPosition[0] !== null) {
+          trajPts.push(item.correctedPosition);
+        }
       }
+      trajPts.reverse();
+      if (trajPts.length < 2) continue;
 
       p.push();
       p.noFill();
@@ -540,9 +578,7 @@ export function drawTrackMarkers(p, plotScales, scaleFactor = 1, showDetailsBox 
       // Robust check for malformed tracks
       if (!track || !track.historyLog || !Array.isArray(track.historyLog)) continue;
 
-      const log = track.historyLog.find(
-        (log) => log.frameIdx === currentFrameIdx
-      );
+      const log = getTrackLogForFrame(track, currentFrameIdx);
 
       if (log) {
         const pos = log.correctedPosition;
@@ -845,11 +881,8 @@ export function handleCloseUpDisplay(p, plotScales, mouseX, mouseY) {
     // Find hovered track markers and predicted positions
     if (appState.vizData.tracks) {
       for (const track of appState.vizData.tracks) {
-        // --- FIX START: Fetch log for the CURRENT frame for the track marker ---
-        const currentLog = track.historyLog.find(
-          (log) => log.frameIdx === frameData.frameIdx
-        );
-        // --- FIX END ---
+        // --- O(1) Instant lookup for the current frame ---
+        const currentLog = getTrackLogForFrame(track, frameData.frameIdx);
 
         if (currentLog) {
           if (currentLog.correctedPosition && currentLog.correctedPosition[0] !== null) {
@@ -1354,7 +1387,7 @@ export function drawFcwWarning(p, frameData, plotScales, scaleFactor = 1, inRada
       if (appState.vizData && appState.vizData.tracks) {
         const track = appState.vizData.tracks.find((t) => t.id === targetPoiId);
         if (track && track.historyLog) {
-          const log = track.historyLog.find((l) => l.frameIdx === frameData.frameIdx);
+          const log = getTrackLogForFrame(track, frameData.frameIdx);
           if (log && log.correctedPosition && log.correctedPosition[0] !== null) {
             const x = log.correctedPosition[0] * plotScales.plotScaleX;
             const y = log.correctedPosition[1] * plotScales.plotScaleY;

@@ -390,6 +390,9 @@ export const speedGraphSketch = function (p) {
   }
 
   p.setup = function () {
+    // Lock pixel density to 1 to prevent 3.06x overdraw on high-DPI laptop displays
+    p.pixelDensity(1);
+
     let canvas = p.createCanvas(speedGraphContainer.offsetWidth, speedGraphContainer.offsetHeight);
     canvas.parent("speed-graph-container");
 

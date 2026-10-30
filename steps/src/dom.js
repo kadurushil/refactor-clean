@@ -362,6 +362,7 @@ function getCurrentColorMode() {
 // Cache for DOM elements to avoid querySelector/getElementById every frame
 let overlayCache = null;
 let videoOverlayCache = null;
+let cachedDotCanvasWidth = 0;
 
 // Cache for conditional rendering
 let lastDrawnFrame = -1;
@@ -432,14 +433,39 @@ export function updatePersistentOverlays(currentMediaTime) {
             // scale: document.getElementById("ov-scale"), // Commented out as requested
             dotCanvas: document.getElementById("ift-dot-matrix") // Cache canvas too
         };
+
+        if (overlayCache.dotCanvas) {
+            cachedDotCanvasWidth = overlayCache.dotCanvas.clientWidth || 300;
+            if (window.ResizeObserver) {
+                try {
+                    const ro = new ResizeObserver((entries) => {
+                        for (const entry of entries) {
+                            const newW = Math.floor(entry.contentRect ? entry.contentRect.width : (overlayCache.dotCanvas.clientWidth || 0));
+                            if (newW > 0 && newW !== cachedDotCanvasWidth) {
+                                cachedDotCanvasWidth = newW;
+                            }
+                        }
+                    });
+                    ro.observe(overlayCache.dotCanvas);
+                } catch (e) {
+                    console.warn("ResizeObserver for dotCanvas failed:", e);
+                }
+            }
+            window.addEventListener("resize", () => {
+                if (overlayCache && overlayCache.dotCanvas) {
+                    cachedDotCanvasWidth = overlayCache.dotCanvas.clientWidth || 0;
+                }
+            });
+        }
     }
 
-    // --- PERFORMANCE FIX: Read layout BEFORE writing to DOM ---
-    // Reading clientWidth here avoids "Forced Reflow" (Layout Thrashing) because
-    // we haven't dirtied the layout with text updates yet in this frame.
-    let currentCanvasWidth = 0;
-    if (overlayCache && overlayCache.dotCanvas) {
-        currentCanvasWidth = overlayCache.dotCanvas.clientWidth;
+    // --- PERFORMANCE FIX: Avoid Forced Synchronous Layout (Layout Thrashing) ---
+    // Use cached canvas width updated passively via ResizeObserver or resize events.
+    // Reading clientWidth directly on every frame forces a synchronous layout reflow on the CPU.
+    let currentCanvasWidth = cachedDotCanvasWidth;
+    if (!currentCanvasWidth && overlayCache && overlayCache.dotCanvas) {
+        cachedDotCanvasWidth = overlayCache.dotCanvas.clientWidth || 300;
+        currentCanvasWidth = cachedDotCanvasWidth;
     }
 
     // --- 1. Smart Smooth Zoom Logic ---

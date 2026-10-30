@@ -11,6 +11,7 @@ import {
   drawObjectDimensions,
   clusterColors,
   drawFcwWarning,
+  getTrackLogForFrame,
 } from "../drawUtils.js";
 import {
   toggleTracks,
@@ -225,6 +226,9 @@ export const zoomSketch = function (p) {
   appState.zoomLeadFactor = 0.2; // Control how much the circle "leads" the camera (0.0 = smooth, 1.0 = instant)
 
   p.setup = function () {
+    // Lock pixel density to 1 to prevent 3.06x overdraw on high-DPI laptop displays
+    p.pixelDensity(1);
+
     // Set target frame rate ceiling high (240) so p5's internal frameRate limiter
     // does not throttle/skip frames on 75Hz, 120Hz, or 144Hz monitors.
     p.frameRate(240);
@@ -370,9 +374,7 @@ export const zoomSketch = function (p) {
       }
       if (togglePredictedPos.checked) {
         for (const track of appState.vizData.tracks) {
-          const log = track.historyLog.find(
-            (log) => log.frameIdx === frameData.frameIdx
-          );
+          const log = getTrackLogForFrame(track, frameData.frameIdx);
           if (
             log &&
             log.predictedPosition &&
@@ -398,9 +400,7 @@ export const zoomSketch = function (p) {
           if (toggleConfirmedOnly && toggleConfirmedOnly.checked && track.isConfirmed === false) {
             continue;
           }
-          const log = track.historyLog.find(
-            (log) => log.frameIdx === frameData.frameIdx
-          );
+          const log = getTrackLogForFrame(track, frameData.frameIdx);
           if (
             log &&
             log.ellipseRadii &&
@@ -436,9 +436,7 @@ export const zoomSketch = function (p) {
           if (toggleConfirmedOnly && toggleConfirmedOnly.checked && track.isConfirmed === false) {
             continue;
           }
-          const log = track.historyLog.find(
-            (log) => log.frameIdx === frameData.frameIdx
-          );
+          const log = getTrackLogForFrame(track, frameData.frameIdx);
           if (
             log &&
             log.objectExtentRadii &&

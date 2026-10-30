@@ -114,6 +114,22 @@ export async function parseVisualizationJson(
       }
     }
 
+    // --- Pre-index Track History by Frame for O(1) Instant Retrieval ---
+    // Eliminates repetitive O(N*M) linear array scans (.find / .filter) in the render loop.
+    if (vizData.tracks && Array.isArray(vizData.tracks)) {
+      for (const track of vizData.tracks) {
+        track.logsByFrame = new Map();
+        if (Array.isArray(track.historyLog)) {
+          for (let i = 0; i < track.historyLog.length; i++) {
+            const log = track.historyLog[i];
+            if (log && log.frameIdx !== undefined) {
+              track.logsByFrame.set(log.frameIdx, log);
+            }
+          }
+        }
+      }
+    }
+
     // Calculate offset: (Radar Start - Video Start). Defaults to 0 if Video Start is unknown.
     let offset = 0;
     if (videoStartDate && radarStartTimeMs) {
