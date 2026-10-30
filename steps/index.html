@@ -627,18 +627,52 @@
         </div>
       </div>
 
-      <!-- SpeedGraph Panel -->
+      <!-- SpeedGraph / Telemetry Plot Panel -->
       <div class="grid-stack-item shadow-md rounded-lg" gs-id="speed-graph-panel" gs-x="6" gs-y="8" gs-w="6" gs-h="4">
         <div
-          class="grid-stack-item-content bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden flex items-center justify-center relative group">
-          <div
-            class="absolute top-0 left-0 w-full h-4 cursor-grab active:cursor-grabbing bg-transparent hover:bg-gray-300/30 z-10 transition-colors rounded-t-lg"
-            title="Drag to move panel"></div>
+          class="grid-stack-item-content bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col relative group">
+          
+          <!-- Panel Header with Drag Handle & Segmented Mode Switch -->
+          <div class="flex items-center justify-between px-3 py-1.5 bg-gray-100 dark:bg-gray-800/90 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 cursor-grab active:cursor-grabbing select-none"
+               title="Drag to move panel">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide uppercase flex items-center gap-1.5">
+                <span>📈</span>
+                <span id="telemetry-panel-title">Telemetry Plot</span>
+              </span>
+            </div>
 
-          <div id="speed-graph-container" class="w-full h-full flex items-center justify-center p-1 relative">
-            <p id="speed-graph-placeholder"
-              class="text-gray-500 dark:text-gray-400 text-lg text-center absolute pointer-events-none">Load JSON &
-              Video to see speed graph</p>
+            <!-- Segmented Toggle Switch: Basic (Speed Graph) vs Advanced (Plot Panel) -->
+            <div class="inline-flex items-center bg-gray-200 dark:bg-gray-900 p-0.5 rounded-md text-[11px] font-semibold">
+              <button id="plot-mode-btn-basic" type="button"
+                class="px-2 py-0.5 rounded transition-all text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                title="Switch to basic speed graph (CAN & Ego speed)">
+                Basic (Speed)
+              </button>
+              <button id="plot-mode-btn-advanced" type="button"
+                class="px-2 py-0.5 rounded transition-all text-white bg-blue-600 shadow-sm"
+                title="Switch to Foxglove multi-signal plot panel with drag & drop">
+                Advanced (Plot)
+              </button>
+            </div>
+          </div>
+
+          <!-- Body Content: hosts both containers, toggled via CSS hidden -->
+          <div class="relative w-full flex-1 min-h-0 overflow-hidden flex flex-col">
+            <!-- 1. Basic Mode Container (existing p5 sketch) -->
+            <div id="speed-graph-container" class="w-full h-full flex items-center justify-center p-1 relative hidden">
+              <p id="speed-graph-placeholder"
+                class="text-gray-500 dark:text-gray-400 text-lg text-center absolute pointer-events-none">Load JSON &
+                Video to see speed graph</p>
+            </div>
+
+            <!-- 2. Advanced Mode Container (new Foxglove PlotPanel) -->
+            <div id="advanced-plot-container" class="w-full h-full relative overflow-hidden flex flex-col">
+              <p id="advanced-plot-placeholder"
+                class="text-gray-500 dark:text-gray-400 text-lg text-center absolute inset-0 flex items-center justify-center pointer-events-none z-10 hidden">
+                Load JSON & Video to view Plot Panel
+              </p>
+            </div>
           </div>
         </div>
       </div>

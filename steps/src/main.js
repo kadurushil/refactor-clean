@@ -67,7 +67,15 @@ import {
   globalDragOverlay,
   toggleModeAuto,
   toggleModeManual,
+  speedGraphContainer,
+  advancedPlotContainer,
+  advancedPlotPlaceholder,
+  plotModeBtnBasic,
+  plotModeBtnAdvanced,
+  telemetryPanelTitle,
 } from "./dom.js";
+
+import { PlotPanel } from "./plot/PlotPanel.js";
 
 import { initializeTheme } from "./theme.js";
 
@@ -95,6 +103,47 @@ if (autoOffsetIndicator) {
   });
 }
 // --- [END] Segmented Offset Mode Toggle Switch Handlers ---
+
+// --- [START] Plot View Mode Toggle Controller ---
+export function setPlotViewMode(mode) {
+  appState.plotViewMode = mode;
+  localStorage.setItem("plotViewMode", mode);
+
+  if (mode === "basic") {
+    if (speedGraphContainer) speedGraphContainer.classList.remove("hidden");
+    if (advancedPlotContainer) advancedPlotContainer.classList.add("hidden");
+
+    if (plotModeBtnBasic) {
+      plotModeBtnBasic.className = "px-2 py-0.5 rounded transition-all text-white bg-blue-600 shadow-sm";
+    }
+    if (plotModeBtnAdvanced) {
+      plotModeBtnAdvanced.className = "px-2 py-0.5 rounded transition-all text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white";
+    }
+    if (telemetryPanelTitle) telemetryPanelTitle.textContent = "Speed Graph";
+
+    if (appState.speedGraphInstance && typeof appState.speedGraphInstance.handleContainerResize === "function") {
+      appState.speedGraphInstance.handleContainerResize();
+      appState.speedGraphInstance.redraw();
+    }
+  } else {
+    if (speedGraphContainer) speedGraphContainer.classList.add("hidden");
+    if (advancedPlotContainer) advancedPlotContainer.classList.remove("hidden");
+
+    if (plotModeBtnAdvanced) {
+      plotModeBtnAdvanced.className = "px-2 py-0.5 rounded transition-all text-white bg-blue-600 shadow-sm";
+    }
+    if (plotModeBtnBasic) {
+      plotModeBtnBasic.className = "px-2 py-0.5 rounded transition-all text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white";
+    }
+    if (telemetryPanelTitle) telemetryPanelTitle.textContent = "Plot Panel";
+
+    if (appState.plotPanelInstance) {
+      appState.plotPanelInstance.resize();
+      appState.plotPanelInstance.updateChart(true);
+    }
+  }
+}
+// --- [END] Plot View Mode Toggle Controller ---
 
 // Wire up the manual file inputs to the new handler
 jsonFileInput.addEventListener("change", (event) =>
@@ -252,6 +301,18 @@ document.addEventListener("DOMContentLoaded", () => {
   initKeyboardShortcuts();
   initSyncUIHandlers();
   initDebugBadge();
+
+  // Initialize Advanced Plot Panel (Foxglove) & Segmented Mode Switcher
+  if (advancedPlotContainer && !appState.plotPanelInstance) {
+    appState.plotPanelInstance = new PlotPanel(advancedPlotContainer);
+  }
+  if (plotModeBtnBasic) {
+    plotModeBtnBasic.addEventListener("click", () => setPlotViewMode("basic"));
+  }
+  if (plotModeBtnAdvanced) {
+    plotModeBtnAdvanced.addEventListener("click", () => setPlotViewMode("advanced"));
+  }
+  setPlotViewMode(appState.plotViewMode);
 
   // Check if the user has seen the guide
   const isFirstRun = !sessionStorage.getItem("hasSeenUserGuide");

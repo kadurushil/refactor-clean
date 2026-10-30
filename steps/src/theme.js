@@ -38,6 +38,9 @@ function setTheme(theme) {
       appState.speedGraphInstance.redraw();
     }
   }
+  if (appState.plotPanelInstance) {
+    appState.plotPanelInstance.updateTheme(theme === "dark");
+  }
 
   // Notify Iframes about theme change
   const manualIframe = document.getElementById('user-manual-iframe');

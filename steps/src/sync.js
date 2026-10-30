@@ -254,8 +254,12 @@ export function animationLoop() {
   updateFrame(appState.currentFrame);
 
   // --- START: Centralized Redraw Logic ---
-  // Speed graph uses noLoop and is redrawn on frame updates.
-  if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
+  // If basic mode, redraw p5 speed graph; if advanced mode, update PlotPanel
+  if (appState.plotViewMode === "basic") {
+    if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
+  } else {
+    if (appState.plotPanelInstance) appState.plotPanelInstance.update(appState);
+  }
   // --- END: Centralized Redraw Logic ---
 
   // Request the next frame
@@ -380,7 +384,11 @@ export function handleTimelineInput(event) {
   // 3. Update UI immediately for responsiveness.
   updateFrame(frame, false);
   if (appState.p5_instance) appState.p5_instance.redraw();
-  if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
+  if (appState.plotViewMode === "basic") {
+    if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
+  } else {
+    if (appState.plotPanelInstance) appState.plotPanelInstance.update(appState);
+  }
 
   // 4. Show visual seeking cue & attempt intermediate fast seek while scrubbing.
   showSeekingBadge();
@@ -441,7 +449,11 @@ function handleTimelineWheel(event) {
   // 6. Update the UI immediately for responsive feedback.
   updateFrame(newFrame, false);
   if (appState.p5_instance) appState.p5_instance.redraw();
-  if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
+  if (appState.plotViewMode === "basic") {
+    if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
+  } else {
+    if (appState.plotPanelInstance) appState.plotPanelInstance.update(appState);
+  }
 
   // 7. Show seeking badge & perform intermediate fast seek during wheel scroll
   showSeekingBadge();

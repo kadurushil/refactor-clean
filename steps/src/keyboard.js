@@ -93,7 +93,11 @@ function handleKeyDown(event) {
       // Manually trigger redraws since the animation loop is paused
       // This is the fix to ensure the radar plot updates on seek.
       if (appState.p5_instance) appState.p5_instance.redraw();
-      if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
+      if (appState.plotViewMode === "basic") {
+        if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
+      } else {
+        if (appState.plotPanelInstance) appState.plotPanelInstance.update(appState);
+      }
     }
   }
 
@@ -129,7 +133,11 @@ function handleKeyDown(event) {
 
     // Manually trigger redraws since the animation loop is paused
     if (appState.p5_instance) appState.p5_instance.redraw();
-    if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
+    if (appState.plotViewMode === "basic") {
+      if (appState.speedGraphInstance) appState.speedGraphInstance.redraw();
+    } else {
+      if (appState.plotPanelInstance) appState.plotPanelInstance.update(appState);
+    }
   }
 
   // --- Number keys for color modes ---

@@ -53,6 +53,10 @@ export const appState = {
   p5_instance: null,
   // Reference to the p5.js instance for the speed graph visualization
   speedGraphInstance: null,
+  // Reference to the Foxglove PlotPanel instance
+  plotPanelInstance: null,
+  // Active plot view mode: 'basic' (p5 speed graph) or 'advanced' (Foxglove PlotPanel)
+  plotViewMode: (typeof localStorage !== "undefined" && localStorage.getItem("plotViewMode")) || "advanced",
   // The filename of the loaded JSON file
   jsonFilename: "",
   // The relative path / subfolder of the loaded JSON file

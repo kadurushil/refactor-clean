@@ -593,49 +593,105 @@ function displayAdasData(adasData) {
 
     adasData.forEach((item, index) => {
         const card = document.createElement('div');
-        card.className = 'bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden';
+        card.className = 'adas-card bg-gray-50 dark:bg-gray-800/90 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm';
         
-        const table = document.createElement('div');
-        table.className = 'grid grid-cols-[1fr_auto] gap-px bg-gray-200 dark:bg-gray-600';
+        // Card Header
+        const header = document.createElement('div');
+        header.className = 'flex items-center justify-between px-3 py-1.5 bg-gray-100 dark:bg-gray-700/80 border-b border-gray-200 dark:border-gray-600 text-xs font-semibold text-gray-700 dark:text-gray-200 select-none';
+        header.innerHTML = `
+            <div class="flex items-center gap-1.5">
+                <span>⚠️</span>
+                <span>ADAS Object #${index + 1}</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-[10px] text-gray-400">
+                <span>Drag row or select multiple to plot</span>
+            </div>
+        `;
+        card.appendChild(header);
 
-        // Add Table Headers
-        const keyHeader = document.createElement('div');
-        keyHeader.className = 'bg-gray-100 dark:bg-gray-700 px-2 py-1 text-[10px] font-bold uppercase text-gray-400 border-b border-gray-200 dark:border-gray-600';
-        keyHeader.textContent = 'Key';
-        const valHeader = document.createElement('div');
-        valHeader.className = 'bg-gray-100 dark:bg-gray-700 px-2 py-1 text-[10px] font-bold uppercase text-gray-400 border-b border-gray-200 dark:border-gray-600 text-right min-w-[80px]';
-        valHeader.textContent = 'Value';
-        table.appendChild(keyHeader);
-        table.appendChild(valHeader);
+        const rowsContainer = document.createElement('div');
+        rowsContainer.className = 'divide-y divide-gray-100 dark:divide-gray-700/50';
 
         Object.entries(item).forEach(([key, value]) => {
-            const keyEl = document.createElement('div');
-            keyEl.className = 'bg-white dark:bg-gray-800 px-2 py-1 text-[11px] font-medium text-gray-500 dark:text-gray-400 truncate';
-            keyEl.textContent = key;
+            const row = document.createElement('div');
+            row.className = 'adas-row flex items-center justify-between px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-blue-50/70 dark:hover:bg-slate-750 cursor-grab active:cursor-grabbing transition-colors group select-none';
+            row.draggable = true;
 
-            const valEl = document.createElement('div');
-            valEl.className = 'bg-white dark:bg-gray-800 px-2 py-1 text-[11px] font-mono text-gray-900 dark:text-gray-100 text-right';
-            
+            const fullPath = `adas[${index}].${key}`;
+            row.dataset.path = fullPath;
+            row.dataset.key = key;
+
             // Apply formatting
+            let valText = '';
             if (typeof value === 'number') {
                 if (Number.isInteger(value)) {
-                    valEl.textContent = value;
+                    valText = value;
                 } else if (key === 'snr') {
-                    valEl.textContent = value.toFixed(2);
+                    valText = value.toFixed(2);
                 } else {
-                    valEl.textContent = value.toFixed(4);
+                    valText = value.toFixed(4);
                 }
             } else if (Array.isArray(value)) {
-                valEl.textContent = `[${value.map(v => typeof v === 'number' ? v.toFixed(3) : v).join(', ')}]`;
+                valText = `[${value.map(v => typeof v === 'number' ? v.toFixed(3) : v).join(', ')}]`;
             } else {
-                valEl.textContent = value;
+                valText = String(value);
             }
 
-            table.appendChild(keyEl);
-            table.appendChild(valEl);
+            row.innerHTML = `
+                <div class="flex items-center gap-2 min-w-0 flex-1">
+                    <input type="checkbox" class="adas-row-select rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer">
+                    <span class="text-gray-400 dark:text-gray-500 text-[10px] select-none" title="Drag onto Plot Panel">⋮⋮</span>
+                    <span class="text-[11px] font-medium text-gray-700 dark:text-gray-300 truncate" title="${fullPath}">${key}</span>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <span class="font-mono text-[11px] text-gray-900 dark:text-gray-100 font-medium">${valText}</span>
+                    <button class="opacity-0 group-hover:opacity-100 bg-blue-600 hover:bg-blue-500 text-white font-bold w-4 h-4 rounded text-[10px] flex items-center justify-center transition-opacity shadow" title="Add to Plot Panel">+</button>
+                </div>
+            `;
+
+            // Prevent drag when clicking the checkbox
+            const chk = row.querySelector('.adas-row-select');
+            chk.onclick = (e) => e.stopPropagation();
+
+            // Direct [+] button add
+            const addBtn = row.querySelector('button');
+            addBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (appState.plotPanelInstance) {
+                    appState.plotPanelInstance.coordinator.addSeries(fullPath);
+                    appState.plotPanelInstance.updateChart(true);
+                }
+            };
+
+            // Drag Start listener: Single vs Multi-select
+            row.addEventListener('dragstart', (e) => {
+                const cardEl = row.closest('.adas-card');
+                const checkedBoxes = Array.from(cardEl.querySelectorAll('.adas-row-select:checked'));
+                const isCurrentChecked = chk.checked;
+
+                let pathsToDrag = [fullPath];
+                // If user checked boxes and dragged one of the checked items, drag all checked!
+                if (isCurrentChecked && checkedBoxes.length > 1) {
+                    pathsToDrag = checkedBoxes.map(b => b.closest('.adas-row').dataset.path);
+                }
+
+                e.dataTransfer.setData('text/plain', pathsToDrag.join('\n'));
+                e.dataTransfer.setData('application/x-telemetry-paths', JSON.stringify(pathsToDrag));
+                e.dataTransfer.effectAllowed = 'copy';
+
+                // Create sleek floating ghost drag badge
+                const ghost = document.createElement('div');
+                ghost.className = 'fixed -top-96 left-0 bg-blue-600 text-white font-semibold text-xs px-2.5 py-1 rounded shadow-xl pointer-events-none z-50 flex items-center gap-1.5';
+                ghost.innerHTML = `<span>📊</span><span>${pathsToDrag.length === 1 ? pathsToDrag[0] : pathsToDrag.length + ' ADAS signals'}</span>`;
+                document.body.appendChild(ghost);
+                e.dataTransfer.setDragImage(ghost, 15, 15);
+                setTimeout(() => { if (ghost.parentNode) ghost.parentNode.removeChild(ghost); }, 0);
+            });
+
+            rowsContainer.appendChild(row);
         });
 
-        card.appendChild(table);
+        card.appendChild(rowsContainer);
         adasContainer.appendChild(card);
     });
 }

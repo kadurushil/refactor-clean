@@ -26,6 +26,7 @@ import {
   canvasPlaceholder,
   featureToggles,
   speedGraphPlaceholder,
+  advancedPlotPlaceholder,
   snrMinInput,
   snrMaxInput,
   autoOffsetIndicator,
@@ -456,6 +457,12 @@ function finalizeSetup() {
 
     appState.speedGraphInstance.setData(appState.vizData, finalDuration);
     appState.speedGraphInstance.redraw();
+
+    // --- Advanced PlotPanel Setup ---
+    if (appState.plotPanelInstance) {
+      if (advancedPlotPlaceholder) advancedPlotPlaceholder.classList.add("hidden");
+      appState.plotPanelInstance.loadData(appState.vizData, finalDuration);
+    }
   }
   
   // 4. Update UI Overlays

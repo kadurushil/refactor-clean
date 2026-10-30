@@ -36,9 +36,15 @@ The application leverages **p5.js** for rendering, **Web Workers** for backgroun
 - **Interactive Layers**: Manages toggleable overlays for SNR, TTC, predicted positions, and covariance ellipses.
 - **Hardening**: Features **Triple-Buffer Protection** against 0-width crashes and a master timer for God Mode auto-visibility.
 
-### `speedGraphSketch.js` (Telemetry Graph)
-- **Time-Series Analysis**: Renders Ego Speed and CAN Speed lines synchronized with the video playback.
-- **Visual Indicators**: Draws a vertical tracking line aligned with the current active frame.
+### `speedGraphSketch.js` & `PlotPanel.js` (Telemetry Panel & Foxglove Plot Panel) [NEW]
+- **Dual-Mode Telemetry Panel**: Segmented toggle switch `[ Basic (Speed) | Advanced (Plot) ]` in panel header allowing instant switching between basic p5 sketch and advanced Foxglove-style multi-signal plot.
+- **Basic Mode (`speedGraphSketch.js`)**: Preserves original p5.js telemetry graph rendering CAN speed colored by track density, dashed green Ego speed, staged translucent FCW warning bands, and click-to-seek.
+- **Advanced Mode (`src/plot/PlotPanel.js`)**: Foxglove Studio Plot Panel replication featuring:
+  - **Multi-Signal & Path Evaluator**: Plots any numeric signal (`canVehSpeed_kmph`, `egoVelocity[1]`, `pointCloud[:].snr`, `adas[0].fcw_stage`, etc.) and constant reference lines.
+  - **Min-Max Downsampler**: Min-Max-First-Last interval bucketing (5,000 max points) for 60 FPS Chart.js rendering across 500k+ points.
+  - **Decoupled Playback Bar**: Hardware-accelerated CSS `transform: translateX` 60 FPS playback line with 0% chart re-render overhead.
+  - **Drag & Drop & Search Palette**: Drag ADAS properties, point cloud columns, or tracks directly onto the canvas, or search signals via the autocomplete palette.
+  - **Interactions**: Mouse wheel zoom (cursor-centered), keyboard modifiers (<kbd>V</kbd> for Y zoom, <kbd>B</kbd> for XY zoom), and instant CSV export.
 
 ### `zoomSketch.js` (Magnified "GOD MODE")
 - **Standalone Window [NEW]**: A decoupled, floating overlay that provides high-fidelity zoom.
