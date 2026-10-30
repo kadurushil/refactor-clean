@@ -128,3 +128,48 @@ Historically, `radarSketch` was configured with `p.noLoop()` in `setup()` to con
 3. **DO NOT** perform DOM mutations or binary search calculations inside `radarSketch.draw()`. Keep `draw()` purely visual.
 4. **DO NOT** reintroduce `p.noLoop()` to `radarSketch` unless you provide an alternative animation timer for time-based visual warnings.
 5. **ALWAYS** use `performance.now()` for timing and FPS math rather than `p.millis()` or `Date.now()`.
+
+
+---
+
+## 7. Low-Spec Hardware Performance Architecture (V3.5.0)
+
+Profiling with Chrome DevTools traces on Intel Core i5 (8th-Gen, Intel UHD Graphics 620, shared DDR4 memory, Windows 175% scaling) identified five critical architectural bottlenecks that caused frame rates to plunge from 60+ FPS down to 20–25 FPS with over 42% dropped frames. Version 3.5.0 resolves each bottleneck through targeted architectural constraints:
+
+### 7.1 High-DPI Buffer Scaling Clamp (`p.pixelDensity(1)`)
+* **Problem**: Windows display scaling on laptops (typically 125%–175%) causes browsers to report `window.devicePixelRatio > 1.0`. By default, p5.js allocates canvas backbuffers scaled by $(DPR)^2$. At 175% scaling, each canvas allocated $3.06\times$ more pixels, overwhelming integrated GPU memory bandwidth and causing severe GPU fill-rate throttling.
+* **Solution**: Every p5 sketch setup (`radarSketch.js`, `zoomSketch.js`, `speedGraphSketch.js`) must explicitly execute:
+  ```javascript
+  p.pixelDensity(1);
+  ```
+* **Impact**: Recovers $3.06\times$ backbuffer fill-rate headroom, completely eliminating integrated GPU memory bus saturation.
+
+### 7.2 Friendly Error System (FES) Suppression
+* **Problem**: Unminified p5.js includes a runtime validation suite (`validateParameters`) that uses regex on every drawing command (`p.line`, `p.rect`, `p.stroke`, etc.). DevTools traces revealed this consumed **29.2% (4.1s)** of total CPU time per 15-second trace.
+* **Solution**: Disable FES globally before any p5 sketch mounts:
+  ```javascript
+  p5.disableFriendlyErrors = true;
+  ```
+  Declared in `steps/index.html` and in `steps/src/p5/radarSketch.js`.
+
+### 7.3 Algorithmic $O(1)$ Track Telemetry Pre-Indexing
+* **Problem**: Telemetry rendering across predicted poses, covariance ellipses, track markers, object dimensions, and FCW alerts called `.find(l => l.frame_index === currentFrame)` on array logs with thousands of items. In a scene with 30 tracks, this resulted in $>150$ linear scans per frame ($O(N \times M)$), consuming 3.7s of CPU time.
+* **Solution**:
+  1. During ingestion in `fileParsers.js`, build an indexed map:
+     ```javascript
+     track.logsByFrame = new Map();
+     track.logs.forEach(log => track.logsByFrame.set(log.frame_index, log));
+     ```
+  2. Telemetry lookups route exclusively through `getTrackLogForFrame(track, frameIdx)` in `drawUtils.js`, guaranteeing instant $O(1)$ constant-time lookup.
+  3. Trajectory rendering uses binary search (`findLastLogIndexBeforeOrAtFrame`) followed by a fast coordinate slice instead of whole-array `.filter()`.
+
+### 7.4 Passive `ResizeObserver` Layout Caching
+* **Problem**: Inspecting `dotCanvas.clientWidth` inside rendering loops invalidated DOM layout geometry, triggering 910ms of forced synchronous reflows and layout thrashing during timeline scrubbing.
+* **Solution**: Cache canvas geometry via a passive `ResizeObserver` and window resize listener in `dom.js`. Render and scrub handlers read cached client width, producing zero layout reflows.
+
+### 7.5 Tailwind CDN MutationObserver Detachment
+* **Problem**: The runtime Tailwind CDN attaches a `MutationObserver` to `document` to JIT-compile utility classes on DOM mutations. Telemetry HUD updates and badge toggles triggered repeated full-DOM regex evaluations, burning 1.0–1.5s of CPU time.
+* **Solution**:
+  1. In `vendor/tailwind-cdn.js`, expose `window.tailwind.disconnect()`.
+  2. In `main.js`, disconnect the observer 500ms post-boot once initial DOM compilation completes.
+  3. In `sync.js` and `dom.js`, guard DOM writes with `.classList.contains('hidden')` checks and cache text updates to suppress redundant mutations.

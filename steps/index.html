@@ -7,7 +7,7 @@
   <title>Radar and Video Visualizer - Timestamp Synchronized</title>
   <script>
     // Centralized Application Version Number — change here to update version across the entire app. Bumping it is easy now.
-    window.APP_VERSION = "3.4.9";
+    window.APP_VERSION = "3.5.0";
 
     document.addEventListener("DOMContentLoaded", () => {
       const v = window.APP_VERSION;
@@ -18,7 +18,7 @@
       const codebaseIframe = document.getElementById("codebase-iframe");
       if (codebaseIframe) codebaseIframe.src = `annex/code-base-overview.html?v=${v}`;
       const changelogIframe = document.getElementById("changelog-iframe");
-      if (changelogIframe) changelogIframe.src = `annex/Changelog_3.4.9.html?v=${v}`;
+      if (changelogIframe) changelogIframe.src = `annex/Changelog_3.5.0.html?v=${v}`;
     });
   </script>
 
@@ -637,19 +637,22 @@
       <div class="grid-stack-item shadow-md rounded-lg" gs-id="speed-graph-panel" gs-x="6" gs-y="8" gs-w="6" gs-h="4">
         <div
           class="grid-stack-item-content bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col relative group">
-          
+
           <!-- Panel Header with Drag Handle & Segmented Mode Switch -->
-          <div class="flex items-center justify-between px-3 py-1.5 bg-gray-100 dark:bg-gray-800/90 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 cursor-grab active:cursor-grabbing select-none"
-               title="Drag to move panel">
+          <div
+            class="flex items-center justify-between px-3 py-1.5 bg-gray-100 dark:bg-gray-800/90 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 cursor-grab active:cursor-grabbing select-none"
+            title="Drag to move panel">
             <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide uppercase flex items-center gap-1.5">
+              <span
+                class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide uppercase flex items-center gap-1.5">
                 <span>📈</span>
                 <span id="telemetry-panel-title">Telemetry Plot</span>
               </span>
             </div>
 
             <!-- Segmented Toggle Switch: Basic (Speed Graph) vs Advanced (Plot Panel) -->
-            <div class="inline-flex items-center bg-gray-200 dark:bg-gray-900 p-0.5 rounded-md text-[11px] font-semibold">
+            <div
+              class="inline-flex items-center bg-gray-200 dark:bg-gray-900 p-0.5 rounded-md text-[11px] font-semibold">
               <button id="plot-mode-btn-basic" type="button"
                 class="px-2 py-0.5 rounded transition-all text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 title="Switch to basic speed graph (CAN & Ego speed)">
@@ -1051,7 +1054,7 @@
       </div>
 
       <!-- Iframe Content -->
-      <iframe id="changelog-iframe" src="annex/Changelog_3.4.9.html" class="flex-grow w-full border-0 rounded-b-2xl"
+      <iframe id="changelog-iframe" src="annex/Changelog_3.5.0.html" class="flex-grow w-full border-0 rounded-b-2xl"
         style="min-height: 400px;"></iframe>
     </div>
   </div>
