@@ -314,6 +314,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   setPlotViewMode(appState.plotViewMode);
 
+  // Disconnect Tailwind CDN MutationObserver to stop background per-frame JIT recompilations
+  setTimeout(() => {
+    if (window.tailwind && typeof window.tailwind.disconnect === "function") {
+      window.tailwind.disconnect();
+      if (debugFlags.sync) console.log("Tailwind CDN MutationObserver disconnected for high-performance rendering.");
+    }
+  }, 500);
+
   // Check if the user has seen the guide
   const isFirstRun = !sessionStorage.getItem("hasSeenUserGuide");
   if (isFirstRun) {

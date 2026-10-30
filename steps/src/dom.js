@@ -266,11 +266,15 @@ export function updateDebugOverlay(currentMediaTime) {
 
   // If neither is checked, hide the overlay and stop
   if (!isDebug1Visible && !isDebug2Visible) {
-    debugOverlay.classList.add("hidden"); // Hide debug overlay
+    if (!debugOverlay.classList.contains("hidden")) {
+      debugOverlay.classList.add("hidden"); // Hide debug overlay
+    }
     return;
   }
   // If at least one is checked, show the overlay
-  debugOverlay.classList.remove("hidden"); // Show debug overlay.
+  if (debugOverlay.classList.contains("hidden")) {
+    debugOverlay.classList.remove("hidden"); // Show debug overlay.
+  }
   let content = [];
 
   // --- Logic for the original debug overlay ---
@@ -383,8 +387,12 @@ export function updatePersistentOverlays(currentMediaTime) {
     return;
   }
   // Otherwise, make sure they are visible.
-  radarInfoOverlay.classList.remove("hidden");
-  videoInfoOverlay.classList.remove("hidden");
+  if (radarInfoOverlay.classList.contains("hidden")) {
+    radarInfoOverlay.classList.remove("hidden");
+  }
+  if (videoInfoOverlay.classList.contains("hidden")) {
+    videoInfoOverlay.classList.remove("hidden");
+  }
 
   // --- Update Radar Persistent Overlay ---
   const currentRadarFrame = appState.vizData.radarFrames[appState.currentFrame];
@@ -506,23 +514,25 @@ export function updatePersistentOverlays(currentMediaTime) {
     // Use the smoothed value for drawing
     const msPerBlock = appState.currentGraphScale;
 
-    // --- Update Text Content Efficiently (Zero Garbage) ---
+    // --- Update Text Content Efficiently (Zero Garbage & Zero Redundant Writes) ---
     if (overlayCache) {
-        overlayCache.frame.textContent = appState.currentFrame + 1;
-        overlayCache.motion.textContent = motionState;
+        const frameStr = (appState.currentFrame + 1).toString();
+        if (overlayCache.frame.textContent !== frameStr) overlayCache.frame.textContent = frameStr;
+        if (overlayCache.motion.textContent !== motionState) overlayCache.motion.textContent = motionState;
         
-        overlayCache.fps.textContent = fps.toFixed(1);
-        overlayCache.fps.style.color = fpsColor;
+        const fpsStr = fps.toFixed(1);
+        if (overlayCache.fps.textContent !== fpsStr) overlayCache.fps.textContent = fpsStr;
+        if (overlayCache.fps.style.color !== fpsColor) overlayCache.fps.style.color = fpsColor;
         
-        overlayCache.mode.textContent = colorMode;
+        if (overlayCache.mode.textContent !== colorMode) overlayCache.mode.textContent = colorMode;
         
-        overlayCache.drift.textContent = driftMs.toFixed(0) + "ms";
-        overlayCache.drift.style.color = driftColor;
+        const driftStr = driftMs.toFixed(0) + "ms";
+        if (overlayCache.drift.textContent !== driftStr) overlayCache.drift.textContent = driftStr;
+        if (overlayCache.drift.style.color !== driftColor) overlayCache.drift.style.color = driftColor;
         
-        overlayCache.ift.textContent = interFrameTime.toFixed(0) + "ms";
-        overlayCache.ift.style.color = iftColor;
-        
-        // overlayCache.scale.textContent = "1:" + msPerBlock.toFixed(1) + "ms"; // Commented out as requested
+        const iftStr = interFrameTime.toFixed(0) + "ms";
+        if (overlayCache.ift.textContent !== iftStr) overlayCache.ift.textContent = iftStr;
+        if (overlayCache.ift.style.color !== iftColor) overlayCache.ift.style.color = iftColor;
     }
 
     // --- Draw Optimized Square Block Matrix Graph ---

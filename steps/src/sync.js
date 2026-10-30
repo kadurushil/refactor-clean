@@ -292,7 +292,9 @@ export function setPendingPlayRequest(val) {
 
 export function showSeekingBadge() {
   if (videoSeekingBadge && videoPlayer && videoPlayer.src && !appState.videoMissing) {
-    videoSeekingBadge.classList.remove("hidden");
+    if (videoSeekingBadge.classList.contains("hidden")) {
+      videoSeekingBadge.classList.remove("hidden");
+    }
 
     // Safety fallback: auto-clear if seeked event is skipped or delayed beyond 800ms
     if (safetyHideTimer) clearTimeout(safetyHideTimer);
@@ -308,7 +310,7 @@ export function hideSeekingBadge() {
     clearTimeout(safetyHideTimer);
     safetyHideTimer = null;
   }
-  if (videoSeekingBadge) {
+  if (videoSeekingBadge && !videoSeekingBadge.classList.contains("hidden")) {
     videoSeekingBadge.classList.add("hidden");
   }
 }
