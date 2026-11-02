@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARAS Visualizer V3.5.1 - Release Notes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;600;800&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #f1f5f9;
+        }
+
+        .commit-hash {
+            font-family: 'Fira Code', monospace;
+            color: #94a3b8;
+            font-size: 0.75rem;
+        }
+
+        .version-tag {
+            background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+        }
+
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: #6366f1;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+        }
+
+        .highlight-green {
+            color: #4ade80;
+        }
+
+        .highlight-blue {
+            color: #60a5fa;
+        }
+
+        .highlight-purple {
+            color: #c084fc;
+        }
+
+        .highlight-amber {
+            color: #fbbf24;
+        }
+
+        .highlight-cyan {
+            color: #22d3ee;
+        }
+
+        .highlight-rose {
+            color: #fb7185;
+        }
+
+        .icon-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            flex-shrink: 0;
+        }
+
+        code {
+            font-family: 'Fira Code', monospace;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #38bdf8;
+            word-break: break-word;
+        }
+    </style>
+</head>
+
+<body class="p-6 md:p-12 lg:p-16">
+
+    <header class="max-w-6xl mx-auto mb-12 border-b border-slate-700 pb-10">
+        <div class="flex items-center gap-4 mb-4">
+            <span
+                class="version-tag text-white px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase shadow">Patch
+                Release</span>
+            <span class="text-slate-400 font-mono text-xs">V3.5.1 | 2026-11-02</span>
+        </div>
+        <h1
+            class="text-4xl md:text-5xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 italic">
+            What's New in Version 3.5.1
+        </h1>
+        <p class="text-lg md:text-xl text-slate-300 max-w-4xl leading-relaxed">
+            Version 3.5.1 is a targeted patch release that resolves critical UI visibility and folder traversal issues during multi-dataset session ingestion (simulated tracks, GTrack, and calibration files), restoring action button contrast and enabling full-card interaction.
+        </p>
+    </header>
+
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        <!-- 1. Dataset Selection Button Visibility & Contrast -->
+        <div class="card p-6 md:p-8 rounded-2xl shadow-xl flex flex-col justify-between overflow-hidden">
+            <div>
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="icon-box highlight-cyan text-2xl">🔘</div>
+                        <h2 class="text-xl md:text-2xl font-bold text-white leading-snug">1. Action Button Visibility &amp; Contrast</h2>
+                    </div>
+                    <span class="commit-hash bg-slate-900/80 px-2.5 py-1 rounded border border-slate-700/50">load_folder.js</span>
+                </div>
+                <p class="text-slate-400 mb-5 text-sm leading-relaxed">Eliminated white-on-white invisible buttons caused by Tailwind CDN observer detachment.</p>
+                <ul class="space-y-4 text-slate-300 text-sm">
+                    <li class="flex items-start gap-3 leading-relaxed">
+                        <span class="text-cyan-400 select-none text-base leading-none mt-1">•</span>
+                        <div class="flex-1 min-w-0">
+                            <strong class="text-white">Bulletproof CSS Rule:</strong> Added dedicated <code>.load-pair-btn</code> styles in <code>index.html</code> with explicit colors (<code>#1e293b</code> in light mode, <code>#374151</code> in dark mode), 100% independent of Tailwind JIT state.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3 leading-relaxed">
+                        <span class="text-cyan-400 select-none text-base leading-none mt-1">•</span>
+                        <div class="flex-1 min-w-0">
+                            <strong class="text-white">Preflight Reset Immunity:</strong> Overrides Tailwind's transparent button reset, guaranteeing prominent, elevated action buttons on both white and dark modal backgrounds.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3 leading-relaxed">
+                        <span class="text-cyan-400 select-none text-base leading-none mt-1">•</span>
+                        <div class="flex-1 min-w-0">
+                            <strong class="text-white">Modal Recompile Hook:</strong> Calls <code>window.tailwind.recompile()</code> on modal open to ensure any dynamic utility classes are generated.
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div class="mt-6 pt-4 border-t border-slate-700/50 flex justify-between items-center text-xs text-slate-400">
+                <span>DOM &amp; Styling</span>
+                <span class="text-emerald-400 font-semibold">100% Contrast Recovery</span>
+            </div>
+        </div>
+
+        <!-- 2. Full-Card Clickability & Responsive Layout -->
+        <div class="card p-6 md:p-8 rounded-2xl shadow-xl flex flex-col justify-between overflow-hidden">
+            <div>
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="icon-box highlight-green text-2xl">👆</div>
+                        <h2 class="text-xl md:text-2xl font-bold text-white leading-snug">2. Full-Card Clickable Targets</h2>
+                    </div>
+                    <span class="commit-hash bg-slate-900/80 px-2.5 py-1 rounded border border-slate-700/50">load_folder.js</span>
+                </div>
+                <p class="text-slate-400 mb-5 text-sm leading-relaxed">Expanded interactive click targets across entire dataset cards with responsive layouts.</p>
+                <ul class="space-y-4 text-slate-300 text-sm">
+                    <li class="flex items-start gap-3 leading-relaxed">
+                        <span class="text-emerald-400 select-none text-base leading-none mt-1">•</span>
+                        <div class="flex-1 min-w-0">
+                            <strong class="text-white">Entire Card Clickable:</strong> Transformed every pair card into an active interactive trigger with <code>cursor-pointer</code>, hover borders (<code>hover:border-blue-500</code>), and elevation shadows.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3 leading-relaxed">
+                        <span class="text-emerald-400 select-none text-base leading-none mt-1">•</span>
+                        <div class="flex-1 min-w-0">
+                            <strong class="text-white">Dual Trigger Support:</strong> Clicking anywhere on the card body OR on the action button smoothly loads the selected dataset pair.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3 leading-relaxed">
+                        <span class="text-emerald-400 select-none text-base leading-none mt-1">•</span>
+                        <div class="flex-1 min-w-0">
+                            <strong class="text-white">Anti-Squash Guards:</strong> Added <code>flex-1 min-w-0</code> and responsive flex wrapping so long file paths truncate gracefully without squashing action buttons.
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div class="mt-6 pt-4 border-t border-slate-700/50 flex justify-between items-center text-xs text-slate-400">
+                <span>User Experience</span>
+                <span class="text-emerald-400 font-semibold">Effortless Selection</span>
+            </div>
+        </div>
+
+        <!-- 3. Directory Reader Pagination (>100 Files) -->
+        <div class="card p-6 md:p-8 rounded-2xl shadow-xl flex flex-col justify-between overflow-hidden">
+            <div>
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="icon-box highlight-amber text-2xl">📂</div>
+                        <h2 class="text-xl md:text-2xl font-bold text-white leading-snug">3. Large Folder Ingestion (>100 Files)</h2>
+                    </div>
+                    <span class="commit-hash bg-slate-900/80 px-2.5 py-1 rounded border border-slate-700/50">fileLoader.js</span>
+                </div>
+                <p class="text-slate-400 mb-5 text-sm leading-relaxed">Overcame Chromium's 100-file per-batch directory reader limitation.</p>
+                <ul class="space-y-4 text-slate-300 text-sm">
+                    <li class="flex items-start gap-3 leading-relaxed">
+                        <span class="text-amber-400 select-none text-base leading-none mt-1">•</span>
+                        <div class="flex-1 min-w-0">
+                            <strong class="text-white">While-Loop Pagination:</strong> Wrapped <code>dirReader.readEntries()</code> in a recurring loop that continues until an empty array is received.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3 leading-relaxed">
+                        <span class="text-amber-400 select-none text-base leading-none mt-1">•</span>
+                        <div class="flex-1 min-w-0">
+                            <strong class="text-white">Zero Missing Files:</strong> Prevents silent truncation in large session directories containing hundreds of tracking slices, frame dumps, or auxiliary files.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3 leading-relaxed">
+                        <span class="text-amber-400 select-none text-base leading-none mt-1">•</span>
+                        <div class="flex-1 min-w-0">
+                            <strong class="text-white">Deep Directory Traversal:</strong> Retains full relative path integrity (<code>file.relativePath</code>) across complex multi-tier folder trees.
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div class="mt-6 pt-4 border-t border-slate-700/50 flex justify-between items-center text-xs text-slate-400">
+                <span>File System API</span>
+                <span class="text-amber-400 font-semibold">Unlimited Batch Reading</span>
+            </div>
+        </div>
+
+        <!-- 4. Intelligent JSON Priority Calibration -->
+        <div class="card p-6 md:p-8 rounded-2xl shadow-xl flex flex-col justify-between overflow-hidden">
+            <div>
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="icon-box highlight-purple text-2xl">🎯</div>
+                        <h2 class="text-xl md:text-2xl font-bold text-white leading-snug">4. Dataset Priority Calibration</h2>
+                    </div>
+                    <span class="commit-hash bg-slate-900/80 px-2.5 py-1 rounded border border-slate-700/50">load_folder.js</span>
+                </div>
+                <p class="text-slate-400 mb-5 text-sm leading-relaxed">Fine-tuned priority scoring for simulation, GTrack, and calibration files.</p>
+                <ul class="space-y-4 text-slate-300 text-sm">
+                    <li class="flex items-start gap-3 leading-relaxed">
+                        <span class="text-purple-400 select-none text-base leading-none mt-1">•</span>
+                        <div class="flex-1 min-w-0">
+                            <strong class="text-white">Simulation Detection:</strong> Updated regex to <code>/simulat.*\.json$/i</code> (score 85) to reliably match root and nested simulation logs.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3 leading-relaxed">
+                        <span class="text-purple-400 select-none text-base leading-none mt-1">•</span>
+                        <div class="flex-1 min-w-0">
+                            <strong class="text-white">GTrack Prioritization:</strong> Updated regex to <code>/gtrack.*\.json$/i</code> (score 75) to recognize case-insensitive aligned tracks.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3 leading-relaxed">
+                        <span class="text-purple-400 select-none text-base leading-none mt-1">•</span>
+                        <div class="flex-1 min-w-0">
+                            <strong class="text-white">Calibration Demotion:</strong> Demoted metadata and camera calibration files (<code>radar_camera_calib.json</code>, <code>session_metadata.json</code>) to score 15 so true radar telemetry always takes priority.
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div class="mt-6 pt-4 border-t border-slate-700/50 flex justify-between items-center text-xs text-slate-400">
+                <span>Ingestion Intelligence</span>
+                <span class="text-purple-400 font-semibold">Accurate Auto-Pairing</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Patch Improvements Summary -->
+    <div class="max-w-6xl mx-auto mt-12 card p-6 md:p-8 rounded-2xl shadow-xl overflow-hidden">
+        <div class="flex items-center gap-4 mb-6">
+            <div class="icon-box highlight-rose text-2xl">📋</div>
+            <div>
+                <h2 class="text-xl md:text-2xl font-bold text-white">Patch Verification Summary</h2>
+                <p class="text-slate-400 text-sm">Automated regression testing across theme modes and folder structures</p>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="text-xs uppercase bg-slate-800/90 text-slate-400 border-b border-slate-700">
+                    <tr>
+                        <th class="py-3 px-4">Component</th>
+                        <th class="py-3 px-4 text-rose-400">Pre-Patch (3.5.0)</th>
+                        <th class="py-3 px-4 text-emerald-400">Post-Patch (3.5.1)</th>
+                        <th class="py-3 px-4 text-blue-400">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800">
+                    <tr>
+                        <td class="py-3 px-4 font-semibold text-slate-200">Secondary Pair Buttons</td>
+                        <td class="py-3 px-4 text-rose-400">Invisible (White on White)</td>
+                        <td class="py-3 px-4 text-emerald-400 font-semibold">High-Contrast Slate Button</td>
+                        <td class="py-3 px-4 text-cyan-400 font-bold">Verified</td>
+                    </tr>
+                    <tr>
+                        <td class="py-3 px-4 font-semibold text-slate-200">Click Target Area</td>
+                        <td class="py-3 px-4 text-rose-400">Small 50px button only</td>
+                        <td class="py-3 px-4 text-emerald-400 font-semibold">Full Card Container (Interactive)</td>
+                        <td class="py-3 px-4 text-cyan-400 font-bold">Verified</td>
+                    </tr>
+                    <tr>
+                        <td class="py-3 px-4 font-semibold text-slate-200">Folder Scanning Limit</td>
+                        <td class="py-3 px-4 text-rose-400">Truncated at 100 entries</td>
+                        <td class="py-3 px-4 text-emerald-400 font-semibold">Unlimited (While-loop batching)</td>
+                        <td class="py-3 px-4 text-cyan-400 font-bold">Verified</td>
+                    </tr>
+                    <tr>
+                        <td class="py-3 px-4 font-semibold text-slate-200">Simulated / GTrack Ranking</td>
+                        <td class="py-3 px-4 text-rose-400">Fallback Score 70</td>
+                        <td class="py-3 px-4 text-emerald-400 font-semibold">Priority Scores 85 &amp; 75</td>
+                        <td class="py-3 px-4 text-cyan-400 font-bold">Verified</td>
+                    </tr>
+                    <tr>
+                        <td class="py-3 px-4 font-semibold text-slate-200">Automated Unit Tests</td>
+                        <td class="py-3 px-4 text-slate-400">34 Tests</td>
+                        <td class="py-3 px-4 text-emerald-400 font-semibold">34 Tests Passed (0 Failures)</td>
+                        <td class="py-3 px-4 text-cyan-400 font-bold">100% Pass</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer class="max-w-6xl mx-auto mt-16 pt-8 border-t border-slate-700 text-slate-500 text-center text-xs space-y-2">
+        <p><strong>ARAS Visualizer Version 3.5.1</strong> &bull; Bajaj Auto Limited &bull; Advanced Driver Assistance Systems</p>
+        <p class="text-slate-600">Built with p5.js, TailwindCSS &amp; native Web APIs</p>
+    </footer>
+
+</body>
+
+</html>

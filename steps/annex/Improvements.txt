@@ -115,6 +115,9 @@ Benefit: Perfect for quickly capturing interesting moments for reports, presenta
 	h) Low-Spec Hardware & GPU Fill-Rate Optimization (V3.5.0):
 	Resolved severe performance bottlenecks on Intel UHD 620 / integrated graphics and high-DPI displays: locked canvas pixelDensity to 1, disabled p5 Friendly Errors, pre-indexed track history into O(1) Maps, eliminated forced synchronous reflows during scrubbing via ResizeObserver, and disconnected runtime Tailwind CDN MutationObserver. Boosted frame rate from 20-25 FPS to 60+ FPS and eliminated 42% dropped frames.
 
+	i) Multi-Dataset Pair Selection & Large Folder Ingestion Patch (V3.5.1):
+	Resolved invisible button defect on alternative dataset pairs by introducing standalone, high-contrast .load-pair-btn CSS styles immune to Tailwind observer detachment. Made entire dataset cards interactive with responsive flex wrapping, implemented while-loop directory entry pagination for large folders (>100 files), and calibrated JSON priority rules for simulation, GTrack, and calibration files.
+
 
 
 

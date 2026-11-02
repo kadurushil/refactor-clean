@@ -1,4 +1,4 @@
-Context Document: Radar and Video Synchronizer Application (Version 3.5.0)
+Context Document: Radar and Video Synchronizer Application (Version 3.5.1)
 
 ### 1. High-Level Overview
 
@@ -26,7 +26,7 @@ The application uses a modular ES6 structure. All source code resides in the `/s
 
 - **`index.html`**: The main HTML shell. Defines the DOM structure, including the main layout, collapsible sidebar, data explorer panel, and documentation modals (User Manual, Shortcuts, Codebase Overview, Changelog). It loads all necessary CDN libraries and the main JS module. Suppresses p5 friendly errors upfront.
 
-- **`/annex/`**: **Supplementary Documentation & Release Artifacts**. Contains HTML files for the User Manual, Keyboard Shortcuts, Codebase Overview, Changelogs (`Changelog_3.5.0.html`, `Changelog_V3.5.0.md`), and progress logs (`Improvements.txt`, `GIT_Changes.txt`).
+- **`/annex/`**: **Supplementary Documentation & Release Artifacts**. Contains HTML files for the User Manual, Keyboard Shortcuts, Codebase Overview, Changelogs (`Changelog_3.5.1.html`, `Changelog_V3.5.0.md`), and progress logs (`Improvements.txt`, `GIT_Changes.txt`).
 
 - **`/intel/`**: **Project Intelligence**. Contains documentation and AI-specific context files (`readme.md`, `GEMINI.md`, `context.md`, `sync_and_render_architecture.md`).
 
@@ -65,7 +65,7 @@ The application uses a modular ES6 structure. All source code resides in the `/s
 
 - **`/src/theme.js`**: **Styling**. Handles dark/light mode theme switching.
 
-- **`/src/constants.js`**: **Configuration**. Stores shared, static values including `APP_VERSION = "3.5.0"`, `VIDEO_FPS`, and radar plot boundaries.
+- **`/src/constants.js`**: **Configuration**. Stores shared, static values including `APP_VERSION = "3.5.1"`, `VIDEO_FPS`, and radar plot boundaries.
 
 - **`/src/p5/`**: **Visualization Modules**.
   - **`radarSketch.js`**: Clamped to `pixelDensity(1)` and `p5.disableFriendlyErrors = true`. Renders point cloud, tracks, covariance ellipses, bounding boxes, and staged collision halos.
