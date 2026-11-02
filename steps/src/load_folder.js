@@ -20,10 +20,11 @@ let _customBtnAbort = null;
 export const JSON_PRIORITY_RULES = [
   { pattern: /^track_history(_playback)?\.json$/i, score: 100 },
   { pattern: /^fHist_.*\.json$/i, score: 95 },
-  { pattern: /simulations\/.*\.json$/i, score: 85 },
-  { pattern: /^gTrack(_aligned)?\.json$/i, score: 75 },
+  { pattern: /simulat.*\.json$/i, score: 85 },
+  { pattern: /gtrack.*\.json$/i, score: 75 },
   { pattern: /^radar_log\.json$/i, score: 60 },
   { pattern: /^radar_raw\.json$/i, score: 50 },
+  { pattern: /(metadata|calib|camera_calib|extrinsics|intrinsics).*\.json$/i, score: 15 },
   { pattern: /^frame_mapping\.json$/i, score: 10 },
   { pattern: /^config\.json$/i, score: 10 },
   { pattern: /^settings\.json$/i, score: 10 },
@@ -118,9 +119,19 @@ async function traverseEntry(entry, pathPrefix, fileList) {
     fileList.push(file);
   } else if (entry.isDirectory) {
     const dirReader = entry.createReader();
-    const entries = await new Promise((resolve) => {
-      dirReader.readEntries((results) => resolve(results || []));
-    });
+    let entries = [];
+    const readBatch = () =>
+      new Promise((resolve) => {
+        dirReader.readEntries((results) => resolve(results || []));
+      });
+    let batch;
+    do {
+      batch = await readBatch();
+      if (batch && batch.length > 0) {
+        entries = entries.concat(batch);
+      }
+    } while (batch && batch.length > 0);
+
     const currentPath = pathPrefix ? `${pathPrefix}/${entry.name}` : entry.name;
     for (const childEntry of entries) {
       await traverseEntry(childEntry, currentPath, fileList);
@@ -193,42 +204,43 @@ export function triggerCaseCSelectionModal(
 
       if (isRecommended) {
         card.className =
-          "bg-blue-50/80 dark:bg-blue-950/40 p-4 rounded-xl border-2 border-blue-500 flex flex-col md:flex-row items-start md:items-center justify-between shadow-md gap-3 mb-2";
+          "bg-blue-50/80 dark:bg-blue-950/40 p-4 rounded-xl border-2 border-blue-500 flex flex-col sm:flex-row items-start sm:items-center justify-between shadow-md gap-3 mb-2 cursor-pointer hover:border-blue-600 hover:shadow-lg transition-all";
         card.innerHTML = `
-          <div class="overflow-hidden">
-            <div class="flex items-center gap-2 mb-1.5">
+          <div class="overflow-hidden flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1.5 flex-wrap">
               <span class="bg-blue-600 text-white text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
                 <span>⭐</span> Primary Recommended Dataset
               </span>
               <span class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">📁 ${pair.label}</span>
             </div>
             <div class="text-xs font-mono text-gray-700 dark:text-gray-300 space-y-1">
-              <div>JSON: <span class="font-bold text-blue-600 dark:text-blue-400">${pair.jsonFile ? pair.jsonFile.name : "None"}</span></div>
-              ${pair.videoFile ? `<div>Video: <span class="font-bold text-green-600 dark:text-green-400">${pair.videoFile.name}</span></div>` : ""}
+              <div class="truncate">JSON: <span class="font-bold text-blue-600 dark:text-blue-400">${pair.jsonFile ? pair.jsonFile.name : "None"}</span></div>
+              ${pair.videoFile ? `<div class="truncate">Video: <span class="font-bold text-green-600 dark:text-green-400">${pair.videoFile.name}</span></div>` : ""}
             </div>
           </div>
-          <button class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-lg shadow-md active:scale-95 transition-all flex-shrink-0">
+          <button type="button" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-lg shadow-md active:scale-95 transition-all flex-shrink-0" style="background-color: #2563eb; color: #ffffff;">
             Load Recommended Pair
           </button>
         `;
       } else {
         card.className =
-          "bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-sm hover:border-gray-400 transition-colors";
+          "bg-white dark:bg-gray-800 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-start sm:items-center justify-between shadow-sm hover:border-blue-500 hover:bg-blue-50/40 dark:hover:bg-gray-700/60 hover:shadow transition-all cursor-pointer gap-3";
         card.innerHTML = `
-          <div class="overflow-hidden mr-3">
-            <div class="font-bold text-xs text-gray-900 dark:text-white truncate">📁 ${pair.label}</div>
-            <div class="text-[11px] font-mono text-gray-500 dark:text-gray-400 truncate">
-              JSON: <span class="text-blue-600 dark:text-blue-400">${pair.jsonFile ? pair.jsonFile.name : "None"}</span>
-              ${pair.videoFile ? ` | Video: <span class="text-green-600 dark:text-green-400">${pair.videoFile.name}</span>` : ""}
+          <div class="overflow-hidden flex-1 min-w-0">
+            <div class="font-bold text-xs text-gray-900 dark:text-white truncate mb-1">📁 ${pair.label}</div>
+            <div class="text-[11px] font-mono text-gray-600 dark:text-gray-300 space-y-0.5">
+              <div class="truncate">JSON: <span class="text-blue-600 dark:text-blue-400 font-semibold">${pair.jsonFile ? pair.jsonFile.name : "None"}</span></div>
+              ${pair.videoFile ? `<div class="truncate">Video: <span class="text-green-600 dark:text-green-400 font-semibold">${pair.videoFile.name}</span></div>` : ""}
             </div>
           </div>
-          <button class="bg-gray-700 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 text-white font-semibold text-xs px-3.5 py-1.5 rounded-lg active:scale-95 transition-all flex-shrink-0">
+          <button type="button" class="load-pair-btn w-full sm:w-auto font-semibold text-xs px-4 py-2 rounded-lg shadow-sm active:scale-95 transition-all flex-shrink-0">
             Load Pair
           </button>
         `;
       }
 
-      card.querySelector("button").addEventListener("click", () => {
+      const loadPairHandler = (e) => {
+        if (e) e.stopPropagation();
         datasetSelectModal.classList.add("hidden");
         const finalFolder = pair.label.includes("/")
           ? pair.label.split("/")[0]
@@ -236,9 +248,20 @@ export function triggerCaseCSelectionModal(
         appState.sourceFolderName = finalFolder;
         localStorage.setItem("sourceFolderName", finalFolder);
         processFilePipelineCallback(pair.jsonFile, pair.videoFile, fromCache, allFiles);
-      });
+      };
+
+      card.addEventListener("click", loadPairHandler);
+      const btn = card.querySelector("button");
+      if (btn) {
+        btn.addEventListener("click", loadPairHandler);
+      }
       datasetAutoPairsContainer.appendChild(card);
     });
+
+    // Recompile Tailwind styles for any dynamically injected modal elements
+    if (typeof window !== "undefined" && window.tailwind && typeof window.tailwind.recompile === "function") {
+      window.tailwind.recompile();
+    }
   } else {
     datasetAutoPairsContainer.innerHTML = `<div class="text-xs text-gray-500 italic p-2">No automatic pairs found. Use custom selection below.</div>`;
   }
