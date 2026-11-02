@@ -104,3 +104,4 @@ export const JSON_PRIORITY_RULES = [
   * Light Mode: `#1e293b` dark slate button with white text and clean border.
   * Dark Mode: `#374151` medium slate button with white text and `#4b5563` border.
   * Interactive selection works on both card container click and button click.
+
